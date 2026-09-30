@@ -1,0 +1,8 @@
+{
+  "name": "Remix Deolinda Pizzaria Napoletana 2",
+  "description": "Pizzaria artesanal napoletana ",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

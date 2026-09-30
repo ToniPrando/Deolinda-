@@ -1,0 +1,67 @@
+{
+  "entities": {
+    "Order": {
+      "title": "Order",
+      "description": "Customer pizza order placed in the pizzeria system",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique Order ID" },
+        "customerName": { "type": "string", "description": "Customer full name" },
+        "customerPhone": { "type": "string", "description": "Customer phone number" },
+        "customerAddress": { "type": "string", "description": "Customer delivery address" },
+        "type": { "type": "string", "enum": ["delivery", "table", "counter"], "description": "Order fulfillment type" },
+        "tableNumber": { "type": "string", "description": "Table identifier if type is table" },
+        "items": { "type": "array", "description": "List of ordered pizza items and drinks" },
+        "subtotal": { "type": "number", "description": "Subtotal before delivery" },
+        "deliveryFee": { "type": "number", "description": "Delivery fee" },
+        "total": { "type": "number", "description": "Total order price in BRL" },
+        "paymentMethod": { "type": "string", "description": "Selected payment method" },
+        "status": { "type": "string", "description": "KDS status" },
+        "createdAt": { "type": "string", "description": "ISO timestamp of order creation" },
+        "estimatedMinutes": { "type": "number", "description": "Estimated preparation and delivery minutes" }
+      },
+      "required": ["id", "customerName", "type", "items", "total", "status", "createdAt"]
+    },
+    "Reservation": {
+      "title": "Reservation",
+      "description": "Table reservation in the pizzeria",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Reservation ID" },
+        "name": { "type": "string", "description": "Client reservation name" },
+        "phone": { "type": "string", "description": "Client phone" },
+        "guests": { "type": "number", "description": "Number of guests" },
+        "date": { "type": "string", "description": "Reservation date" },
+        "time": { "type": "string", "description": "Reservation time" },
+        "table": { "type": "string", "description": "Table identifier" },
+        "status": { "type": "string", "description": "Reservation status" },
+        "notes": { "type": "string", "description": "Special requests" }
+      },
+      "required": ["id", "name", "phone", "guests", "date", "time", "status"]
+    },
+    "Setting": {
+      "title": "Setting",
+      "description": "Global application branding and restaurant configuration synchronized across devices",
+      "type": "object",
+      "properties": {
+        "logoUrl": { "type": "string", "description": "Public URL or Base64 data URI of the custom logo" },
+        "updatedAt": { "type": "string", "description": "Timestamp of the last update" },
+        "type": { "type": "string", "description": "Setting category identifier" }
+      }
+    }
+  },
+  "firestore": {
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Real-time pizza orders stream synced between customer devices and admin KDS"
+    },
+    "/reservations/{reservationId}": {
+      "schema": "Reservation",
+      "description": "Real-time table reservations"
+    },
+    "/settings/{settingId}": {
+      "schema": "Setting",
+      "description": "Real-time restaurant branding and logo settings synchronized across all devices"
+    }
+  }
+}

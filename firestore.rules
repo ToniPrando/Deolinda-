@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Orders collection: Open for reading and writing so customer devices can place orders
+    // and kitchen/admin devices receive real-time updates and update status
+    match /orders/{orderId} {
+      allow read, write: if true;
+    }
+    
+    // Reservations collection: Open for table booking and status updates
+    match /reservations/{reservationId} {
+      allow read, write: if true;
+    }
+
+    // Settings collection: Global branding, logo and emblem synchronized in real-time
+    match /settings/{settingId} {
+      allow read, write: if true;
+    }
+
+    // Global match for settings and test connectivity
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

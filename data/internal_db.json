@@ -1,0 +1,180 @@
+{
+  "orders": [
+    {
+      "id": "ORD-8491",
+      "customerName": "Matheus Silveira",
+      "phone": "(11) 98765-4321",
+      "items": [
+        {
+          "name": "Margherita D.O.P.",
+          "quantity": 2,
+          "price": 68,
+          "crust": "Clássica Napoletana",
+          "notes": "Bastante manjericão fresco"
+        },
+        {
+          "name": "Cannoli Siciliani",
+          "quantity": 2,
+          "price": 28
+        }
+      ],
+      "total": 164,
+      "type": "delivery",
+      "address": "Rua Augusta, 1420 - Apto 82, Consolação",
+      "paymentMethod": "Pix",
+      "status": "baking",
+      "createdAt": "2026-09-28T13:12:41.541Z",
+      "estimatedMinutes": 20,
+      "customerLoyaltyPoints": 340,
+      "pointsEarnedThisOrder": 164,
+      "customerTier": "Pizzaiolo Appassionato",
+      "customerMemberCode": "DEO-8491-FEDELTA",
+      "customerTotalOrders": 3
+    },
+    {
+      "id": "ORD-8492",
+      "customerName": "Camila Fernandes",
+      "phone": "(11) 97123-8899",
+      "items": [
+        {
+          "name": "Deolinda Suprema (Tartufata)",
+          "quantity": 1,
+          "price": 89,
+          "crust": "Borda recheada com Ricotta de Búfala",
+          "notes": ""
+        },
+        {
+          "name": "Burrata al Forno",
+          "quantity": 1,
+          "price": 46
+        },
+        {
+          "name": "Chianti Classico DOCG (Garrafa)",
+          "quantity": 1,
+          "price": 145
+        }
+      ],
+      "total": 280,
+      "type": "table",
+      "tableNumber": "Mesa 04 (Jardim do Forno)",
+      "paymentMethod": "Cartão",
+      "status": "preparing",
+      "createdAt": "2026-09-28T13:21:41.541Z",
+      "estimatedMinutes": 25,
+      "customerLoyaltyPoints": 680,
+      "pointsEarnedThisOrder": 280,
+      "customerTier": "Maestro Napoletano",
+      "customerMemberCode": "DEO-8492-VIP",
+      "customerTotalOrders": 6
+    },
+    {
+      "id": "ORD-8493",
+      "customerName": "Luciano Rossi",
+      "phone": "(11) 99341-2030",
+      "items": [
+        {
+          "name": "Mortadella & Pistacchio di Bronte",
+          "quantity": 1,
+          "price": 84,
+          "crust": "Clássica Napoletana",
+          "notes": ""
+        },
+        {
+          "name": "Tiramisù Tradizionale",
+          "quantity": 1,
+          "price": 32
+        }
+      ],
+      "total": 116,
+      "type": "pickup",
+      "paymentMethod": "Pix",
+      "status": "received",
+      "createdAt": "2026-09-28T13:25:41.541Z",
+      "estimatedMinutes": 30,
+      "customerLoyaltyPoints": 210,
+      "pointsEarnedThisOrder": 116,
+      "customerTier": "Amici di Deolinda",
+      "customerMemberCode": "DEO-8493-FEDELTA",
+      "customerTotalOrders": 2
+    }
+  ],
+  "reservations": [
+    {
+      "id": "RES-401",
+      "name": "Giulia Bertolli",
+      "email": "giulia.bertolli@gmail.com",
+      "phone": "(11) 98877-6655",
+      "date": "2026-09-28",
+      "time": "20:00",
+      "guests": 4,
+      "area": "Jardim do Forno a Lenha",
+      "occasion": "Aniversário",
+      "notes": "Mesa próxima ao forno para vermos os pizzaiolos.",
+      "status": "confirmed",
+      "createdAt": "2026-09-28T13:27:41.541Z"
+    },
+    {
+      "id": "RES-402",
+      "name": "Rodrigo Mendonça",
+      "email": "rodrigo.m@outlook.com",
+      "phone": "(11) 97654-3210",
+      "date": "2026-09-28",
+      "time": "21:00",
+      "guests": 2,
+      "area": "Varanda Rústica Romântica",
+      "occasion": "Jantar Romântico",
+      "notes": "Comemoração de 5 anos de namoro.",
+      "status": "confirmed",
+      "createdAt": "2026-09-28T13:27:41.541Z"
+    }
+  ],
+  "customers": [
+    {
+      "id": "CUST-1001",
+      "name": "Matheus Silveira",
+      "email": "matheus.s@gmail.com",
+      "phone": "(11) 98765-4321",
+      "address": "Rua Augusta, 1420 - Apto 82, Consolação, São Paulo - SP",
+      "neighborhood": "Consolação",
+      "city": "São Paulo",
+      "cep": "01304-001",
+      "createdAt": "2026-08-29T13:27:41.541Z",
+      "loyaltyPoints": 340,
+      "tier": "Pizzaiolo Appassionato",
+      "memberCode": "DEO-8491-FEDELTA",
+      "totalOrdersCount": 3
+    },
+    {
+      "id": "CUST-1002",
+      "name": "Camila Fernandes",
+      "email": "camila.f@hotmail.com",
+      "phone": "(11) 97123-8899",
+      "address": "Al. dos Guatás, 310 - Saúde, São Paulo - SP",
+      "neighborhood": "Saúde",
+      "city": "São Paulo",
+      "cep": "04053-040",
+      "createdAt": "2026-09-13T13:27:41.541Z",
+      "loyaltyPoints": 680,
+      "tier": "Maestro Napoletano",
+      "memberCode": "DEO-8492-VIP",
+      "totalOrdersCount": 6
+    },
+    {
+      "id": "CUST-1003",
+      "name": "Luciano Rossi",
+      "email": "luciano.rossi@uol.com.br",
+      "phone": "(11) 99341-2030",
+      "address": "Rua Bela Cintra, 890 - Jardins, São Paulo - SP",
+      "neighborhood": "Jardins",
+      "city": "São Paulo",
+      "cep": "01415-000",
+      "createdAt": "2026-09-23T13:27:41.541Z",
+      "loyaltyPoints": 210,
+      "tier": "Amici di Deolinda",
+      "memberCode": "DEO-8493-FEDELTA",
+      "totalOrdersCount": 2
+    }
+  ],
+  "logs": [],
+  "customLogo": null
+}
