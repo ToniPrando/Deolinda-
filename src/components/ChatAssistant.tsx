@@ -31,7 +31,7 @@ export const ChatAssistant: React.FC = () => {
     {
       id: 'msg-1',
       sender: 'bot',
-      text: 'Ciao! Benvenuto alla Deolinda Pizzaria Napoletana. 🇮🇹 Sou o Mastro Deolinda, seu concierge gastronômico. Posso tirar dúvidas sobre nossa massa de 48h de fermentação, harmonizações de vinhos ou ajudar no seu pedido!',
+      text: 'Ciao! Benvenuto alla Deolinda Pizzaria Napoletana. 🇮🇹 Sou o Mastro Deolinda, seu concierge gastronômico. Posso tirar dúvidas sobre nossa massa de 72h de fermentação, harmonizações de vinhos ou ajudar no seu pedido!',
       timestamp: 'Agora'
     }
   ]);
@@ -88,7 +88,7 @@ export const ChatAssistant: React.FC = () => {
         {
           id: `bot-${Date.now()}`,
           sender: 'bot',
-          text: 'Nossa massa napolitana de 48h é maturada lentamente e assada a 450°C no forno a lenha! Para reservas e pedidos personalizados, você também pode nos chamar no WhatsApp.',
+          text: 'Nossa massa napolitana de 72h é maturada lentamente e assada a 450°C no forno a lenha! Para reservas e pedidos personalizados, você também pode nos chamar no WhatsApp.',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
@@ -98,7 +98,7 @@ export const ChatAssistant: React.FC = () => {
   };
 
   const quickPrompts = [
-    { label: '🌾 Como funciona a fermentação 48h?', prompt: 'Como funciona a fermentação de 48 horas e por que a massa é tão leve e digestível?' },
+    { label: '🌾 Como funciona a fermentação 72h?', prompt: 'Como funciona a fermentação de 72 horas e por que a massa é tão leve e digestível?' },
     { label: '🍷 Qual vinho harmoniza com a Margherita?', prompt: 'Qual vinho italiano vocês recomendam para harmonizar com a Margherita D.O.P.?' },
     { label: '🍕 Recomende a melhor pizza da casa', prompt: 'Qual é a pizza especial mais famosa e recomendada da Deolinda?' },
     { label: '🌱 Opções vegetarianas no cardápio', prompt: 'Quais opções vegetarianas vocês oferecem?' }

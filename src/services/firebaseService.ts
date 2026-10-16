@@ -11,7 +11,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { Order, Reservation, OrderStatus, MenuItem } from '../types';
+import { Order, Reservation, OrderStatus, MenuItem, SocialPost, SiteInfo, MenuCategory } from '../types';
 
 // Initialize Firebase App instance
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
@@ -489,4 +489,194 @@ export function subscribeToMenuItems(
     return () => {};
   }
 }
+
+/**
+ * Saves the full gallery / Fotos & Momentos posts collection to Cloud Firestore, backend, and localStorage.
+ */
+export async function saveGalleryPostsToFirestore(posts: SocialPost[]): Promise<void> {
+  try {
+    const galleryDocRef = doc(db, 'settings', 'gallery');
+    await setDoc(galleryDocRef, {
+      posts,
+      updatedAt: new Date().toISOString(),
+      type: 'gallery_posts',
+      _serverTimestamp: serverTimestamp()
+    }, { merge: true });
+    console.log('[Firestore] Gallery posts saved successfully to Cloud Firestore.');
+  } catch (error: any) {
+    console.warn('[Firestore] Notice while saving gallery posts to Firestore:', error?.message || error);
+  }
+
+  // Backup to Express backend API
+  try {
+    await fetch('/api/settings/gallery', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ posts })
+    });
+  } catch (e) {
+    console.warn('[Backend] Gallery save error:', e);
+  }
+
+  // Local storage fallback
+  try {
+    localStorage.setItem('deolinda_custom_social_posts', JSON.stringify(posts));
+  } catch {}
+}
+
+/**
+ * Subscribes to real-time gallery / Fotos & Momentos updates from Cloud Firestore
+ */
+export function subscribeToGalleryPosts(
+  onUpdate: (posts: SocialPost[]) => void
+): () => void {
+  try {
+    const galleryDocRef = doc(db, 'settings', 'gallery');
+    const unsubscribe = onSnapshot(galleryDocRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data && Array.isArray(data.posts) && data.posts.length > 0) {
+          onUpdate(data.posts);
+          try {
+            localStorage.setItem('deolinda_custom_social_posts', JSON.stringify(data.posts));
+          } catch {}
+        }
+      }
+    }, (err) => {
+      console.warn('[Firestore] Gallery subscription notice:', err?.message || err);
+    });
+
+    return unsubscribe;
+  } catch (err) {
+    console.warn('[Firestore] Gallery subscribe error:', err);
+    return () => {};
+  }
+}
+
+/**
+ * Saves the full site information and text content to Cloud Firestore, backend, and localStorage.
+ */
+export async function saveSiteInfoToFirestore(siteInfo: SiteInfo): Promise<void> {
+  try {
+    const siteDocRef = doc(db, 'settings', 'site_info');
+    await setDoc(siteDocRef, {
+      siteInfo,
+      updatedAt: new Date().toISOString(),
+      type: 'site_info',
+      _serverTimestamp: serverTimestamp()
+    }, { merge: true });
+    console.log('[Firestore] Site info saved successfully to Cloud Firestore.');
+  } catch (error: any) {
+    console.warn('[Firestore] Notice while saving site info to Firestore:', error?.message || error);
+  }
+
+  // Backup to Express backend API
+  try {
+    await fetch('/api/settings/site-info', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ siteInfo })
+    });
+  } catch (e) {
+    console.warn('[Backend] Site info save error:', e);
+  }
+
+  // Local storage fallback
+  try {
+    localStorage.setItem('deolinda_custom_site_info', JSON.stringify(siteInfo));
+  } catch {}
+}
+
+/**
+ * Subscribes to real-time site info updates from Cloud Firestore
+ */
+export function subscribeToSiteInfo(
+  onUpdate: (siteInfo: SiteInfo) => void
+): () => void {
+  try {
+    const siteDocRef = doc(db, 'settings', 'site_info');
+    const unsubscribe = onSnapshot(siteDocRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data && data.siteInfo && typeof data.siteInfo === 'object') {
+          onUpdate(data.siteInfo);
+          try {
+            localStorage.setItem('deolinda_custom_site_info', JSON.stringify(data.siteInfo));
+          } catch {}
+        }
+      }
+    }, (err) => {
+      console.warn('[Firestore] Site info subscription notice:', err?.message || err);
+    });
+
+    return unsubscribe;
+  } catch (err) {
+    console.warn('[Firestore] Site info subscribe error:', err);
+    return () => {};
+  }
+}
+
+/**
+ * Saves the custom menu categories (buttons) to Cloud Firestore, backend, and localStorage.
+ */
+export async function saveMenuCategoriesToFirestore(categories: MenuCategory[]): Promise<void> {
+  try {
+    const catDocRef = doc(db, 'settings', 'menu_categories');
+    await setDoc(catDocRef, {
+      categories,
+      updatedAt: new Date().toISOString(),
+      type: 'menu_categories',
+      _serverTimestamp: serverTimestamp()
+    }, { merge: true });
+    console.log('[Firestore] Menu categories saved successfully to Cloud Firestore.');
+  } catch (error: any) {
+    console.warn('[Firestore] Notice while saving menu categories to Firestore:', error?.message || error);
+  }
+
+  // Backup to Express backend API
+  try {
+    await fetch('/api/settings/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ categories })
+    });
+  } catch (e) {
+    console.warn('[Backend] Menu categories save error:', e);
+  }
+
+  // Local storage fallback
+  try {
+    localStorage.setItem('deolinda_custom_menu_categories', JSON.stringify(categories));
+  } catch {}
+}
+
+/**
+ * Subscribes to real-time menu categories updates from Cloud Firestore
+ */
+export function subscribeToMenuCategories(
+  onUpdate: (categories: MenuCategory[]) => void
+): () => void {
+  try {
+    const catDocRef = doc(db, 'settings', 'menu_categories');
+    const unsubscribe = onSnapshot(catDocRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data && Array.isArray(data.categories)) {
+          onUpdate(data.categories);
+          try {
+            localStorage.setItem('deolinda_custom_menu_categories', JSON.stringify(data.categories));
+          } catch {}
+        }
+      }
+    }, (err) => {
+      console.warn('[Firestore] Menu categories subscription notice:', err?.message || err);
+    });
+
+    return unsubscribe;
+  } catch (err) {
+    console.warn('[Firestore] Menu categories subscribe error:', err);
+    return () => {};
+  }
+}
+
 

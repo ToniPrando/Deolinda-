@@ -402,7 +402,78 @@ app.post("/api/settings/menu", (req, res) => {
   }
 });
 
-// Customers API
+// Custom Gallery / Fotos & Momentos API
+app.get("/api/settings/gallery", (_req, res) => {
+  try {
+    res.json({ posts: (db as any).galleryPosts || null });
+  } catch (error: any) {
+    res.json({ posts: null });
+  }
+});
+
+app.post("/api/settings/gallery", (req, res) => {
+  try {
+    const { posts } = req.body;
+    if (Array.isArray(posts)) {
+      (db as any).galleryPosts = posts;
+      saveDatabase();
+      return res.json({ success: true, count: posts.length });
+    }
+    return res.status(400).json({ error: "Invalid posts array" });
+  } catch (error: any) {
+    console.error("Error saving gallery posts:", error);
+    res.status(500).json({ error: error.message || "Failed to save gallery posts" });
+  }
+});
+
+// Custom Menu Categories API (Botões do Cardápio)
+app.get("/api/settings/categories", (_req, res) => {
+  try {
+    res.json({ categories: (db as any).menuCategories || null });
+  } catch (error: any) {
+    res.json({ categories: null });
+  }
+});
+
+app.post("/api/settings/categories", (req, res) => {
+  try {
+    const { categories } = req.body;
+    if (Array.isArray(categories)) {
+      (db as any).menuCategories = categories;
+      saveDatabase();
+      return res.json({ success: true, count: categories.length });
+    }
+    return res.status(400).json({ error: "Invalid categories array" });
+  } catch (error: any) {
+    console.error("Error saving menu categories:", error);
+    res.status(500).json({ error: error.message || "Failed to save menu categories" });
+  }
+});
+
+// Custom Site Information & Content API
+app.get("/api/settings/site-info", (_req, res) => {
+  try {
+    res.json({ siteInfo: (db as any).siteInfo || null });
+  } catch (error: any) {
+    res.json({ siteInfo: null });
+  }
+});
+
+app.post("/api/settings/site-info", (req, res) => {
+  try {
+    const { siteInfo } = req.body;
+    if (siteInfo && typeof siteInfo === "object") {
+      (db as any).siteInfo = siteInfo;
+      saveDatabase();
+      return res.json({ success: true });
+    }
+    return res.status(400).json({ error: "Invalid siteInfo object" });
+  } catch (error: any) {
+    console.error("Error saving site info:", error);
+    res.status(500).json({ error: error.message || "Failed to save site info" });
+  }
+});
+
 app.get("/api/customers", (_req, res) => {
   res.json({ customers: db.customers });
 });
@@ -525,11 +596,11 @@ INFORMAÇÕES DA PIZZARIA DEOLINDA:
 - Entradas: Burrata al Forno com Focaccia (R$ 46), Bruschetta Caprese (R$ 36), Arancini al Pomodoro (R$ 38).
 - Sobremesas: Tiramisù Tradizionale al Mascarpone (R$ 32), Cannoli Siciliani com Ricotta & Pistache (R$ 28).
 - Vinhos: Chianti Classico DOCG (R$ 145), Primitivo di Manduria (R$ 160), Prosecco Valdobbiadene (R$ 130).
-- Localização: https://maps.app.goo.gl/WXxuE14BxN9RBDmh8?g_st=ac
+- Localização: Rua Santa Cruz, 232, Centro, Itu, SP | https://maps.app.goo.gl/WXxuE14BxN9RBDmh8?g_st=ac
 - Horário: Terça a Domingo das 18h às 23h30 (Sexta e Sábado até 00h). Segunda fechado para descanso da massa.
 - Programa de Fidelidade: Club Deolinda (ganha 10 pts a cada R$ 10, resgates a partir de 100 pts).
 
-Suas respostas devem ser gentis, cultas, gastronômicas, dando dicas de harmonização de vinhos e explicando a leveza da nossa fermentação de 48h. Se o cliente quiser pedir ou reservar, oriente-o a usar os botões do site ou o WhatsApp direto. Use expressões italianas suaves como 'Buon appetito!', 'Benvenuto!', 'Piacere!'. Responda de forma concisa e acolhedora.`;
+Suas respostas devem ser gentis, cultas, gastronômicas, dando dicas de harmonização de vinhos e explicando a leveza da nossa fermentação de 72h. Se o cliente quiser pedir ou reservar, oriente-o a usar os botões do site ou o WhatsApp direto. Use expressões italianas suaves como 'Buon appetito!', 'Benvenuto!', 'Piacere!'. Responda de forma concisa e acolhedora.`;
 
   try {
     const ai = getAIClient();
@@ -551,7 +622,7 @@ Suas respostas devem ser gentis, cultas, gastronômicas, dando dicas de harmoniz
   let fallbackReply = "Benvenuto alla Deolinda! Sou o Mastro Deolinda, seu concierge gastronômico. ";
 
   if (lower.includes("fermenta") || lower.includes("massa") || lower.includes("digest")) {
-    fallbackReply += "Nossa massa passa por uma maturação lenta de 48 horas com Lievito Madre centenário e 70% de hidratação. Por isso, ao assar a 450°C no forno a lenha, ela fica levíssima, aerada ('cornicione' alto) e incrivelmente digestível!";
+    fallbackReply += "Nossa massa passa por uma maturação lenta de 72 horas com Lievito Madre centenário e 70% de hidratação. Por isso, ao assar a 450°C no forno a lenha, ela fica levíssima, aerada ('cornicione' alto) e incrivelmente digestível!";
   } else if (lower.includes("vinho") || lower.includes("harmoniz") || lower.includes("bebida")) {
     fallbackReply += "Para a clássica Margherita D.O.P., recomendo um belo Chianti Classico DOCG toscano. Se você escolher a nossa Deolinda Suprema com trufas e stracciatella, um Primitivo di Manduria encorpado fica sublime!";
   } else if (lower.includes("reserva") || lower.includes("mesa") || lower.includes("horario")) {
@@ -559,7 +630,7 @@ Suas respostas devem ser gentis, cultas, gastronômicas, dando dicas de harmoniz
   } else if (lower.includes("fidelidade") || lower.includes("ponto") || lower.includes("club")) {
     fallbackReply += "No nosso Club Deolinda, você acumula 10 pontos a cada R$ 10 consumidos e pode resgatar desde Cannoli crocantes até pizzas Margherita D.O.P. inteiras! Confira a seção 'Club Fidelidade' no site.";
   } else if (lower.includes("endereço") || lower.includes("local") || lower.includes("onde")) {
-    fallbackReply += "Estamos localizados em um espaço aconchegante! Você pode ver nossa localização exata e traçar rotas pelo Google Maps no rodapé ou pelo link: https://maps.app.goo.gl/WXxuE14BxN9RBDmh8?g_st=ac";
+    fallbackReply += "Estamos localizados na Rua Santa Cruz, 232, Centro, Itu - SP! Você pode ver nossa localização exata e traçar rotas pelo Google Maps no rodapé ou pelo link: https://maps.app.goo.gl/WXxuE14BxN9RBDmh8?g_st=ac";
   } else if (lower.includes("preço") || lower.includes("cardapio") || lower.includes("menu")) {
     fallbackReply += "Nossas pizzas clássicas começam a partir de R$ 56 (Marinara) e R$ 68 (Margherita D.O.P. com búfala fresca). Todas feitas com ingredientes autênticos importados da Itália!";
   } else {

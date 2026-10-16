@@ -1,4 +1,10 @@
-export type CategoryType = 'tradizionali' | 'speciali' | 'antipasti' | 'dolci' | 'bevande';
+export type CategoryType = 'tradizionali' | 'speciali' | 'antipasti' | 'dolci' | 'bevande' | (string & {});
+
+export interface MenuCategory {
+  id: string;
+  label: string;
+  icon?: string;
+}
 
 export interface MenuItem {
   id: string;
@@ -130,3 +136,77 @@ export interface SocialPost {
   isHotOutOfOven?: boolean;
   tags: string[];
 }
+
+export interface SiteInfo {
+  // Identidade & Contatos
+  restaurantName: string;
+  slogan: string;
+  phone: string;
+  whatsappNumber: string;
+  whatsappMessage: string;
+  instagramHandle: string;
+  instagramUrl: string;
+  email: string;
+  address: string;
+  addressNeighborhood: string;
+  addressCityState: string;
+  mapsUrl: string;
+  openingHoursSummary: string;
+
+  // Hero (Cabeçalho)
+  heroBadge: string;
+  heroSubBadge: string;
+  heroSubtitle: string;
+  heroCtaMenuText: string;
+  heroCtaWhatsappText: string;
+  heroFermentationHighlight: string;
+  heroFermentationSubtext: string;
+  heroOvenHighlight: string;
+  heroOvenSubtext: string;
+  heroFlourHighlight: string;
+  heroFlourSubtext: string;
+  heroTomatoHighlight: string;
+  heroTomatoSubtext: string;
+
+  // Fermentação
+  fermentationBadge: string;
+  fermentationTitle: string;
+  fermentationSubtitle: string;
+  fermentationStep1Title: string;
+  fermentationStep1Time: string;
+  fermentationStep1Desc: string;
+  fermentationStep2Title: string;
+  fermentationStep2Time: string;
+  fermentationStep2Desc: string;
+  fermentationStep3Title: string;
+  fermentationStep3Time: string;
+  fermentationStep3Desc: string;
+  fermentationStep4Title: string;
+  fermentationStep4Time: string;
+  fermentationStep4Desc: string;
+
+  // História & Nonna
+  storyBadge: string;
+  storyTitle: string;
+  storySubtitle: string;
+  storyParagraph1: string;
+  storyParagraph2: string;
+  storyQuote: string;
+  storyQuoteAuthor: string;
+
+  // Horários & Localização
+  locationBadge: string;
+  locationTitle: string;
+  locationSubtitle: string;
+  hoursTueThu: string;
+  hoursFriSat: string;
+  hoursSun: string;
+  hoursMon: string;
+  valetInfo: string;
+  environmentInfo: string;
+
+  // Rodapé
+  footerCopyright: string;
+  footerAssociationText: string;
+}
+

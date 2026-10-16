@@ -24,7 +24,7 @@ export const SOCIAL_POSTS: SocialPost[] = [
   {
     id: 'post-3',
     imageUrl: 'https://images.unsplash.com/photo-1604382355076-af4b0eb60143?auto=format&fit=crop&w=800&q=80',
-    caption: 'A simplicidade da perfeição: Margherita Verace com San Marzano D.O.P. e Mozzarella di Bufala fresca. 48h de fermentação natural. #LievitoMadre #Napoletana',
+    caption: 'A simplicidade da perfeição: Margherita Verace com San Marzano D.O.P. e Mozzarella di Bufala fresca. 72h de fermentação natural. #LievitoMadre #Napoletana',
     author: '@marcellogourmet',
     likes: 290,
     timestamp: 'Há 3 horas',

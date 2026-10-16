@@ -4,7 +4,8 @@ import {
   Menu as MenuIcon, 
   X
 } from 'lucide-react';
-import { CustomerUser } from '../types';
+import { CustomerUser, SiteInfo } from '../types';
+import { TricolorBands } from './TricolorBands';
 
 interface NavbarProps {
   onOpenAuth?: () => void;
@@ -12,12 +13,14 @@ interface NavbarProps {
   customLogoUrl?: string | null;
   customEmblemUrl?: string | null;
   isEmblemEnabled?: boolean;
+  siteInfo?: SiteInfo;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   customLogoUrl,
   customEmblemUrl,
-  isEmblemEnabled = true
+  isEmblemEnabled = true,
+  siteInfo
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -108,18 +111,19 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Desktop Navigation Links with enhanced spacing */}
-        <nav className="hidden lg:flex items-center gap-5 xl:gap-8 2xl:gap-10 text-sm font-semibold tracking-wide">
-          <button
-            onClick={() => scrollToSection('cardapio')}
-            className="px-3.5 py-1.5 rounded-full text-[#FAF7F2]/90 hover:text-[#E5A93C] hover:bg-white/5 transition-all cursor-pointer"
-          >
-            Cardápio
-          </button>
+        <nav className="hidden lg:flex items-center gap-4 xl:gap-6 2xl:gap-8 text-sm font-semibold tracking-wide">
+          <TricolorBands direction="left" theme="dark" className="w-8 xl:w-12 shrink-0" size="sm" />
           <button
             onClick={() => scrollToSection('fermentacao')}
             className="px-3.5 py-1.5 rounded-full text-[#FAF7F2]/90 hover:text-[#E5A93C] hover:bg-white/5 transition-all cursor-pointer"
           >
             Processo & Massa
+          </button>
+          <button
+            onClick={() => scrollToSection('cardapio')}
+            className="px-3.5 py-1.5 rounded-full text-[#FAF7F2]/90 hover:text-[#E5A93C] hover:bg-white/5 transition-all cursor-pointer"
+          >
+            Cardápio
           </button>
           <button
             onClick={() => scrollToSection('historia')}
@@ -131,7 +135,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => scrollToSection('galeria')}
             className="px-3.5 py-1.5 rounded-full text-[#FAF7F2]/90 hover:text-[#E5A93C] hover:bg-white/5 transition-all cursor-pointer"
           >
-            Galeria do Forno
+            Fotos & Momentos
           </button>
           <button
             onClick={() => scrollToSection('localizacao')}
@@ -139,6 +143,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             Localização
           </button>
+          <TricolorBands direction="right" theme="dark" className="w-8 xl:w-12 shrink-0" size="sm" />
         </nav>
 
         {/* Mobile Menu Trigger */}
@@ -156,36 +161,41 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Mobile Dropdown Menu */}
       {mobileMenuOpen && (
         <div className="lg:hidden bg-[#181513] border-t border-white/10 px-4 pt-3 pb-6 space-y-3 animate-in fade-in slide-in-from-top-4 duration-200">
+          <div className="flex items-center justify-center gap-3 py-1">
+            <TricolorBands direction="left" theme="dark" className="w-12 shrink-0" size="sm" />
+            <span className="text-[10px] tracking-widest uppercase font-semibold text-[#E5A93C] font-cinzel">Menu Deolinda</span>
+            <TricolorBands direction="right" theme="dark" className="w-12 shrink-0" size="sm" />
+          </div>
           <div className="flex flex-col space-y-1 text-base font-medium pt-1">
-            <button
-              onClick={() => scrollToSection('cardapio')}
-              className="text-left py-2 px-3 rounded hover:bg-white/10 text-[#FAF7F2]"
-            >
-              🍕 Cardápio Autêntico
-            </button>
             <button
               onClick={() => scrollToSection('fermentacao')}
               className="text-left py-2 px-3 rounded hover:bg-white/10 text-[#FAF7F2]"
             >
-              🌾 Fermentação 48h & Ingredientes
+              Processo & Massa (Fermentação 72h)
+            </button>
+            <button
+              onClick={() => scrollToSection('cardapio')}
+              className="text-left py-2 px-3 rounded hover:bg-white/10 text-[#FAF7F2]"
+            >
+              Cardápio Autêntico
             </button>
             <button
               onClick={() => scrollToSection('historia')}
               className="text-left py-2 px-3 rounded hover:bg-white/10 text-[#FAF7F2]"
             >
-              🇮🇹 Nossa História & Tradição
+              Nossa História & Tradição
             </button>
             <button
               onClick={() => scrollToSection('galeria')}
               className="text-left py-2 px-3 rounded hover:bg-white/10 text-[#FAF7F2]"
             >
-              📸 Galeria do Forno (#DeolindaNapoletana)
+              Fotos & Momentos (#DeolindaNapoletana)
             </button>
             <button
               onClick={() => scrollToSection('localizacao')}
               className="text-left py-2 px-3 rounded hover:bg-white/10 text-[#FAF7F2]"
             >
-              📍 Localização & Horários
+              Localização & Horários
             </button>
           </div>
         </div>

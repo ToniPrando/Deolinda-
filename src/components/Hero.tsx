@@ -1,5 +1,7 @@
 import React from 'react';
 import { Flame, Clock, Award, Sparkles, ArrowRight, Utensils, ChevronDown, Send } from 'lucide-react';
+import { TricolorBands } from './TricolorBands';
+import { SiteInfo } from '../types';
 
 interface HeroProps {
   onOpenMenu: () => void;
@@ -8,6 +10,7 @@ interface HeroProps {
   customLogoUrl?: string | null;
   customEmblemUrl?: string | null;
   isEmblemEnabled?: boolean;
+  siteInfo?: SiteInfo;
 }
 
 export const Hero: React.FC<HeroProps> = ({
@@ -15,7 +18,8 @@ export const Hero: React.FC<HeroProps> = ({
   onOpenConcierge,
   customLogoUrl,
   customEmblemUrl,
-  isEmblemEnabled = true
+  isEmblemEnabled = true,
+  siteInfo
 }) => {
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-[#14110F] text-white">
@@ -70,35 +74,29 @@ export const Hero: React.FC<HeroProps> = ({
 
             {/* Sub-label banner with Italian Tricolore horizontal bands */}
             <div className="flex items-center justify-center gap-2 sm:gap-4 mt-2">
-              {/* Left Tricolor Horizontal Bands (Verde, Bianco, Rosso) */}
-              <div className="flex flex-col gap-[3px] w-10 sm:w-20 md:w-28 shrink-0">
-                <div className="h-[2.5px] w-full rounded-full bg-gradient-to-r from-transparent via-[#008C45] to-[#008C45] shadow-[0_0_6px_rgba(0,140,69,0.6)]" />
-                <div className="h-[2.5px] w-full rounded-full bg-gradient-to-r from-transparent via-white to-white shadow-[0_0_6px_rgba(255,255,255,0.6)]" />
-                <div className="h-[2.5px] w-full rounded-full bg-gradient-to-r from-transparent via-[#CD212A] to-[#CD212A] shadow-[0_0_6px_rgba(205,33,42,0.6)]" />
-              </div>
+              <TricolorBands direction="left" theme="dark" className="w-10 sm:w-20 md:w-28" />
 
               {/* Text */}
               <span className="text-xs sm:text-base md:text-lg tracking-[0.25em] sm:tracking-[0.4em] uppercase font-bold text-[#FAF7F2] font-cinzel drop-shadow-md whitespace-nowrap">
-                Pizzaria Napoletana
+                {siteInfo?.heroSubBadge || 'Pizzaria Napoletana'}
               </span>
 
               <span className="text-[10px] sm:text-xs uppercase font-extrabold tracking-widest text-[#FAF7F2] bg-[#C24D2C] px-2.5 py-0.5 rounded-full border border-white/30 shadow-md whitespace-nowrap">
                 D.O.P.
               </span>
 
-              {/* Right Tricolor Horizontal Bands (Verde, Bianco, Rosso) */}
-              <div className="flex flex-col gap-[3px] w-10 sm:w-20 md:w-28 shrink-0">
-                <div className="h-[2.5px] w-full rounded-full bg-gradient-to-l from-transparent via-[#008C45] to-[#008C45] shadow-[0_0_6px_rgba(0,140,69,0.6)]" />
-                <div className="h-[2.5px] w-full rounded-full bg-gradient-to-l from-transparent via-white to-white shadow-[0_0_6px_rgba(255,255,255,0.6)]" />
-                <div className="h-[2.5px] w-full rounded-full bg-gradient-to-l from-transparent via-[#CD212A] to-[#CD212A] shadow-[0_0_6px_rgba(205,33,42,0.6)]" />
-              </div>
+              <TricolorBands direction="right" theme="dark" className="w-10 sm:w-20 md:w-28" />
             </div>
           </div>
         </div>
 
         {/* Subtitle */}
         <p className="max-w-2xl text-base sm:text-xl text-[#FAF7F2]/85 font-light leading-relaxed mb-10">
-          Fermentação natural lenta de <strong className="text-[#E5A93C] font-semibold">48 horas</strong>, farinha italiana Tipo 00, ingredientes certificados <strong className="text-[#E5A93C] font-semibold">D.O.P.</strong> e o fogo vivo da pedra vulcânica a <strong className="text-[#E5A93C] font-semibold">450°C</strong>.
+          {siteInfo?.heroSubtitle || (
+            <>
+              Fermentação natural lenta de <strong className="text-[#E5A93C] font-semibold">72 horas</strong>, farinha italiana Tipo 00, ingredientes certificados <strong className="text-[#E5A93C] font-semibold">D.O.P.</strong> e o fogo vivo da pedra vulcânica a <strong className="text-[#E5A93C] font-semibold">450°C</strong>.
+            </>
+          )}
         </p>
 
         {/* Call to Actions */}
@@ -108,18 +106,18 @@ export const Hero: React.FC<HeroProps> = ({
             className="w-full sm:w-auto px-8 py-4 rounded-full bg-[#C24D2C] hover:bg-[#A63A1E] text-white font-bold text-sm uppercase tracking-wider shadow-xl shadow-[#C24D2C]/40 hover:shadow-[#C24D2C]/60 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-3 cursor-pointer group"
           >
             <Utensils className="w-4 h-4 text-[#E5A93C]" />
-            <span>Explorar Cardápio</span>
+            <span>{siteInfo?.heroCtaMenuText || 'Explorar Cardápio'}</span>
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </button>
 
           <a
-            href="https://wa.me/5511915331853?text=Ol%C3%A1%20Deolinda%20Pizzaria!%20Gostaria%20de%20informa%C3%A7%C3%B5es."
+            href={`https://wa.me/${siteInfo?.whatsappNumber || '5511915331853'}?text=${encodeURIComponent(siteInfo?.whatsappMessage || 'Olá Deolinda Pizzaria! Gostaria de informações.')}`}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full sm:w-auto px-6 py-4 rounded-full bg-white/10 hover:bg-white/15 text-[#FAF7F2] border border-white/20 font-semibold text-sm backdrop-blur-md transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <Send className="w-4 h-4 text-[#25D366]" />
-            <span>WhatsApp (11) 91533-1853</span>
+            <span>{siteInfo?.heroCtaWhatsappText || `WhatsApp ${siteInfo?.phone || '(11) 91533-1853'}`}</span>
           </a>
         </div>
 
@@ -131,8 +129,8 @@ export const Hero: React.FC<HeroProps> = ({
             </div>
             <div>
               <p className="text-xs uppercase font-bold text-[#E5A93C] tracking-wider">Fermentação</p>
-              <p className="text-sm font-semibold text-white">48 Horas Lenta</p>
-              <p className="text-[11px] text-white/60">Leve e digestiva</p>
+              <p className="text-sm font-semibold text-white">{siteInfo?.heroFermentationHighlight || '72 Horas Lenta'}</p>
+              <p className="text-[11px] text-white/60">{siteInfo?.heroFermentationSubtext || 'Leve e digestiva'}</p>
             </div>
           </div>
 
@@ -142,8 +140,8 @@ export const Hero: React.FC<HeroProps> = ({
             </div>
             <div>
               <p className="text-xs uppercase font-bold text-[#E5A93C] tracking-wider">Forno a Lenha</p>
-              <p className="text-sm font-semibold text-white">450°C em 90s</p>
-              <p className="text-[11px] text-white/60">Pedra vulcânica</p>
+              <p className="text-sm font-semibold text-white">{siteInfo?.heroOvenHighlight || '450°C em 90s'}</p>
+              <p className="text-[11px] text-white/60">{siteInfo?.heroOvenSubtext || 'Pedra vulcânica'}</p>
             </div>
           </div>
 
@@ -153,8 +151,8 @@ export const Hero: React.FC<HeroProps> = ({
             </div>
             <div>
               <p className="text-xs uppercase font-bold text-[#E5A93C] tracking-wider">Origem</p>
-              <p className="text-sm font-semibold text-white">100% D.O.P. Itália</p>
-              <p className="text-[11px] text-white/60">San Marzano & Bufala</p>
+              <p className="text-sm font-semibold text-white">{siteInfo?.heroTomatoHighlight || '100% D.O.P. Itália'}</p>
+              <p className="text-[11px] text-white/60">{siteInfo?.heroTomatoSubtext || 'San Marzano & Bufala'}</p>
             </div>
           </div>
 
@@ -164,8 +162,8 @@ export const Hero: React.FC<HeroProps> = ({
             </div>
             <div>
               <p className="text-xs uppercase font-bold text-[#E5A93C] tracking-wider">Massa</p>
-              <p className="text-sm font-semibold text-white">Lievito Madre</p>
-              <p className="text-[11px] text-white/60">Cornicione aerado</p>
+              <p className="text-sm font-semibold text-white">{siteInfo?.heroFlourHighlight || 'Lievito Madre'}</p>
+              <p className="text-[11px] text-white/60">{siteInfo?.heroFlourSubtext || 'Cornicione aerado'}</p>
             </div>
           </div>
         </div>

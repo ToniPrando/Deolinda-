@@ -16,11 +16,13 @@ import {
   LogIn,
   Star
 } from 'lucide-react';
-import { MenuItem, CategoryType, CartItem, CustomerUser } from '../types';
-import { MENU_ITEMS, CRUST_OPTIONS, EXTRA_TOPPINGS } from '../data/menuData';
+import { MenuItem, CategoryType, CartItem, CustomerUser, MenuCategory } from '../types';
+import { MENU_ITEMS, CRUST_OPTIONS, EXTRA_TOPPINGS, DEFAULT_MENU_CATEGORIES } from '../data/menuData';
+import { TricolorBands } from './TricolorBands';
 
 interface MenuSectionProps {
   menuItems?: MenuItem[];
+  menuCategories?: MenuCategory[];
   onAddToCart: (item: CartItem) => void;
   currentUser: CustomerUser | null;
   onRequireLogin: () => void;
@@ -28,6 +30,7 @@ interface MenuSectionProps {
 
 export const MenuSection: React.FC<MenuSectionProps> = ({ 
   menuItems,
+  menuCategories,
   onAddToCart,
   currentUser,
   onRequireLogin
@@ -43,14 +46,17 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
   const [itemQuantity, setItemQuantity] = useState<number>(1);
   const [addedNotice, setAddedNotice] = useState<string | null>(null);
 
-  const categories: { id: CategoryType | 'all'; label: string; icon: string }[] = [
-    { id: 'all', label: 'Todo o Cardápio', icon: '🍽️' },
-    { id: 'tradizionali', label: 'Pizzas Tradicionais', icon: '🍕' },
-    { id: 'speciali', label: 'Pizzas Especiais', icon: '✨' },
-    { id: 'antipasti', label: 'Entradas & Aperitivos', icon: '🫒' },
-    { id: 'dolci', label: 'Sobremesas', icon: '🍰' },
-    { id: 'bevande', label: 'Bebidas & Vinhos', icon: '🍷' }
-  ];
+  const categories: { id: CategoryType | 'all'; label: string; icon: string }[] = useMemo(() => {
+    const list = menuCategories && menuCategories.length > 0 ? menuCategories : DEFAULT_MENU_CATEGORIES;
+    return [
+      { id: 'all', label: 'Todo o Cardápio', icon: '🍽️' },
+      ...list.map(c => ({
+        id: c.id,
+        label: c.label,
+        icon: c.icon || '🍕'
+      }))
+    ];
+  }, [menuCategories]);
 
   const currentItems = menuItems || MENU_ITEMS;
 
@@ -159,7 +165,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
             A Tradição Napolitana no seu Paladar
           </h2>
           <p className="text-[#5C554E] text-base sm:text-lg">
-            Todas as nossas pizzas são individuais (30cm), com massa de 48h de fermentação, assadas a 450°C e cortadas ao estilo de Nápoles.
+            Todas as nossas pizzas são individuais (30cm), com massa de 72h de fermentação, assadas a 450°C e cortadas ao estilo de Nápoles.
           </p>
         </motion.div>
 
@@ -198,21 +204,25 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
           </div>
 
           {/* Category Tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-2 scrollbar-none border-t border-[#F0EAE1]">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer ${
-                  selectedCategory === cat.id
-                    ? 'bg-[#C24D2C] text-white shadow-md shadow-[#C24D2C]/30 scale-105'
-                    : 'bg-[#FAF7F2] text-[#5C554E] hover:bg-[#EAE4D9] border border-[#E0D5C3]'
-                }`}
-              >
-                <span>{cat.icon}</span>
-                <span>{cat.label}</span>
-              </button>
-            ))}
+          <div className="flex items-center justify-between sm:justify-center gap-2 sm:gap-4 border-t border-[#F0EAE1] pt-3">
+            <TricolorBands direction="left" theme="light" className="w-6 sm:w-12 md:w-20 shrink-0" size="sm" />
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5 scrollbar-none justify-start md:justify-center flex-1 sm:flex-initial">
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer ${
+                    selectedCategory === cat.id
+                      ? 'bg-[#C24D2C] text-white shadow-md shadow-[#C24D2C]/30 scale-105'
+                      : 'bg-[#FAF7F2] text-[#5C554E] hover:bg-[#EAE4D9] border border-[#E0D5C3]'
+                  }`}
+                >
+                  <span>{cat.icon}</span>
+                  <span>{cat.label}</span>
+                </button>
+              ))}
+            </div>
+            <TricolorBands direction="right" theme="light" className="w-6 sm:w-12 md:w-20 shrink-0" size="sm" />
           </div>
         </motion.div>
 

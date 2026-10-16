@@ -13,36 +13,35 @@ import {
   HelpCircle
 } from 'lucide-react';
 
-export const FermentationProcess: React.FC = () => {
+import { SiteInfo } from '../types';
+
+interface FermentationProcessProps {
+  siteInfo?: SiteInfo;
+}
+
+export const FermentationProcess: React.FC<FermentationProcessProps> = ({ siteInfo }) => {
   const [activeStep, setActiveStep] = useState(0);
 
   const steps = [
     {
-      title: '1. O Cultivo do Lievito Madre',
-      time: 'Hora 0 a 12',
-      tag: 'Fermento Vivo',
-      desc: 'Utilizamos nossa cultura viva de leveduras e bactérias lácticas mantida desde 1952. Este fermento natural confere sabor complexo, acidez sutil e aromas florais inigualáveis à massa.',
+      title: siteInfo?.fermentationStep1Title || '1. Farinha Italiana Tipo 00 Caputo & Água Mineral',
+      time: siteInfo?.fermentationStep1Time || 'Hora 0',
+      tag: 'Farinha Pura',
+      desc: siteInfo?.fermentationStep1Desc || 'Utilizamos farinha de trigo italiana de moagem lenta, livre de aditivos químicos, com alto teor proteico para suportar a longa maturação.',
       detail: 'Alimentado diariamente com água pura e farinha de trigo de alta força (W300+).'
     },
     {
-      title: '2. Hidratação 70% & Farinha Tipo 00',
-      time: 'Hora 12 a 24',
-      tag: 'Amassamento Suave',
-      desc: 'Mistura lenta sem aquecer a massa. A farinha italiana Tipo 00 possui granulometria finíssima e alta pureza, permitindo absorver 70% de água e criando uma rede de glúten flexível e aveludada.',
-      detail: 'Massa aberta estritamente com as pontas dos dedos, preservando o ar no cornicione.'
-    },
-    {
-      title: '3. Maturação Lenta a Frio (48 Horas)',
-      time: 'Hora 24 a 48',
+      title: siteInfo?.fermentationStep3Title || '2. Maturação Lenta a Frio (72 Horas)',
+      time: siteInfo?.fermentationStep3Time || 'Hora 24 a 72',
       tag: 'Transformação Química',
-      desc: 'O segredo da leveza! Em temperatura controlada a 4°C, as enzimas transformam os açúcares complexos e quebram as cadeias de glúten em aminoácidos simples. O resultado é uma pizza leve que não pesa no estômago.',
-      detail: '90% dos açúcares são pré-digeridos pelo fermento natural antes de ir ao forno.'
+      desc: siteInfo?.fermentationStep3Desc || 'O segredo da leveza! Em temperatura controlada a 4°C, as enzimas transformam os açúcares complexos e quebram as cadeias de glúten em aminoácidos simples. O resultado é uma pizza leve que não pesa no estômago.',
+      detail: '90% dos açúcares são pré-digeridos naturalmente antes de ir ao forno.'
     },
     {
-      title: '4. Forno a Lenha Napoletano a 450°C',
-      time: '60 a 90 Segundos',
+      title: siteInfo?.fermentationStep4Title || '3. Cocção a 450°C em 90 Segundos',
+      time: siteInfo?.fermentationStep4Time || '60 a 90 Segundos',
       tag: 'Choque Térmico',
-      desc: 'Assada diretamente na pedra vulcânica do Vesúvio. O calor intenso e rápido expande as bolhas de ar internas instantaneamente, criando a borda inflada, aerada e com as autênticas marcas de leopardo.',
+      desc: siteInfo?.fermentationStep4Desc || 'Assada diretamente na pedra vulcânica do Vesúvio. O calor intenso e rápido expande as bolhas de ar internas instantaneamente, criando a borda inflada, aerada e com as autênticas marcas de leopardo.',
       detail: 'O miolo permanece úmido e sedoso enquanto a casca ganha crocância delicada.'
     }
   ];
@@ -86,13 +85,13 @@ export const FermentationProcess: React.FC = () => {
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#C24D2C]/10 text-[#C24D2C] text-xs font-bold uppercase tracking-widest mb-3">
             <Wheat className="w-4 h-4" />
-            <span>Processo Artesanal & Saúde</span>
+            <span>{siteInfo?.fermentationBadge || 'Processo Artesanal & Saúde'}</span>
           </div>
           <h2 className="font-serif-italian text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[#181513] mb-4">
-            O Segredo das 48 Horas de Fermentação Lenta
+            {siteInfo?.fermentationTitle || 'O Segredo das 72 Horas de Fermentação Lenta'}
           </h2>
           <p className="text-[#5C554E] text-base sm:text-lg leading-relaxed">
-            Esqueça a sensação de peso e sede após comer pizza. Nosso método tradicional napolitano une tempo, paciência e biologia para criar uma massa aerada, incrivelmente leve e fácil de digerir.
+            {siteInfo?.fermentationSubtitle || 'Esqueça a sensação de peso e sede após comer pizza. Nosso método tradicional napolitano une tempo, paciência e biologia para criar uma massa aerada, incrivelmente leve e fácil de digerir.'}
           </p>
         </div>
 
@@ -176,7 +175,7 @@ export const FermentationProcess: React.FC = () => {
                   <CheckCircle2 className="w-4 h-4 text-[#E5A93C] shrink-0 mt-0.5" />
                   <div>
                     <strong className="text-white">Digestão Fácil:</strong>{' '}
-                    <span className="text-white/80">O glúten quebrado durante 48h não fermenta na sua barriga.</span>
+                    <span className="text-white/80">O glúten quebrado durante 72h não fermenta na sua barriga.</span>
                   </div>
                 </div>
 

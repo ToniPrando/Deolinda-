@@ -12,8 +12,10 @@ import { AdminAuthModal } from './components/AdminAuthModal';
 import { OrderTrackingModal } from './components/OrderTrackingModal';
 import { LogoUploadModal } from './components/LogoUploadModal';
 import { Footer } from './components/Footer';
-import { CartItem, Order, Reservation, OrderStatus, CustomerUser, MenuItem } from './types';
-import { MENU_ITEMS } from './data/menuData';
+import { CartItem, Order, Reservation, OrderStatus, CustomerUser, MenuItem, SocialPost, SiteInfo, MenuCategory } from './types';
+import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES } from './data/menuData';
+import { SOCIAL_POSTS } from './data/socialData';
+import { DEFAULT_SITE_INFO } from './data/siteInfoData';
 import { Flame, Maximize2 } from 'lucide-react';
 import { 
   subscribeToOrders, 
@@ -23,7 +25,10 @@ import {
   saveReservationToFirestore,
   subscribeToLogo,
   subscribeToBrandSettings,
-  subscribeToMenuItems
+  subscribeToMenuItems,
+  subscribeToGalleryPosts,
+  subscribeToSiteInfo,
+  subscribeToMenuCategories
 } from './services/firebaseService';
 
 export default function App() {
@@ -48,6 +53,42 @@ export default function App() {
       }
     } catch {}
     return MENU_ITEMS;
+  });
+
+  // Dynamic Menu Categories (Botões do Cardápio)
+  const [menuCategories, setMenuCategories] = useState<MenuCategory[]>(() => {
+    try {
+      const saved = localStorage.getItem('deolinda_custom_menu_categories');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return DEFAULT_MENU_CATEGORIES;
+  });
+
+  const [socialPosts, setSocialPosts] = useState<SocialPost[]>(() => {
+    try {
+      const saved = localStorage.getItem('deolinda_custom_social_posts');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return SOCIAL_POSTS;
+  });
+
+  const [siteInfo, setSiteInfo] = useState<SiteInfo>(() => {
+    try {
+      const saved = localStorage.getItem('deolinda_custom_site_info');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          return { ...DEFAULT_SITE_INFO, ...parsed };
+        }
+      }
+    } catch {}
+    return DEFAULT_SITE_INFO;
   });
 
   const handleOpenAuth = () => {
@@ -298,9 +339,66 @@ export default function App() {
       }
     });
 
+    // 4. Fetch gallery posts from backend API
+    fetch('/api/settings/gallery')
+      .then(res => res.json())
+      .then(data => {
+        if (data && Array.isArray(data.posts) && data.posts.length > 0) {
+          setSocialPosts(data.posts);
+          localStorage.setItem('deolinda_custom_social_posts', JSON.stringify(data.posts));
+        }
+      })
+      .catch(() => {});
+
+    // 5. Subscribe to Firestore gallery posts in real-time
+    const unsubGallery = subscribeToGalleryPosts((posts) => {
+      if (posts && posts.length > 0) {
+        setSocialPosts(posts);
+      }
+    });
+
+    // 6. Fetch site info from backend API
+    fetch('/api/settings/site-info')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.siteInfo && typeof data.siteInfo === 'object') {
+          setSiteInfo(prev => ({ ...prev, ...data.siteInfo }));
+          localStorage.setItem('deolinda_custom_site_info', JSON.stringify(data.siteInfo));
+        }
+      })
+      .catch(() => {});
+
+    // 7. Subscribe to Firestore site info in real-time
+    const unsubSiteInfo = subscribeToSiteInfo((info) => {
+      if (info && typeof info === 'object') {
+        setSiteInfo(prev => ({ ...prev, ...info }));
+      }
+    });
+
+    // 8. Fetch menu categories from backend API
+    fetch('/api/settings/categories')
+      .then(res => res.json())
+      .then(data => {
+        if (data && Array.isArray(data.categories) && data.categories.length > 0) {
+          setMenuCategories(data.categories);
+          localStorage.setItem('deolinda_custom_menu_categories', JSON.stringify(data.categories));
+        }
+      })
+      .catch(() => {});
+
+    // 9. Subscribe to Firestore menu categories in real-time
+    const unsubCategories = subscribeToMenuCategories((cats) => {
+      if (cats && cats.length > 0) {
+        setMenuCategories(cats);
+      }
+    });
+
     return () => {
       unsubscribeBrand();
       unsubMenu();
+      unsubGallery();
+      unsubSiteInfo();
+      unsubCategories();
     };
   }, []);
 
@@ -593,12 +691,14 @@ export default function App() {
     <div className="min-h-screen flex flex-col bg-[#FAF7F2] text-[#1E1B18] dark:bg-[#12100E] dark:text-[#FAF7F2] font-sans selection:bg-[#C24D2C] selection:text-white transition-colors duration-200">
       
       {/* Navigation */}
+      {/* Navigation */}
       <Navbar
         onOpenAuth={handleOpenAuth}
         currentUser={currentUser}
         customLogoUrl={customLogoUrl}
         customEmblemUrl={customEmblemUrl}
         isEmblemEnabled={isEmblemEnabled}
+        siteInfo={siteInfo}
       />
 
       {/* Main Content */}
@@ -613,32 +713,35 @@ export default function App() {
           customLogoUrl={customLogoUrl}
           customEmblemUrl={customEmblemUrl}
           isEmblemEnabled={isEmblemEnabled}
+          siteInfo={siteInfo}
         />
 
         {/* 2. Artisanal Fermentation & Fresh Ingredients */}
-        <FermentationProcess />
+        <FermentationProcess siteInfo={siteInfo} />
 
         {/* 3. Authentic Neapolitan Menu */}
         <MenuSection 
           menuItems={menuItems}
+          menuCategories={menuCategories}
           onAddToCart={handleAddToCart}
           currentUser={currentUser}
           onRequireLogin={handleOpenAuth}
         />
 
         {/* 4. Family Tradition & Heritage */}
-        <StorySection />
+        <StorySection siteInfo={siteInfo} />
 
-        {/* 5. Live Oven Social Gallery */}
-        <SocialFeedSection />
+        {/* 5. Fotos & Momentos */}
+        <SocialFeedSection posts={socialPosts} />
 
         {/* 6. Location & Directions */}
-        <LocationSection />
+        <LocationSection siteInfo={siteInfo} />
       </main>
 
       {/* Footer */}
       <Footer
         onOpenAdmin={() => setIsAdminAuthOpen(true)}
+        siteInfo={siteInfo}
       />
 
       {/* Slide-out Order Cart */}
@@ -681,6 +784,12 @@ export default function App() {
         onClose={() => setIsAdminOpen(false)}
         menuItems={menuItems}
         onMenuItemsUpdated={setMenuItems}
+        menuCategories={menuCategories}
+        onMenuCategoriesUpdated={setMenuCategories}
+        socialPosts={socialPosts}
+        onSocialPostsUpdated={setSocialPosts}
+        siteInfo={siteInfo}
+        onSiteInfoUpdated={setSiteInfo}
         orders={orders}
         reservations={reservations}
         onUpdateOrderStatus={handleUpdateOrderStatus}

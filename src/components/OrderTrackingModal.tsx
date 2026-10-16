@@ -130,7 +130,7 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
     },
     {
       key: 'preparing',
-      title: 'Em Preparo (Massa 48h)',
+      title: 'Em Preparo (Massa 72h)',
       subtitle: 'Abrindo o disco à mão com molho San Marzano e búfala',
       icon: Pizza,
       color: '#d97706'
@@ -305,7 +305,7 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                 </h4>
                 <p className="text-xs sm:text-sm text-white/90 max-w-md">
                   {currentOrder.status === 'received' && 'Seu pedido foi registrado em nosso banco de dados interno e já está na bancada do pizzaiolo.'}
-                  {currentOrder.status === 'preparing' && 'Massa de fermentação 48h sendo aberta manualmente e recheada com ingredientes D.O.P.'}
+                  {currentOrder.status === 'preparing' && 'Massa de fermentação 72h sendo aberta manualmente e recheada com ingredientes D.O.P.'}
                   {currentOrder.status === 'baking' && 'A pizza está dentro da cúpula de pedra vulcânica a 450°C, assando em menos de 90 segundos!'}
                   {currentOrder.status === 'out_for_delivery' && (currentOrder.type === 'delivery' ? 'O entregador já está com a caixa térmica lacrada a caminho do seu endereço.' : currentOrder.type === 'table' ? 'O garçom está levando sua pizza fumegante para a sua mesa.' : 'Seu pedido está quentinho te esperando no balcão.')}
                   {currentOrder.status === 'completed' && 'Esperamos que você tenha uma autêntica experiência gastronômica de Nápoles!'}

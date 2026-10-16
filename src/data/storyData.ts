@@ -39,7 +39,7 @@ export const STORY_MILESTONES: StoryMilestone[] = [
 
 export const ARTISAN_PILLARS = [
   {
-    title: 'Fermentação Lenta de 48 Horas',
+    title: 'Fermentação Lenta de 72 Horas',
     subtitle: 'Digestibilidade Incomparável',
     description: 'Nosso processo de bi-fermentação decompõe os açúcares e glúten complexos, garantindo uma massa extremamente leve, que não pesa no estômago e realça aromas florais e frutados.',
     icon: 'Clock'

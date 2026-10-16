@@ -8,10 +8,15 @@ import {
   ExternalLink,
   Loader2
 } from 'lucide-react';
+import { SiteInfo } from '../types';
 
-export const LocationSection: React.FC = () => {
-  const mapsUrl = 'https://maps.app.goo.gl/WXxuE14BxN9RBDmh8?g_st=ac';
-  const destinationQuery = 'Deolinda Pizzaria Napoletana';
+interface LocationSectionProps {
+  siteInfo?: SiteInfo;
+}
+
+export const LocationSection: React.FC<LocationSectionProps> = ({ siteInfo }) => {
+  const mapsUrl = siteInfo?.mapsUrl || 'https://maps.app.goo.gl/WXxuE14BxN9RBDmh8?g_st=ac';
+  const destinationQuery = siteInfo?.restaurantName || 'Deolinda Pizzaria Napoletana';
   const [isLocating, setIsLocating] = useState(false);
 
   const handleNavigateWithGPS = (e?: React.MouseEvent) => {
@@ -61,13 +66,13 @@ export const LocationSection: React.FC = () => {
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#C24D2C]/20 text-[#E5A93C] text-xs font-bold uppercase tracking-widest mb-3 border border-[#C24D2C]/40">
             <MapPin className="w-4 h-4 text-[#C24D2C]" />
-            <span>Onde Nos Encontrar</span>
+            <span>{siteInfo?.locationBadge || 'Onde Nos Encontrar'}</span>
           </div>
           <h2 className="font-serif-italian text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white mb-4">
-            Visite a Deolinda Pizzaria Napoletana
+            {siteInfo?.locationTitle || 'Visite a Deolinda Pizzaria Napoletana'}
           </h2>
           <p className="text-white/70 text-base sm:text-lg">
-            Um refúgio italiano aconchegante com aroma de lenha queimando, vinhos selecionados e a verdadeira hospitalidade de Nápoles.
+            {siteInfo?.locationSubtitle || 'Um refúgio italiano aconchegante com aroma de lenha queimando, vinhos selecionados e a verdadeira hospitalidade de Nápoles.'}
           </p>
         </div>
 
@@ -90,38 +95,62 @@ export const LocationSection: React.FC = () => {
                 <div className="space-y-3 text-xs sm:text-sm text-white/80">
                   <div className="flex justify-between py-2 border-b border-white/10">
                     <span className="font-semibold">Terça a Quinta-feira</span>
-                    <span className="text-[#E5A93C] font-bold">18h00 às 23h30</span>
+                    <span className="text-[#E5A93C] font-bold">{siteInfo?.hoursTueThu || '18h00 às 23h30'}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b border-white/10">
                     <span className="font-semibold">Sexta e Sábado</span>
-                    <span className="text-[#E5A93C] font-bold">18h00 às 00h00</span>
+                    <span className="text-[#E5A93C] font-bold">{siteInfo?.hoursFriSat || '18h00 às 00h00'}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b border-white/10">
                     <span className="font-semibold">Domingo</span>
-                    <span className="text-[#E5A93C] font-bold">18h00 às 23h00</span>
+                    <span className="text-[#E5A93C] font-bold">{siteInfo?.hoursSun || '18h00 às 23h00'}</span>
                   </div>
                   <div className="flex justify-between py-2 text-white/40">
                     <span>Segunda-feira</span>
-                    <span className="italic">Fechado (Descanso da Massa)</span>
+                    <span className="italic">{siteInfo?.hoursMon || 'Fechado (Descanso da Massa)'}</span>
                   </div>
                 </div>
 
                 <div className="pt-3 text-[11px] text-[#E5A93C] flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-green-500 animate-ping" />
-                  <span>Forno a Lenha aquecido a 450°C durante todo o serviço</span>
+                  <span>{siteInfo?.environmentInfo || 'Forno a Lenha aquecido a 450°C durante todo o serviço'}</span>
+                </div>
+
+                {/* Endereço Oficial */}
+                <div className="pt-3 border-t border-white/10">
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-3.5 rounded-2xl bg-white/5 border border-white/10 hover:border-[#C24D2C] hover:bg-white/[0.08] flex items-start gap-3 transition-all group"
+                  >
+                    <MapPin className="w-5 h-5 text-[#C24D2C] shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                    <div>
+                      <span className="block text-[11px] font-bold text-[#E5A93C] uppercase tracking-wider">Endereço da Pizzaria</span>
+                      <p className="text-xs sm:text-sm font-semibold text-white mt-0.5">
+                        {siteInfo?.address && !siteInfo.address.toLowerCase().includes('augusta')
+                          ? `${siteInfo.address}, ${siteInfo.addressNeighborhood || 'Centro'}, ${siteInfo.addressCityState || 'Itu, SP'}`
+                          : 'Rua Santa Cruz, 232, Centro, Itu, SP'}
+                      </p>
+                      <span className="inline-flex items-center gap-1 text-[11px] text-white/60 group-hover:text-[#E5A93C] mt-1">
+                        <span>Ver rotas no Google Maps</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </span>
+                    </div>
+                  </a>
                 </div>
               </div>
 
               {/* Direct WhatsApp Contact Button */}
               <div className="pt-4 border-t border-white/10">
                 <a
-                  href="https://wa.me/5511915331853?text=Ol%C3%A1%20Deolinda%20Pizzaria!%20Gostaria%20de%20informa%C3%A7%C3%B5es."
+                  href={`https://wa.me/${siteInfo?.whatsappNumber || '5511915331853'}?text=${encodeURIComponent(siteInfo?.whatsappMessage || 'Olá Deolinda Pizzaria! Gostaria de informações.')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full py-3.5 px-4 rounded-2xl bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all"
                 >
                   <Send className="w-4 h-4" />
-                  <span>WhatsApp: (11) 91533-1853</span>
+                  <span>WhatsApp: {siteInfo?.phone || '(11) 91533-1853'}</span>
                 </a>
               </div>
             </div>

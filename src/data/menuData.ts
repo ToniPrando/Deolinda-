@@ -1,4 +1,12 @@
-import { MenuItem, LoyaltyReward } from '../types';
+import { MenuItem, LoyaltyReward, MenuCategory } from '../types';
+
+export const DEFAULT_MENU_CATEGORIES: MenuCategory[] = [
+  { id: 'tradizionali', label: 'Pizzas Tradicionais', icon: '🍕' },
+  { id: 'speciali', label: 'Pizzas Especiais', icon: '✨' },
+  { id: 'antipasti', label: 'Entradas & Aperitivos', icon: '🫒' },
+  { id: 'dolci', label: 'Sobremesas', icon: '🍰' },
+  { id: 'bevande', label: 'Bebidas & Vinhos', icon: '🍷' }
+];
 
 export const MENU_ITEMS: MenuItem[] = [
   // PIZZE TRADIZIONALI
@@ -198,11 +206,11 @@ export const MENU_ITEMS: MenuItem[] = [
     name: 'Focaccia al Rosmarino e Sale di Maldon',
     italianName: 'Focaccia Napoletana Classica',
     category: 'antipasti',
-    description: 'Nossa massa napolitana de 48h aberta à mão, pincelada com azeite toscano extravirgem, alecrim fresco da nossa horta e flocos de flor de sal.',
+    description: 'Nossa massa napolitana de 72h aberta à mão, pincelada com azeite toscano extravirgem, alecrim fresco da nossa horta e flocos de flor de sal.',
     price: 28.0,
     image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=800&q=80',
     tags: ['Vegetariana', 'Sem Lactose Adaptável'],
-    ingredients: ['Massa Lievito Madre 48h', 'Azeite EVOO', 'Alecrim Fresco', 'Flor de Sal'],
+    ingredients: ['Massa Lievito Madre 72h', 'Azeite EVOO', 'Alecrim Fresco', 'Flor de Sal'],
     pairing: 'Cerveja Birra Moretti',
     isPopular: false,
     isAvailable: true,
@@ -422,7 +430,7 @@ export const LOYALTY_REWARDS: LoyaltyReward[] = [
     title: 'Pizza Margherita Verace D.O.P. Inteira',
     pointsRequired: 400,
     category: 'Pizza Inteira',
-    description: 'Nossa clássica Margherita D.O.P. com massa de 48h de fermentação.',
+    description: 'Nossa clássica Margherita D.O.P. com massa de 72h de fermentação.',
     iconName: 'Pizza'
   },
   {
