@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flame, Clock, Award, Sparkles, ArrowRight, Utensils, ChevronDown, Send } from 'lucide-react';
+import { Flame, Clock, Award, Sparkles, ArrowRight, Utensils, ChevronDown, Send, Instagram } from 'lucide-react';
 import { TricolorBands } from './TricolorBands';
 import { SiteInfo } from '../types';
 
@@ -114,10 +114,21 @@ export const Hero: React.FC<HeroProps> = ({
             href={`https://wa.me/${siteInfo?.whatsappNumber || '5511915331853'}?text=${encodeURIComponent(siteInfo?.whatsappMessage || 'Olá Deolinda Pizzaria! Gostaria de informações.')}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full sm:w-auto px-6 py-4 rounded-full bg-white/10 hover:bg-white/15 text-[#FAF7F2] border border-white/20 font-semibold text-sm backdrop-blur-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full sm:w-auto px-6 py-4 rounded-full bg-white/10 hover:bg-white/15 text-[#FAF7F2] border border-white/20 font-semibold text-sm backdrop-blur-md transition-all flex items-center justify-center gap-2 cursor-pointer hover:-translate-y-0.5"
           >
             <Send className="w-4 h-4 text-[#25D366]" />
             <span>{siteInfo?.heroCtaWhatsappText || `WhatsApp ${siteInfo?.phone || '(11) 91533-1853'}`}</span>
+          </a>
+
+          <a
+            href={siteInfo?.instagramUrl || 'https://www.instagram.com/deolindapizzaria/'}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Siga a Deolinda Pizzaria no Instagram (${siteInfo?.instagramHandle || '@deolindapizzaria'})`}
+            className="w-full sm:w-auto px-6 py-4 rounded-full bg-white/10 hover:bg-white/15 text-[#FAF7F2] border border-white/20 font-semibold text-sm backdrop-blur-md transition-all flex items-center justify-center gap-2 cursor-pointer hover:-translate-y-0.5"
+          >
+            <Instagram className="w-4 h-4 text-[#E5A93C]" />
+            <span>Instagram</span>
           </a>
         </div>
 
