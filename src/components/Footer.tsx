@@ -73,8 +73,8 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo }) => {
           </div>
 
           {/* Center Column: Criado por ToniAep */}
-          <div className="flex flex-col items-center justify-center text-center space-y-2.5 py-2 my-auto">
-            <span className="text-[11px] font-semibold uppercase tracking-widest text-[#E5A93C]/90 font-cinzel">
+          <div className="flex flex-col items-center justify-center text-center space-y-1.5 py-1 my-auto">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-[#E5A93C]/90 font-cinzel">
               Criado por
             </span>
             <a
@@ -82,7 +82,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo }) => {
               target="_blank"
               rel="noopener noreferrer"
               title="Visitar ToniAep Projetos (Criando Inovação)"
-              className="footer-logo relative group inline-flex items-center justify-center p-2 rounded-2xl bg-white/[0.02] hover:bg-white/[0.08] transition-all cursor-pointer"
+              className="footer-logo relative group inline-flex items-center justify-center p-1 rounded-xl bg-white/[0.02] hover:bg-white/[0.08] transition-all cursor-pointer max-w-[50px]"
             >
               <img 
                 src={toniaepLogo || TONIAEP_CREATOR_LOGO_BASE64} 
@@ -96,7 +96,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo }) => {
                 referrerPolicy="no-referrer"
                 loading="eager"
                 decoding="sync"
-                className="w-full max-w-[140px] h-auto object-contain drop-shadow-[0_4px_12px_rgba(0,180,255,0.25)] transition-transform duration-300 group-hover:scale-105"
+                className="w-full max-w-[48px] h-auto object-contain drop-shadow-[0_2px_8px_rgba(0,180,255,0.25)] transition-transform duration-300 group-hover:scale-105"
               />
             </a>
           </div>

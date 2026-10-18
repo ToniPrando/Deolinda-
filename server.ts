@@ -7,7 +7,11 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
-const PORT = Number(process.env.PORT) || 3000;
+const portArgIndex = process.argv.indexOf("--port");
+const argPort = portArgIndex !== -1 && process.argv[portArgIndex + 1] ? Number(process.argv[portArgIndex + 1]) : null;
+// Port 3000 is strictly required by the AI Studio environment and nginx reverse-proxy.
+// Port 8080 is used by nginx in the container and must be avoided.
+const PORT = argPort || (process.env.PORT && process.env.PORT !== "8080" ? Number(process.env.PORT) : 3000);
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -644,13 +648,37 @@ async function startServer() {
   // Always serve static assets from public/ folder with proper mime types
   app.use(express.static(path.join(process.cwd(), "public")));
 
-  if (process.env.NODE_ENV !== "production") {
+  const isProduction = process.env.NODE_ENV === "production" && fs.existsSync(path.join(process.cwd(), "dist", "index.html"));
+
+  if (!isProduction) {
     const { createServer: createViteServer } = await import("vite");
+    const isHmrDisabled = process.env.DISABLE_HMR === "true";
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: !isHmrDisabled,
+        watch: isHmrDisabled ? null : {},
+      },
       appType: "spa",
     });
     app.use(vite.middlewares);
+
+    app.use("*", async (req, res, next) => {
+      const url = req.originalUrl;
+      if (url.startsWith("/api/")) {
+        return next();
+      }
+      try {
+        const rawIndex = fs.readFileSync(path.join(process.cwd(), "index.html"), "utf-8");
+        const transformedHtml = await vite.transformIndexHtml(url, rawIndex);
+        res.status(200).set({ "Content-Type": "text/html" }).end(transformedHtml);
+      } catch (e) {
+        if (vite.ssrFixStacktrace) {
+          vite.ssrFixStacktrace(e as Error);
+        }
+        next(e);
+      }
+    });
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));

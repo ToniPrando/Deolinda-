@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Lock, X, KeyRound, AlertCircle, CheckCircle2, Flame, BellRing } from 'lucide-react';
-import { unlockAudio, playNewOrderSound } from '../utils/audioAlert';
+import { ShieldCheck, Lock, X, KeyRound, AlertCircle, Flame, Eye, EyeOff } from 'lucide-react';
+import { unlockAudio } from '../utils/audioAlert';
 
 interface AdminAuthModalProps {
   isOpen: boolean;
@@ -16,6 +16,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   if (!isOpen) return null;
 
@@ -72,10 +73,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
               <Lock className="w-6 h-6" />
             </div>
             <p className="text-xs text-white/80 font-medium">
-              Digite o PIN de segurança ou senha da equipe para desbloquear:
-            </p>
-            <p className="text-[11px] text-[#E5A93C]/80 font-mono">
-              (PIN Padrão: 1234)
+              Digite a senha ou PIN de acesso da equipe:
             </p>
           </div>
 
@@ -90,7 +88,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
             <div className="relative">
               <KeyRound className="w-4 h-4 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 autoFocus
                 value={pin}
@@ -98,9 +96,17 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
                   setPin(e.target.value);
                   setError('');
                 }}
-                placeholder="Digite a senha ou PIN (1234)"
-                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white/5 border border-white/20 text-[#FAF7F2] placeholder-white/40 text-sm tracking-widest text-center focus:outline-none focus:border-[#C24D2C] focus:ring-1 focus:ring-[#C24D2C]"
+                placeholder="••••••••"
+                className="w-full pl-10 pr-10 py-3 rounded-2xl bg-white/5 border border-white/20 text-[#FAF7F2] placeholder-white/30 text-sm tracking-widest text-center focus:outline-none focus:border-[#C24D2C] focus:ring-1 focus:ring-[#C24D2C]"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors cursor-pointer"
+                title={showPassword ? "Ocultar senha" : "Exibir senha"}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
