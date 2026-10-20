@@ -14,13 +14,17 @@ interface NavbarProps {
   customEmblemUrl?: string | null;
   isEmblemEnabled?: boolean;
   siteInfo?: SiteInfo;
+  activeSection?: string;
+  onNavigate?: (id: string, pathOverride?: string) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   customLogoUrl,
   customEmblemUrl,
   isEmblemEnabled = true,
-  siteInfo
+  siteInfo,
+  activeSection,
+  onNavigate
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -33,20 +37,24 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const scrollToSection = (id: string) => {
+  const handleNavClick = (id: string, path: string) => {
     setMobileMenuOpen(false);
-    const element = document.getElementById(id);
-    if (element) {
-      const offset = 80;
-      const bodyRect = document.body.getBoundingClientRect().top;
-      const elementRect = element.getBoundingClientRect().top;
-      const elementPosition = elementRect - bodyRect;
-      const offsetPosition = elementPosition - offset;
+    if (onNavigate) {
+      onNavigate(id, path);
+    } else {
+      const element = document.getElementById(id);
+      if (element) {
+        const offset = 80;
+        const bodyRect = document.body.getBoundingClientRect().top;
+        const elementRect = element.getBoundingClientRect().top;
+        const elementPosition = elementRect - bodyRect;
+        const offsetPosition = elementPosition - offset;
 
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      }
     }
   };
 
@@ -63,10 +71,10 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="relative flex items-center">
             <a
-              href="#"
+              href="/"
               onClick={(e) => {
                 e.preventDefault();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                handleNavClick('hero', '/');
               }}
               className="flex items-center gap-3 text-left group"
             >
@@ -110,36 +118,56 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Desktop Navigation Links with enhanced spacing */}
-        <nav className="hidden lg:flex items-center gap-4 xl:gap-6 2xl:gap-8 text-sm font-semibold tracking-wide">
+        {/* Desktop Navigation Links with enhanced spacing and active states */}
+        <nav className="hidden lg:flex items-center gap-2.5 xl:gap-4 2xl:gap-6 text-sm tracking-wide">
           <TricolorBands direction="left" theme="dark" className="w-8 xl:w-12 shrink-0" size="sm" />
           <button
-            onClick={() => scrollToSection('fermentacao')}
-            className="px-3.5 py-1.5 rounded-full text-[#FAF7F2]/90 hover:text-[#E5A93C] hover:bg-white/5 transition-all cursor-pointer"
+            onClick={() => handleNavClick('fermentacao', '/processo')}
+            className={`px-3.5 py-1.5 rounded-full transition-all cursor-pointer ${
+              activeSection === 'fermentacao'
+                ? 'bg-white/15 text-[#E5A93C] font-bold shadow-sm ring-1 ring-[#E5A93C]/40'
+                : 'text-[#FAF7F2]/90 hover:text-[#E5A93C] hover:bg-white/5 font-semibold'
+            }`}
           >
             Processo & Massa
           </button>
           <button
-            onClick={() => scrollToSection('cardapio')}
-            className="px-3.5 py-1.5 rounded-full text-[#FAF7F2]/90 hover:text-[#E5A93C] hover:bg-white/5 transition-all cursor-pointer"
+            onClick={() => handleNavClick('cardapio', '/cardapio')}
+            className={`px-3.5 py-1.5 rounded-full transition-all cursor-pointer ${
+              activeSection === 'cardapio'
+                ? 'bg-white/15 text-[#E5A93C] font-bold shadow-sm ring-1 ring-[#E5A93C]/40'
+                : 'text-[#FAF7F2]/90 hover:text-[#E5A93C] hover:bg-white/5 font-semibold'
+            }`}
           >
             Cardápio
           </button>
           <button
-            onClick={() => scrollToSection('historia')}
-            className="px-3.5 py-1.5 rounded-full text-[#FAF7F2]/90 hover:text-[#E5A93C] hover:bg-white/5 transition-all cursor-pointer"
+            onClick={() => handleNavClick('historia', '/historia')}
+            className={`px-3.5 py-1.5 rounded-full transition-all cursor-pointer ${
+              activeSection === 'historia'
+                ? 'bg-white/15 text-[#E5A93C] font-bold shadow-sm ring-1 ring-[#E5A93C]/40'
+                : 'text-[#FAF7F2]/90 hover:text-[#E5A93C] hover:bg-white/5 font-semibold'
+            }`}
           >
             Nossa Tradição
           </button>
           <button
-            onClick={() => scrollToSection('galeria')}
-            className="px-3.5 py-1.5 rounded-full text-[#FAF7F2]/90 hover:text-[#E5A93C] hover:bg-white/5 transition-all cursor-pointer"
+            onClick={() => handleNavClick('galeria', '/galeria')}
+            className={`px-3.5 py-1.5 rounded-full transition-all cursor-pointer ${
+              activeSection === 'galeria'
+                ? 'bg-white/15 text-[#E5A93C] font-bold shadow-sm ring-1 ring-[#E5A93C]/40'
+                : 'text-[#FAF7F2]/90 hover:text-[#E5A93C] hover:bg-white/5 font-semibold'
+            }`}
           >
             Fotos & Momentos
           </button>
           <button
-            onClick={() => scrollToSection('localizacao')}
-            className="px-3.5 py-1.5 rounded-full text-[#FAF7F2]/90 hover:text-[#E5A93C] hover:bg-white/5 transition-all cursor-pointer"
+            onClick={() => handleNavClick('localizacao', '/localizacao')}
+            className={`px-3.5 py-1.5 rounded-full transition-all cursor-pointer ${
+              activeSection === 'localizacao'
+                ? 'bg-white/15 text-[#E5A93C] font-bold shadow-sm ring-1 ring-[#E5A93C]/40'
+                : 'text-[#FAF7F2]/90 hover:text-[#E5A93C] hover:bg-white/5 font-semibold'
+            }`}
           >
             Localização
           </button>
@@ -168,32 +196,42 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
           <div className="flex flex-col space-y-1 text-base font-medium pt-1">
             <button
-              onClick={() => scrollToSection('fermentacao')}
-              className="text-left py-2 px-3 rounded hover:bg-white/10 text-[#FAF7F2]"
+              onClick={() => handleNavClick('fermentacao', '/processo')}
+              className={`text-left py-2 px-3 rounded transition-colors ${
+                activeSection === 'fermentacao' ? 'bg-white/15 text-[#E5A93C] font-bold' : 'hover:bg-white/10 text-[#FAF7F2]'
+              }`}
             >
               Processo & Massa (Fermentação 72h)
             </button>
             <button
-              onClick={() => scrollToSection('cardapio')}
-              className="text-left py-2 px-3 rounded hover:bg-white/10 text-[#FAF7F2]"
+              onClick={() => handleNavClick('cardapio', '/cardapio')}
+              className={`text-left py-2 px-3 rounded transition-colors ${
+                activeSection === 'cardapio' ? 'bg-white/15 text-[#E5A93C] font-bold' : 'hover:bg-white/10 text-[#FAF7F2]'
+              }`}
             >
               Cardápio Autêntico
             </button>
             <button
-              onClick={() => scrollToSection('historia')}
-              className="text-left py-2 px-3 rounded hover:bg-white/10 text-[#FAF7F2]"
+              onClick={() => handleNavClick('historia', '/historia')}
+              className={`text-left py-2 px-3 rounded transition-colors ${
+                activeSection === 'historia' ? 'bg-white/15 text-[#E5A93C] font-bold' : 'hover:bg-white/10 text-[#FAF7F2]'
+              }`}
             >
               Nossa História & Tradição
             </button>
             <button
-              onClick={() => scrollToSection('galeria')}
-              className="text-left py-2 px-3 rounded hover:bg-white/10 text-[#FAF7F2]"
+              onClick={() => handleNavClick('galeria', '/galeria')}
+              className={`text-left py-2 px-3 rounded transition-colors ${
+                activeSection === 'galeria' ? 'bg-white/15 text-[#E5A93C] font-bold' : 'hover:bg-white/10 text-[#FAF7F2]'
+              }`}
             >
               Fotos & Momentos (#DeolindaNapoletana)
             </button>
             <button
-              onClick={() => scrollToSection('localizacao')}
-              className="text-left py-2 px-3 rounded hover:bg-white/10 text-[#FAF7F2]"
+              onClick={() => handleNavClick('localizacao', '/localizacao')}
+              className={`text-left py-2 px-3 rounded transition-colors ${
+                activeSection === 'localizacao' ? 'bg-white/15 text-[#E5A93C] font-bold' : 'hover:bg-white/10 text-[#FAF7F2]'
+              }`}
             >
               Localização & Horários
             </button>

@@ -12,9 +12,10 @@ interface FooterProps {
   onOpenReservation?: () => void;
   onOpenAdmin: () => void;
   siteInfo?: SiteInfo;
+  onNavigate?: (id: string, pathOverride?: string) => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo }) => {
+export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo, onNavigate }) => {
   return (
     <footer className="site-footer bg-[#120F0D] text-[#FAF7F2] border-t border-[#C24D2C]/30 pt-12 pb-10">
       <div className="footer-content w-full max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -108,27 +109,62 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo }) => {
             </h4>
             <ul className="space-y-2 text-xs text-white/80 md:text-right">
               <li>
-                <a href="#fermentacao" className="hover:text-[#E5A93C] transition-colors">
+                <a 
+                  href="/processo" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (onNavigate) onNavigate('fermentacao', '/processo');
+                  }}
+                  className="hover:text-[#E5A93C] transition-colors"
+                >
                   Fermentação Lenta 72h & Ingredientes
                 </a>
               </li>
               <li>
-                <a href="#cardapio" className="hover:text-[#E5A93C] transition-colors">
+                <a 
+                  href="/cardapio" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (onNavigate) onNavigate('cardapio', '/cardapio');
+                  }}
+                  className="hover:text-[#E5A93C] transition-colors"
+                >
                   Cardápio Tradizionale & Speciali
                 </a>
               </li>
               <li>
-                <a href="#historia" className="hover:text-[#E5A93C] transition-colors">
+                <a 
+                  href="/historia" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (onNavigate) onNavigate('historia', '/historia');
+                  }}
+                  className="hover:text-[#E5A93C] transition-colors"
+                >
                   História & Tradição da Nonna Deolinda
                 </a>
               </li>
               <li>
-                <a href="#galeria" className="hover:text-[#E5A93C] transition-colors">
+                <a 
+                  href="/galeria" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (onNavigate) onNavigate('galeria', '/galeria');
+                  }}
+                  className="hover:text-[#E5A93C] transition-colors"
+                >
                   Fotos & Momentos
                 </a>
               </li>
               <li>
-                <a href="#localizacao" className="hover:text-[#E5A93C] transition-colors">
+                <a 
+                  href="/localizacao" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (onNavigate) onNavigate('localizacao', '/localizacao');
+                  }}
+                  className="hover:text-[#E5A93C] transition-colors"
+                >
                   Localização & Horários
                 </a>
               </li>

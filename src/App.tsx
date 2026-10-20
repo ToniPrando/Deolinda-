@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { FermentationProcess } from './components/FermentationProcess';
@@ -30,8 +30,12 @@ import {
   subscribeToSiteInfo,
   subscribeToMenuCategories
 } from './services/firebaseService';
+import { navigateToSection, getRouteByPath, getRouteById } from './utils/navigationRouter';
 
 export default function App() {
+  const [activeSection, setActiveSection] = useState<string>('hero');
+  const isNavigatingRef = useRef(false);
+
   const [currentUser, setCurrentUser] = useState<CustomerUser | null>(() => {
     try {
       const saved = localStorage.getItem('deolinda_customer_user');
@@ -671,26 +675,159 @@ export default function App() {
     }
   };
 
-  const scrollToSection = (id: string) => {
-    const el = document.getElementById(id);
-    if (el) {
-      const offset = 80;
-      const bodyRect = document.body.getBoundingClientRect().top;
-      const elementRect = el.getBoundingClientRect().top;
-      const elementPosition = elementRect - bodyRect;
-      const offsetPosition = elementPosition - offset;
-
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
-    }
+  const handleNavigate = (id: string, pathOverride?: string, pushHistory = true) => {
+    isNavigatingRef.current = true;
+    setActiveSection(id);
+    navigateToSection(id, pathOverride, pushHistory);
+    setTimeout(() => {
+      isNavigatingRef.current = false;
+    }, 850);
   };
+
+  const handleOpenAdminAuth = () => {
+    setIsAdminAuthOpen(true);
+    if (window.location.pathname !== '/admin') {
+      window.history.pushState({ section: 'admin' }, '', '/admin');
+    }
+    document.title = 'Área do Administrador | Deolinda Pizzaria Napoletana';
+  };
+
+  const handleCloseAdmin = () => {
+    setIsAdminOpen(false);
+    setIsAdminAuthOpen(false);
+    const route = getRouteById(activeSection);
+    const targetPath = route ? route.path : '/';
+    if (window.location.pathname === '/admin') {
+      window.history.pushState({ section: activeSection }, '', targetPath);
+    }
+    document.title = route ? route.title : 'Deolinda Pizzaria Napoletana | Fermentação Lenta & Tradição';
+  };
+
+  // 1. Initial deep linking by pathname or hash, and browser history popstate
+  useEffect(() => {
+    const initialPath = window.location.pathname;
+    const initialHash = window.location.hash.replace('#', '');
+
+    if (initialPath === '/admin' || initialHash === 'admin') {
+      setIsAdminAuthOpen(true);
+      document.title = 'Área do Administrador | Deolinda Pizzaria Napoletana';
+      return;
+    }
+
+    let targetRoute = getRouteByPath(initialPath);
+    if (!targetRoute && initialHash) {
+      targetRoute = getRouteById(initialHash);
+    }
+
+    if (targetRoute && targetRoute.id !== 'hero') {
+      setActiveSection(targetRoute.id);
+      setTimeout(() => {
+        navigateToSection(targetRoute.id, targetRoute.path, false);
+      }, 200);
+    } else {
+      document.title = 'Deolinda Pizzaria Napoletana | Fermentação Lenta & Tradição';
+    }
+
+    const handlePopState = () => {
+      const currentPath = window.location.pathname;
+      if (currentPath === '/admin') {
+        setIsAdminAuthOpen(true);
+        return;
+      } else {
+        setIsAdminOpen(false);
+        setIsAdminAuthOpen(false);
+      }
+
+      const route = getRouteByPath(currentPath);
+      if (route) {
+        setActiveSection(route.id);
+        navigateToSection(route.id, route.path, false);
+      } else {
+        setActiveSection('hero');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // 2. Real-time scroll spy that synchronizes current section with browser address bar
+  useEffect(() => {
+    let ticking = false;
+
+    const onScroll = () => {
+      if (isNavigatingRef.current) return;
+      if (isAdminOpen || isAdminAuthOpen) return;
+
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const scrollY = window.scrollY;
+          const viewportHeight = window.innerHeight;
+
+          if (scrollY < 180) {
+            if (activeSection !== 'hero') {
+              setActiveSection('hero');
+              if (window.location.pathname !== '/') {
+                window.history.replaceState({ section: 'hero' }, '', '/');
+                document.title = 'Deolinda Pizzaria Napoletana | Fermentação Lenta & Tradição';
+              }
+            }
+            ticking = false;
+            return;
+          }
+
+          if (window.innerHeight + scrollY >= document.body.offsetHeight - 80) {
+            if (activeSection !== 'localizacao') {
+              setActiveSection('localizacao');
+              if (window.location.pathname !== '/localizacao') {
+                window.history.replaceState({ section: 'localizacao' }, '', '/localizacao');
+                document.title = 'Localização & Horários de Atendimento | Deolinda Pizzaria Napoletana';
+              }
+            }
+            ticking = false;
+            return;
+          }
+
+          const sections = ['fermentacao', 'cardapio', 'historia', 'galeria', 'localizacao'];
+          let bestSection: string | null = null;
+          let minDistance = Infinity;
+
+          for (const secId of sections) {
+            const el = document.getElementById(secId);
+            if (!el) continue;
+            const rect = el.getBoundingClientRect();
+            const dist = Math.abs(rect.top - 90);
+            if (rect.top <= viewportHeight * 0.55 && rect.bottom >= 120) {
+              if (dist < minDistance) {
+                minDistance = dist;
+                bestSection = secId;
+              }
+            }
+          }
+
+          if (bestSection && bestSection !== activeSection) {
+            setActiveSection(bestSection);
+            const route = getRouteById(bestSection);
+            if (route && window.location.pathname !== route.path) {
+              window.history.replaceState({ section: bestSection }, '', route.path);
+              document.title = route.title;
+            }
+          }
+
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [activeSection, isAdminOpen, isAdminAuthOpen]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF7F2] text-[#1E1B18] dark:bg-[#12100E] dark:text-[#FAF7F2] font-sans selection:bg-[#C24D2C] selection:text-white transition-colors duration-200">
       
-      {/* Navigation */}
       {/* Navigation */}
       <Navbar
         onOpenAuth={handleOpenAuth}
@@ -699,13 +836,15 @@ export default function App() {
         customEmblemUrl={customEmblemUrl}
         isEmblemEnabled={isEmblemEnabled}
         siteInfo={siteInfo}
+        activeSection={activeSection}
+        onNavigate={handleNavigate}
       />
 
       {/* Main Content */}
       <main className="flex-grow">
         {/* 1. Hero Section */}
         <Hero
-          onOpenMenu={() => scrollToSection('cardapio')}
+          onOpenMenu={() => handleNavigate('cardapio', '/cardapio')}
           onOpenConcierge={() => {
             const chatTrigger = document.querySelector<HTMLButtonElement>('button[aria-label*="Suporte"]');
             if (chatTrigger) chatTrigger.click();
@@ -740,8 +879,9 @@ export default function App() {
 
       {/* Footer */}
       <Footer
-        onOpenAdmin={() => setIsAdminAuthOpen(true)}
+        onOpenAdmin={handleOpenAdminAuth}
         siteInfo={siteInfo}
+        onNavigate={handleNavigate}
       />
 
       {/* Slide-out Order Cart */}
@@ -756,7 +896,7 @@ export default function App() {
         currentUser={currentUser}
         onUpdateUser={setCurrentUser}
         initialTab={cartDrawerTab}
-        onOpenAdmin={() => setIsAdminAuthOpen(true)}
+        onOpenAdmin={handleOpenAdminAuth}
         onOpenTracking={(ord) => {
           setActiveTrackingOrder(ord);
           setIsTrackingModalOpen(true);
@@ -774,14 +914,14 @@ export default function App() {
       {/* Administrator Protected Authentication Modal */}
       <AdminAuthModal
         isOpen={isAdminAuthOpen}
-        onClose={() => setIsAdminAuthOpen(false)}
+        onClose={handleCloseAdmin}
         onSuccess={() => setIsAdminOpen(true)}
       />
 
       {/* Admin Dashboard */}
       <AdminDashboard
         isOpen={isAdminOpen}
-        onClose={() => setIsAdminOpen(false)}
+        onClose={handleCloseAdmin}
         menuItems={menuItems}
         onMenuItemsUpdated={setMenuItems}
         menuCategories={menuCategories}
