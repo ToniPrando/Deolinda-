@@ -865,6 +865,7 @@ export default function App() {
           onAddToCart={handleAddToCart}
           currentUser={currentUser}
           onRequireLogin={handleOpenAuth}
+          siteInfo={siteInfo}
         />
 
         {/* 4. Family Tradition & Heritage */}

@@ -1,9 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, 
   Sparkles, 
-  Wine, 
   Plus, 
   Flame, 
   UtensilsCrossed, 
@@ -13,10 +12,11 @@ import {
   ShoppingBag,
   Info,
   Lock,
-  LogIn,
-  Star
+  Star,
+  LayoutGrid,
+  ChevronDown
 } from 'lucide-react';
-import { MenuItem, CategoryType, CartItem, CustomerUser, MenuCategory } from '../types';
+import { MenuItem, CategoryType, CartItem, CustomerUser, MenuCategory, SiteInfo } from '../types';
 import { MENU_ITEMS, CRUST_OPTIONS, EXTRA_TOPPINGS, DEFAULT_MENU_CATEGORIES } from '../data/menuData';
 import { TricolorBands } from './TricolorBands';
 
@@ -26,6 +26,7 @@ interface MenuSectionProps {
   onAddToCart: (item: CartItem) => void;
   currentUser: CustomerUser | null;
   onRequireLogin: () => void;
+  siteInfo?: SiteInfo;
 }
 
 export const MenuSection: React.FC<MenuSectionProps> = ({ 
@@ -33,10 +34,45 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
   menuCategories,
   onAddToCart,
   currentUser,
-  onRequireLogin
+  onRequireLogin,
+  siteInfo
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<CategoryType | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [gridCols, setGridCols] = useState<3 | 4 | 5>(5);
+  const [isGridMenuOpen, setIsGridMenuOpen] = useState<boolean>(false);
+  const gridMenuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const gridMenuContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const handleGridMouseEnter = () => {
+    if (gridMenuTimeoutRef.current) {
+      clearTimeout(gridMenuTimeoutRef.current);
+      gridMenuTimeoutRef.current = null;
+    }
+    setIsGridMenuOpen(true);
+  };
+
+  const handleGridMouseLeave = () => {
+    if (gridMenuTimeoutRef.current) {
+      clearTimeout(gridMenuTimeoutRef.current);
+    }
+    gridMenuTimeoutRef.current = setTimeout(() => {
+      setIsGridMenuOpen(false);
+    }, 280);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (gridMenuContainerRef.current && !gridMenuContainerRef.current.contains(e.target as Node)) {
+        setIsGridMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      if (gridMenuTimeoutRef.current) clearTimeout(gridMenuTimeoutRef.current);
+    };
+  }, []);
 
   // Modal State for Pizza Customizer
   const [customizingItem, setCustomizingItem] = useState<MenuItem | null>(null);
@@ -100,6 +136,21 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
     const crustPrice = crustObj ? crustObj.price : 0;
     const extrasTotal = selectedExtras.reduce((sum, e) => sum + e.price, 0);
     return (customizingItem.price + crustPrice + extrasTotal) * itemQuantity;
+  };
+
+  const buildCustomizedWhatsAppText = () => {
+    if (!customizingItem) return '';
+    const crustObj = CRUST_OPTIONS.find(c => c.name === selectedCrust);
+    const crustPart = (customizingItem.category === 'tradizionali' || customizingItem.category === 'speciali') && selectedCrust
+      ? ` - Borda: ${selectedCrust}${crustObj && crustObj.price > 0 ? ` (+${formatBRL(crustObj.price)})` : ''}`
+      : '';
+    const extrasPart = selectedExtras.length > 0
+      ? ` - Adicionais: ${selectedExtras.map(e => `${e.name} (+${formatBRL(e.price)})`).join(', ')}`
+      : '';
+    const notesPart = specialNotes.trim() ? ` - Obs: ${specialNotes.trim()}` : '';
+    const total = formatBRL(calculateCustomizedPrice());
+
+    return `Olá Deolinda Pizzaria! Gostaria de pedir: *${itemQuantity}x ${customizingItem.name}* (${total})${crustPart}${extrasPart}${notesPart}.`;
   };
 
   const handleConfirmAddToCart = () => {
@@ -183,7 +234,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8C827A]" />
               <input
                 type="text"
-                placeholder="Buscar por pizza, ingrediente ou vinho..."
+                placeholder="Buscar por pizza ou ingrediente..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C] transition-all"
@@ -203,15 +254,14 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
             </div>
           </div>
 
-          {/* Category Tabs */}
-          <div className="flex items-center justify-between sm:justify-center gap-2 sm:gap-4 border-t border-[#F0EAE1] pt-3">
-            <TricolorBands direction="left" theme="light" className="w-6 sm:w-12 md:w-20 shrink-0" size="sm" />
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5 scrollbar-none justify-start md:justify-center flex-1 sm:flex-initial">
+          {/* Category Tabs & Grid View Control */}
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-3 border-t border-[#F0EAE1] pt-3">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5 scrollbar-none justify-start flex-1 w-full lg:w-auto">
               {categories.map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer ${
+                  className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
                     selectedCategory === cat.id
                       ? 'bg-[#C24D2C] text-white shadow-md shadow-[#C24D2C]/30 scale-105'
                       : 'bg-[#FAF7F2] text-[#5C554E] hover:bg-[#EAE4D9] border border-[#E0D5C3]'
@@ -222,7 +272,71 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                 </button>
               ))}
             </div>
-            <TricolorBands direction="right" theme="light" className="w-6 sm:w-12 md:w-20 shrink-0" size="sm" />
+
+            {/* Grid Configuration Button with Hover Menu */}
+            <div 
+              ref={gridMenuContainerRef}
+              className="relative shrink-0 self-center lg:self-center"
+              onMouseEnter={handleGridMouseEnter}
+              onMouseLeave={handleGridMouseLeave}
+            >
+              <button
+                type="button"
+                onClick={() => setIsGridMenuOpen(prev => !prev)}
+                className="px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer bg-[#FAF7F2] text-[#5C554E] hover:bg-[#EAE4D9] border border-[#E0D5C3] shadow-xs hover:border-[#C24D2C]/40 hover:text-[#181513]"
+                aria-haspopup="true"
+                aria-expanded={isGridMenuOpen}
+              >
+                <LayoutGrid className="w-4 h-4 text-[#C24D2C]" />
+                <span>Grade ({gridCols} por linha)</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isGridMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Hover Dropdown Menu */}
+              {isGridMenuOpen && (
+                <div 
+                  className="absolute right-0 top-full pt-1.5 z-50 min-w-[215px] animate-in fade-in zoom-in-95 duration-150"
+                  onMouseEnter={handleGridMouseEnter}
+                  onMouseLeave={handleGridMouseLeave}
+                >
+                  <div className="bg-white rounded-2xl shadow-xl border border-[#E0D5C3] p-1.5 backdrop-blur-md">
+                    <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#8C827A] border-b border-[#F0EAE1] mb-1 flex items-center justify-between">
+                      <span>Configurar Grade</span>
+                      <span className="text-[#C24D2C] font-semibold">{gridCols} por linha</span>
+                    </div>
+                    {[
+                      { cols: 5, label: '5 por linha', hint: 'Padrão recomendado' },
+                      { cols: 4, label: '4 por linha', hint: 'Visual intermediário' },
+                      { cols: 3, label: '3 por linha', hint: 'Cards maiores' },
+                    ].map((option) => (
+                      <button
+                        key={option.cols}
+                        type="button"
+                        onClick={() => {
+                          setGridCols(option.cols as 3 | 4 | 5);
+                          setIsGridMenuOpen(false);
+                        }}
+                        className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between gap-3 text-left cursor-pointer ${
+                          gridCols === option.cols
+                            ? 'bg-[#C24D2C] text-white shadow-sm'
+                            : 'text-[#5C554E] hover:bg-[#FAF7F2] hover:text-[#181513]'
+                        }`}
+                      >
+                        <div className="flex flex-col">
+                          <span>{option.label}</span>
+                          <span className={`text-[10px] font-normal ${gridCols === option.cols ? 'text-white/80' : 'text-[#8C827A]'}`}>
+                            {option.hint}
+                          </span>
+                        </div>
+                        {gridCols === option.cols && (
+                          <Check className="w-4 h-4 shrink-0" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </motion.div>
 
@@ -253,11 +367,17 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
           </motion.div>
         ) : (
           <motion.div
-            key={`${selectedCategory}-${searchQuery ? 'search' : 'all'}`}
+            key={`${selectedCategory}-${searchQuery ? 'search' : 'all'}-${gridCols}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.35 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+            className={`grid ${
+              gridCols === 3
+                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5'
+                : gridCols === 4
+                ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'
+                : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4'
+            }`}
           >
             {filteredItems.map((item, index) => (
               <motion.div
@@ -268,12 +388,16 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                 transition={{
                   duration: 0.55,
                   ease: [0.22, 1, 0.36, 1],
-                  delay: Math.min((index % 3) * 0.08, 0.24)
+                  delay: Math.min((index % 5) * 0.05, 0.25)
                 }}
-                className="bg-white rounded-3xl overflow-hidden border border-[#E0D5C3] shadow-sm hover:shadow-xl transition-shadow duration-300 flex flex-col group will-change-transform"
+                className="bg-white rounded-2xl overflow-hidden border border-[#E0D5C3] shadow-sm hover:shadow-xl transition-shadow duration-300 flex flex-col group will-change-transform"
               >
                 {/* Image & Badges */}
-                <div className="relative h-56 overflow-hidden bg-[#181513]">
+                <div 
+                  onClick={() => openCustomizer(item)}
+                  className="relative h-44 sm:h-48 overflow-hidden bg-[#181513] cursor-pointer"
+                  title="Clique para ver detalhes e personalizar"
+                >
                   <img
                     src={item.image}
                     alt={item.name}
@@ -283,71 +407,83 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
                   {/* Loyalty Points Earned Badge (Top Right) */}
-                  <div className="absolute top-3 right-3 bg-[#181513]/85 backdrop-blur-md px-2.5 py-1 rounded-full border border-[#E5A93C]/40 text-[#E5A93C] font-mono font-black text-[10px] shadow flex items-center gap-1">
+                  <div className="absolute top-2.5 right-2.5 bg-[#181513]/85 backdrop-blur-md px-2 py-0.5 rounded-full border border-[#E5A93C]/40 text-[#E5A93C] font-mono font-bold text-[10px] shadow flex items-center gap-1">
                     <Star className="w-3 h-3 fill-[#E5A93C]" />
                     <span>+{item.pointsEarned ?? Math.round(item.price)} pts</span>
                   </div>
 
                   {/* Price Tag (Bottom Right of Image) */}
-                  <div className="absolute bottom-3 right-3 bg-[#181513]/90 backdrop-blur-md px-3.5 py-1 rounded-full border border-[#E5A93C]/40 text-[#E5A93C] font-black text-base shadow-lg">
+                  <div className="absolute bottom-2.5 right-2.5 bg-[#181513]/90 backdrop-blur-md px-3 py-1 rounded-full border border-[#E5A93C]/40 text-[#E5A93C] font-black text-sm sm:text-base shadow-lg">
                     {formatBRL(item.price)}
                   </div>
                 </div>
 
                 {/* Content Body */}
-                <div className="p-6 flex flex-col flex-1 justify-between">
+                <div className="p-4 sm:p-4.5 flex flex-col flex-1 justify-between">
                   <div>
                     {item.italianName && (
-                      <p className="text-[11px] font-cinzel font-semibold uppercase tracking-widest text-[#C24D2C] mb-1">
+                      <p className="text-[10px] font-cinzel font-semibold uppercase tracking-wider text-[#C24D2C] mb-1 truncate">
                         {item.italianName}
                       </p>
                     )}
 
-                    <h3 className="font-serif-italian text-xl font-bold text-[#181513] mb-2 group-hover:text-[#C24D2C] transition-colors">
+                    <h3 
+                      onClick={() => openCustomizer(item)}
+                      className="font-serif-italian text-base sm:text-lg font-bold text-[#181513] mb-1.5 group-hover:text-[#C24D2C] transition-colors leading-snug line-clamp-2 cursor-pointer"
+                      title="Clique para ver detalhes e personalizar"
+                    >
                       {item.name}
                     </h3>
 
-                    <p className="text-xs text-[#5C554E] leading-relaxed mb-4 line-clamp-3">
+                    <p className="text-xs text-[#5C554E] leading-relaxed mb-3 line-clamp-2">
                       {item.description}
                     </p>
 
                     {/* Ingredients Pills */}
-                    <div className="flex flex-wrap gap-1.5 mb-4">
-                      {item.ingredients.map((ing, iIdx) => (
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {item.ingredients.slice(0, 3).map((ing, iIdx) => (
                         <span
                           key={iIdx}
-                          className="px-2 py-0.5 rounded-md bg-[#FAF7F2] text-[#5C554E] text-[11px] border border-[#EADFCF]"
+                          className="px-1.5 py-0.5 rounded-md bg-[#FAF7F2] text-[#5C554E] text-[10px] border border-[#EADFCF] whitespace-nowrap"
                         >
                           {ing}
                         </span>
                       ))}
+                      {item.ingredients.length > 3 && (
+                        <span className="px-1.5 py-0.5 rounded-md bg-[#FAF7F2] text-[#8C827A] text-[10px] border border-[#EADFCF]">
+                          +{item.ingredients.length - 3}
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  {/* Bottom Pairing & Add Action */}
-                  <div className="pt-4 border-t border-[#F0EAE1] space-y-3">
-                    {item.pairing && (
-                      <div className="flex items-start gap-1.5 text-[11px] text-[#1B382B] bg-[#1B382B]/5 p-2 rounded-lg">
-                        <Wine className="w-3.5 h-3.5 text-[#C24D2C] shrink-0 mt-0.5" />
-                        <span className="leading-tight">
-                          <strong>Harmonização:</strong> {item.pairing}
-                        </span>
-                      </div>
-                    )}
+                  {/* Bottom Action Area: Personalizar e Botão WhatsApp compacto no canto direito */}
+                  <div className="pt-2.5 border-t border-[#F0EAE1] flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openCustomizer(item)}
+                      className="py-1.5 px-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer bg-[#FAF7F2] hover:bg-[#F0EAE1] text-[#C24D2C] hover:text-[#A63A1E] border border-[#E0D5C3]"
+                    >
+                      <Plus className="w-3.5 h-3.5 shrink-0" />
+                      <span>
+                        {item.category === 'tradizionali' || item.category === 'speciali'
+                          ? 'Personalizar'
+                          : 'Pedir'}
+                      </span>
+                    </button>
 
-                    {currentUser && (
-                      <button
-                        onClick={() => openCustomizer(item)}
-                        className="w-full py-3 rounded-2xl font-bold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer bg-[#C24D2C] hover:bg-[#A63A1E] text-white"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>
-                          {item.category === 'tradizionali' || item.category === 'speciali'
-                            ? 'Personalizar & Pedir'
-                            : 'Adicionar ao Pedido'}
-                        </span>
-                      </button>
-                    )}
+                    <a
+                      href={`https://wa.me/${siteInfo?.whatsappNumber || '5511915331853'}?text=${encodeURIComponent(`Olá Deolinda Pizzaria! Gostaria de pedir: *${item.name}* (${formatBRL(item.price)}).`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={`Pedir ${item.name} no WhatsApp`}
+                      aria-label={`Pedir ${item.name} no WhatsApp`}
+                      className="w-8 h-8 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white shadow-sm hover:shadow flex items-center justify-center shrink-0 transition-transform hover:scale-110 active:scale-95 group/wa cursor-pointer ml-auto"
+                    >
+                      <svg className="w-4.5 h-4.5 fill-current transition-transform group-hover/wa:scale-110" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                      </svg>
+                    </a>
                   </div>
                 </div>
               </motion.div>
@@ -520,13 +656,29 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                 </div>
               </div>
 
-              <button
-                onClick={handleConfirmAddToCart}
-                className="px-6 py-3.5 rounded-2xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-[#C24D2C]/30 flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <ShoppingBag className="w-4 h-4" />
-                <span>Confirmar & Adicionar</span>
-              </button>
+              <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                <a
+                  href={`https://wa.me/${siteInfo?.whatsappNumber || '5511915331853'}?text=${encodeURIComponent(buildCustomizedWhatsAppText())}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Pedir este item personalizado no WhatsApp"
+                  className="flex-1 sm:flex-initial px-4 py-3.5 rounded-2xl bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs uppercase tracking-wider shadow-md flex items-center justify-center gap-2 cursor-pointer transition-transform hover:scale-[1.02] active:scale-95"
+                >
+                  <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                  </svg>
+                  <span>Pedir no WhatsApp</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={handleConfirmAddToCart}
+                  className="flex-1 sm:flex-initial px-5 py-3.5 rounded-2xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-[#C24D2C]/30 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <ShoppingBag className="w-4 h-4" />
+                  <span>Adicionar</span>
+                </button>
+              </div>
             </div>
 
           </div>
