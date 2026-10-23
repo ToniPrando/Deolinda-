@@ -254,25 +254,25 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
           </div>
 
           {/* Category Tabs & Grid View Control */}
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-3 border-t border-[#F0EAE1] pt-3">
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5 scrollbar-none justify-start flex-1 w-full lg:w-auto">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-3 sm:gap-4 border-t border-[#F0EAE1] pt-3.5">
+            <div className="flex items-center gap-2 sm:gap-2.5 overflow-x-auto pb-1 pt-0.5 scrollbar-none flex-1 w-full lg:w-auto">
               {categories.map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+                  className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 lg:shrink ${
                     selectedCategory === cat.id
-                      ? 'bg-[#C24D2C] text-white shadow-md shadow-[#C24D2C]/30 scale-105'
+                      ? 'bg-[#C24D2C] text-white shadow-md shadow-[#C24D2C]/30 scale-[1.02]'
                       : 'bg-[#FAF7F2] text-[#5C554E] hover:bg-[#EAE4D9] border border-[#E0D5C3]'
                   }`}
                 >
-                  <span>{cat.icon}</span>
+                  <span className="text-sm">{cat.icon}</span>
                   <span>{cat.label}</span>
                 </button>
               ))}
             </div>
 
-            {/* Grid Configuration Button with Hover Menu (Oculto em celular/telas pequenas) */}
+            {/* Grid Configuration Button with Hover Menu (Reduzido pela metade do tamanho) */}
             <div 
               ref={gridMenuContainerRef}
               className="hidden md:block relative shrink-0 self-center lg:self-center"
@@ -282,13 +282,14 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
               <button
                 type="button"
                 onClick={() => setIsGridMenuOpen(prev => !prev)}
-                className="px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer bg-[#FAF7F2] text-[#5C554E] hover:bg-[#EAE4D9] border border-[#E0D5C3] shadow-xs hover:border-[#C24D2C]/40 hover:text-[#181513]"
+                title={`Grade de exibição: ${gridCols} colunas por linha. Clique ou passe o mouse para alterar.`}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer bg-[#FAF7F2] text-[#5C554E] hover:bg-[#EAE4D9] border border-[#E0D5C3] shadow-xs hover:border-[#C24D2C]/40 hover:text-[#181513]"
                 aria-haspopup="true"
                 aria-expanded={isGridMenuOpen}
               >
-                <LayoutGrid className="w-4 h-4 text-[#C24D2C]" />
-                <span>Grade ({gridCols} por linha)</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isGridMenuOpen ? 'rotate-180' : ''}`} />
+                <LayoutGrid className="w-3.5 h-3.5 text-[#C24D2C]" />
+                <span className="font-mono">{gridCols}x</span>
+                <ChevronDown className={`w-3 h-3 text-[#8C827A] transition-transform duration-200 ${isGridMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {/* Hover Dropdown Menu */}
