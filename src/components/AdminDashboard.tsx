@@ -2473,7 +2473,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       type="text"
                       value={currentSiteInfo.footerAssociationText}
                       onChange={(e) => handleUpdateSiteInfoField('footerAssociationText', e.target.value)}
-                      placeholder="Associazione Verace Pizza Napoletana"
+                      placeholder="Opcional (deixe em branco para ocultar)"
                       className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513]"
                     />
                   </div>

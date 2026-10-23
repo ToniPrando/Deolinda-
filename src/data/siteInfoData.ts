@@ -70,5 +70,5 @@ export const DEFAULT_SITE_INFO: SiteInfo = {
 
   // Rodapé
   footerCopyright: 'Deolinda Pizzaria Napoletana. Fatta con amore, lievito madre e farina pura.',
-  footerAssociationText: 'Associazione Verace Pizza Napoletana'
+  footerAssociationText: ''
 };

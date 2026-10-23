@@ -405,12 +405,6 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
-                  {/* Loyalty Points Earned Badge (Top Right) */}
-                  <div className="absolute top-2.5 right-2.5 bg-[#181513]/85 backdrop-blur-md px-2 py-0.5 rounded-full border border-[#E5A93C]/40 text-[#E5A93C] font-mono font-bold text-[10px] shadow flex items-center gap-1">
-                    <Star className="w-3 h-3 fill-[#E5A93C]" />
-                    <span>+{item.pointsEarned ?? Math.round(item.price)} pts</span>
-                  </div>
-
                   {/* Price Tag (Bottom Right of Image) */}
                   <div className="absolute bottom-2.5 right-2.5 bg-[#181513]/90 backdrop-blur-md px-3 py-1 rounded-full border border-[#E5A93C]/40 text-[#E5A93C] font-black text-sm sm:text-base shadow-lg">
                     {formatBRL(item.price)}

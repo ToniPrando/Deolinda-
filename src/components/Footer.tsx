@@ -186,8 +186,12 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo, onNavigat
               <Lock className="w-3 h-3 text-white/40" />
               <span>Área Restrita (Administrador)</span>
             </button>
-            <span>•</span>
-            <span className="text-[#E5A93C]/80 font-semibold">{siteInfo?.footerAssociationText || 'Associazione Verace Pizza Napoletana'}</span>
+            {siteInfo?.footerAssociationText && siteInfo.footerAssociationText.trim() !== '' && siteInfo.footerAssociationText !== 'Associazione Verace Pizza Napoletana' && (
+              <>
+                <span>•</span>
+                <span className="text-[#E5A93C]/80 font-semibold">{siteInfo.footerAssociationText}</span>
+              </>
+            )}
           </div>
         </div>
 
