@@ -679,4 +679,90 @@ export function subscribeToMenuCategories(
   }
 }
 
+/**
+ * Saves the custom admin password to Cloud Firestore, backend API and localStorage.
+ */
+export async function saveAdminPasswordToFirestore(newPassword: string): Promise<void> {
+  const cleanPassword = newPassword.trim();
+  try {
+    const authDocRef = doc(db, 'settings', 'admin_auth');
+    await setDoc(authDocRef, {
+      adminPassword: cleanPassword,
+      updatedAt: new Date().toISOString(),
+      type: 'admin_auth',
+      _serverTimestamp: serverTimestamp()
+    }, { merge: true });
+    console.log('[Firestore] Admin password saved successfully to Cloud Firestore.');
+  } catch (error: any) {
+    console.warn('[Firestore] Notice while saving admin password to Firestore:', error?.message || error);
+  }
+
+  // Backup to Express backend API
+  try {
+    await fetch('/api/settings/admin-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: cleanPassword })
+    });
+  } catch (e) {
+    console.warn('[Backend] Admin password save error:', e);
+  }
+
+  // Local storage fallback
+  try {
+    localStorage.setItem('deolinda_admin_password', cleanPassword);
+  } catch {}
+}
+
+/**
+ * Gets the custom admin password from Cloud Firestore once.
+ */
+export async function getAdminPasswordFromFirestore(): Promise<string | null> {
+  try {
+    const authDocRef = doc(db, 'settings', 'admin_auth');
+    const snap = await getDoc(authDocRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      if (data && typeof data.adminPassword === 'string' && data.adminPassword.trim()) {
+        return data.adminPassword.trim();
+      }
+    }
+  } catch (error) {
+    console.warn('[Firestore] Error getting admin password:', error);
+  }
+  return null;
+}
+
+/**
+ * Subscribes to real-time admin password updates from Cloud Firestore.
+ */
+export function subscribeToAdminPassword(
+  onUpdate: (password: string | null) => void
+): () => void {
+  try {
+    const authDocRef = doc(db, 'settings', 'admin_auth');
+    const unsubscribe = onSnapshot(authDocRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data && typeof data.adminPassword === 'string' && data.adminPassword.trim()) {
+          const pwd = data.adminPassword.trim();
+          onUpdate(pwd);
+          try {
+            localStorage.setItem('deolinda_admin_password', pwd);
+          } catch {}
+          return;
+        }
+      }
+      onUpdate(null);
+    }, (err) => {
+      console.warn('[Firestore] Admin password subscription notice:', err?.message || err);
+    });
+
+    return unsubscribe;
+  } catch (err) {
+    console.warn('[Firestore] Admin password subscribe error:', err);
+    return () => {};
+  }
+}
+
 

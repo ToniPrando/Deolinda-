@@ -28,7 +28,8 @@ import {
   subscribeToMenuItems,
   subscribeToGalleryPosts,
   subscribeToSiteInfo,
-  subscribeToMenuCategories
+  subscribeToMenuCategories,
+  subscribeToAdminPassword
 } from './services/firebaseService';
 import { navigateToSection, getRouteByPath, getRouteById } from './utils/navigationRouter';
 
@@ -225,6 +226,13 @@ export default function App() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false);
+  const [customAdminPassword, setCustomAdminPassword] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('deolinda_admin_password');
+    } catch {
+      return null;
+    }
+  });
 
   // Real-Time Customer Order Live Tracking Modal & Persistent Active Order
   const [activeTrackingOrder, setActiveTrackingOrder] = useState<Order | null>(() => {
@@ -397,12 +405,25 @@ export default function App() {
       }
     });
 
+    // 10. Subscribe to Firestore admin password in real-time
+    const unsubAdminPwd = subscribeToAdminPassword((pwd) => {
+      setCustomAdminPassword(pwd);
+      try {
+        if (pwd) {
+          localStorage.setItem('deolinda_admin_password', pwd);
+        } else {
+          localStorage.removeItem('deolinda_admin_password');
+        }
+      } catch {}
+    });
+
     return () => {
       unsubscribeBrand();
       unsubMenu();
       unsubGallery();
       unsubSiteInfo();
       unsubCategories();
+      unsubAdminPwd();
     };
   }, []);
 
@@ -939,6 +960,7 @@ export default function App() {
         isOpen={isAdminAuthOpen}
         onClose={handleCloseAdminAuth}
         onSuccess={handleAdminAuthSuccess}
+        customAdminPassword={customAdminPassword}
       />
 
       {/* Admin Dashboard */}
@@ -961,6 +983,8 @@ export default function App() {
         customLogoUrl={customLogoUrl}
         customEmblemUrl={customEmblemUrl}
         isEmblemEnabled={isEmblemEnabled}
+        customAdminPassword={customAdminPassword}
+        onAdminPasswordUpdated={setCustomAdminPassword}
         onOpenLogoModal={(initialTab) => {
           setLogoModalInitialTab(initialTab || 'logo');
           setIsLogoModalOpen(true);

@@ -6,12 +6,14 @@ interface AdminAuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  customAdminPassword?: string | null;
 }
 
 export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
   isOpen,
   onClose,
-  onSuccess
+  onSuccess,
+  customAdminPassword
 }) => {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
@@ -25,13 +27,30 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
     setError('');
     setIsLoading(true);
 
-    // Expanded valid admin pins and passwords
-    const validPins = ['1234', 'admin', 'admin123', 'deolinda', 'kds450', 'deolinda123', 'pizza', 'pizzaria', '450'];
-    const cleanPin = pin.trim().toLowerCase();
+    const savedCustomPassword = (customAdminPassword || localStorage.getItem('deolinda_admin_password') || '').trim();
+    const enteredPin = pin.trim();
+    const cleanEnteredPin = enteredPin.toLowerCase();
+
+    // Default master pins
+    const defaultPins = ['1234', 'admin', 'admin123', 'deolinda', 'kds450', 'deolinda123', 'pizza', 'pizzaria', '450'];
+
+    let isAuthorized = false;
+
+    // Check custom password if configured
+    if (savedCustomPassword) {
+      if (enteredPin === savedCustomPassword || cleanEnteredPin === savedCustomPassword.toLowerCase()) {
+        isAuthorized = true;
+      }
+    }
+
+    // Check default pins
+    if (defaultPins.includes(cleanEnteredPin)) {
+      isAuthorized = true;
+    }
 
     setTimeout(() => {
       setIsLoading(false);
-      if (validPins.includes(cleanPin) || cleanPin === '1234') {
+      if (isAuthorized) {
         // Unlock browser audio context on user authentication action
         unlockAudio();
         onSuccess();

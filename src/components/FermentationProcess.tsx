@@ -78,61 +78,61 @@ export const FermentationProcess: React.FC<FermentationProcessProps> = ({ siteIn
   ];
 
   return (
-    <section id="fermentacao" className="py-12 sm:py-16 bg-[#FAF7F2] text-[#1E1B18] border-b border-[#EADFCF]">
+    <section id="fermentacao" className="pt-3 sm:pt-4 pb-12 bg-[#FAF7F2] text-[#1E1B18] border-b border-[#EADFCF] scroll-mt-16 sm:scroll-mt-18">
       <div className="w-full max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#C24D2C]/10 text-[#C24D2C] text-xs font-bold uppercase tracking-widest mb-3">
-            <Wheat className="w-4 h-4" />
+        <div className="text-center max-w-3xl mx-auto mb-3 sm:mb-5">
+          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#C24D2C]/10 text-[#C24D2C] text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-1.5">
+            <Wheat className="w-3.5 h-3.5" />
             <span>{siteInfo?.fermentationBadge || 'Processo Artesanal & Saúde'}</span>
           </div>
-          <h2 className="font-serif-italian text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[#181513] mb-4">
+          <h2 className="font-serif-italian text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-[#181513] mb-1 leading-tight">
             {siteInfo?.fermentationTitle || 'O Segredo das 72 Horas de Fermentação Lenta'}
           </h2>
-          <p className="text-[#5C554E] text-base sm:text-lg leading-relaxed">
+          <p className="text-[#5C554E] text-xs sm:text-sm max-w-xl mx-auto leading-relaxed">
             {siteInfo?.fermentationSubtitle || 'Esqueça a sensação de peso e sede após comer pizza. Nosso método tradicional napolitano une tempo, paciência e biologia para criar uma massa aerada, incrivelmente leve e fácil de digerir.'}
           </p>
         </div>
 
         {/* 4-Step Interactive Timeline */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center mb-20">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-center mb-8 sm:mb-10">
           
           {/* Step Selector List (Left 7 Cols) */}
-          <div className="lg:col-span-7 space-y-3">
+          <div className="lg:col-span-7 space-y-2.5">
             {steps.map((step, idx) => {
               const isSelected = activeStep === idx;
               return (
                 <div
                   key={idx}
                   onClick={() => setActiveStep(idx)}
-                  className={`p-5 rounded-2xl border transition-all cursor-pointer text-left ${
+                  className={`p-3.5 sm:p-4 rounded-xl border transition-all cursor-pointer text-left ${
                     isSelected
-                      ? 'bg-white border-[#C24D2C] shadow-xl shadow-[#C24D2C]/10 ring-2 ring-[#C24D2C]/20'
+                      ? 'bg-white border-[#C24D2C] shadow-lg shadow-[#C24D2C]/10 ring-2 ring-[#C24D2C]/20'
                       : 'bg-[#F4EFE6]/60 border-transparent hover:bg-white hover:border-[#D6C7B2]'
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#C24D2C] flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5" />
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#C24D2C] flex items-center gap-1.5">
+                      <Clock className="w-3 h-3" />
                       {step.time}
                     </span>
-                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#1B382B]/10 text-[#1B382B]">
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#1B382B]/10 text-[#1B382B]">
                       {step.tag}
                     </span>
                   </div>
 
-                  <h3 className="text-lg sm:text-xl font-bold text-[#181513] mb-1">
+                  <h3 className="text-base sm:text-lg font-bold text-[#181513] mb-1">
                     {step.title}
                   </h3>
 
-                  <p className="text-sm text-[#5C554E] leading-relaxed mb-2">
+                  <p className="text-xs sm:text-sm text-[#5C554E] leading-relaxed mb-1.5">
                     {step.desc}
                   </p>
 
                   {isSelected && (
-                    <div className="mt-3 pt-3 border-t border-[#F0E6D8] flex items-center gap-2 text-xs font-medium text-[#1B382B]">
-                      <Sparkles className="w-4 h-4 text-[#E5A93C] shrink-0" />
+                    <div className="mt-2.5 pt-2.5 border-t border-[#F0E6D8] flex items-center gap-2 text-xs font-medium text-[#1B382B]">
+                      <Sparkles className="w-3.5 h-3.5 text-[#E5A93C] shrink-0" />
                       <span>{step.detail}</span>
                     </div>
                   )}
@@ -142,53 +142,53 @@ export const FermentationProcess: React.FC<FermentationProcessProps> = ({ siteIn
           </div>
 
           {/* Interactive Visual Card (Right 5 Cols) */}
-          <div className="lg:col-span-5 bg-gradient-to-br from-[#181513] to-[#2B231D] rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden">
+          <div className="lg:col-span-5 bg-gradient-to-br from-[#181513] to-[#2B231D] rounded-2xl p-4 sm:p-5 text-white shadow-xl relative overflow-hidden">
             <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-[#C24D2C]/20 blur-3xl" />
             <div className="absolute -bottom-12 -left-12 w-48 h-48 rounded-full bg-[#E5A93C]/20 blur-3xl" />
 
             <div className="relative z-10">
-              <div className="flex items-center justify-between mb-6">
-                <span className="px-3 py-1 rounded-full bg-[#C24D2C] text-xs font-bold tracking-wider uppercase">
+              <div className="flex items-center justify-between mb-4">
+                <span className="px-2.5 py-0.5 rounded-full bg-[#C24D2C] text-[10px] font-bold tracking-wider uppercase">
                   Anatomia Napolitana
                 </span>
-                <span className="text-[#E5A93C] text-xs font-semibold flex items-center gap-1">
-                  <Flame className="w-3.5 h-3.5" />
+                <span className="text-[#E5A93C] text-[11px] font-semibold flex items-center gap-1">
+                  <Flame className="w-3 h-3" />
                   450°C no Forno
                 </span>
               </div>
 
-              <div className="rounded-2xl overflow-hidden mb-6 border border-white/10 shadow-lg relative group">
+              <div className="rounded-xl overflow-hidden mb-4 border border-white/10 shadow-md relative group">
                 <img
                   src="https://images.unsplash.com/photo-1604382355076-af4b0eb60143?auto=format&fit=crop&w=800&q=80"
                   alt="Pizza Napoletana Borda Cornicione"
-                  className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
+                  className="w-full h-36 sm:h-40 object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-4">
-                  <p className="text-xs text-[#FAF7F2] font-medium">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-3">
+                  <p className="text-[11px] text-[#FAF7F2] font-medium">
                     🔍 Cornicione: A borda alta e oca cheia de alvéolos de ar
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-3 text-sm">
-                <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-[#E5A93C] shrink-0 mt-0.5" />
+              <div className="space-y-2 text-xs sm:text-sm">
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#E5A93C] shrink-0 mt-0.5" />
                   <div>
                     <strong className="text-white">Digestão Fácil:</strong>{' '}
                     <span className="text-white/80">O glúten quebrado durante 72h não fermenta na sua barriga.</span>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-[#E5A93C] shrink-0 mt-0.5" />
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#E5A93C] shrink-0 mt-0.5" />
                   <div>
                     <strong className="text-white">Textura 'Nuvolosa':</strong>{' '}
                     <span className="text-white/80">Centro fino e úmido com bordas fofas como nuvem.</span>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-[#E5A93C] shrink-0 mt-0.5" />
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#E5A93C] shrink-0 mt-0.5" />
                   <div>
                     <strong className="text-white">Sem Açúcar ou Gordura na Massa:</strong>{' '}
                     <span className="text-white/80">Apenas Farinha 00, Água, Sal Marinho e Lievito Madre.</span>
@@ -200,39 +200,39 @@ export const FermentationProcess: React.FC<FermentationProcessProps> = ({ siteIn
         </div>
 
         {/* D.O.P. Ingredients Section */}
-        <div className="mt-16">
-          <div className="text-center max-w-2xl mx-auto mb-10">
-            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-[#1B382B] uppercase tracking-wider mb-2">
-              <ShieldCheck className="w-4 h-4 text-[#1B382B]" />
+        <div className="mt-8 sm:mt-10">
+          <div className="text-center max-w-2xl mx-auto mb-4 sm:mb-6">
+            <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#1B382B] uppercase tracking-wider mb-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-[#1B382B]" />
               <span>Autenticidade Garantida</span>
             </div>
-            <h3 className="font-serif-italian text-2xl sm:text-3xl font-bold text-[#181513]">
+            <h3 className="font-serif-italian text-xl sm:text-2xl font-bold text-[#181513]">
               Ingredientes Importados de Origem Protegida (D.O.P.)
             </h3>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
             {dopIngredients.map((item, idx) => (
               <div
                 key={idx}
-                className="bg-white rounded-2xl overflow-hidden border border-[#EADFCF] shadow-sm hover:shadow-md transition-shadow group flex flex-col"
+                className="bg-white rounded-xl overflow-hidden border border-[#EADFCF] shadow-xs hover:shadow-md transition-shadow group flex flex-col"
               >
-                <div className="h-44 overflow-hidden relative">
+                <div className="h-36 sm:h-40 overflow-hidden relative">
                   <img
                     src={item.image}
                     alt={item.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-[#181513]/80 text-[#E5A93C] text-[10px] font-bold tracking-wider uppercase backdrop-blur-sm border border-[#E5A93C]/30">
+                  <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-[#181513]/80 text-[#E5A93C] text-[10px] font-bold tracking-wider uppercase backdrop-blur-sm border border-[#E5A93C]/30">
                     {item.badge}
                   </span>
                 </div>
 
-                <div className="p-5 flex flex-col flex-1">
-                  <p className="text-[11px] font-bold text-[#C24D2C] uppercase tracking-wide mb-1">
+                <div className="p-3.5 sm:p-4 flex flex-col flex-1">
+                  <p className="text-[10px] font-bold text-[#C24D2C] uppercase tracking-wide mb-1">
                     {item.origin}
                   </p>
-                  <h4 className="font-serif-italian text-lg font-bold text-[#181513] mb-2">
+                  <h4 className="font-serif-italian text-base font-bold text-[#181513] mb-1">
                     {item.name}
                   </h4>
                   <p className="text-xs text-[#5C554E] leading-relaxed flex-1">

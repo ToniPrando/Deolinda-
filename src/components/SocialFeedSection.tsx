@@ -19,48 +19,48 @@ export const SocialFeedSection: React.FC<SocialFeedSectionProps> = ({ posts }) =
   const displayPosts = posts && posts.length > 0 ? posts : SOCIAL_POSTS;
 
   return (
-    <section id="galeria" className="py-12 sm:py-16 bg-[#F4EFE6] text-[#1E1B18] border-b border-[#EADFCF] scroll-mt-20">
+    <section id="galeria" className="pt-3 sm:pt-4 pb-12 bg-[#F4EFE6] text-[#1E1B18] border-b border-[#EADFCF] scroll-mt-16 sm:scroll-mt-18">
       <div className="w-full max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-4 mb-3 sm:mb-5">
           <div>
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#C24D2C]/10 text-[#C24D2C] text-xs font-bold uppercase tracking-widest mb-3">
-              <Camera className="w-4 h-4 text-[#C24D2C]" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#C24D2C]/10 text-[#C24D2C] text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-1.5">
+              <Camera className="w-3.5 h-3.5 text-[#C24D2C]" />
               <span>Fotos & Momentos • #DeolindaNapoletana</span>
             </div>
-            <h2 className="font-serif-italian text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[#181513]">
+            <h2 className="font-serif-italian text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-[#181513] mb-1 leading-tight">
               Fotos & Momentos
             </h2>
-            <p className="text-[#5C554E] text-sm sm:text-base mt-2 max-w-xl">
+            <p className="text-[#5C554E] text-xs sm:text-sm max-w-xl">
               Acompanhe as fotos e momentos especiais da Deolinda Pizzaria Napoletana e compartilhe sua experiência marcando <strong>@deolindapizzaria</strong>.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0">
             <a
               href="https://www.instagram.com/deolindapizzaria/"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-5 py-3 rounded-full bg-white hover:bg-gray-100 text-[#181513] border border-[#E0D5C3] text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all"
+              className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-white hover:bg-gray-100 text-[#181513] border border-[#E0D5C3] text-[11px] sm:text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-xs transition-all"
             >
-              <Instagram className="w-4 h-4 text-[#C24D2C]" />
+              <Instagram className="w-3.5 h-3.5 text-[#C24D2C]" />
               <span>Seguir @deolindapizzaria</span>
             </a>
           </div>
         </div>
 
         {/* Gallery Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {displayPosts.map((post) => {
             return (
               <div
                 key={post.id}
                 onClick={() => setSelectedPost(post)}
-                className="bg-white rounded-3xl overflow-hidden border border-[#E0D5C3] shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group cursor-pointer"
+                className="bg-white rounded-2xl overflow-hidden border border-[#E0D5C3] shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col group cursor-pointer"
               >
                 {/* Image Container */}
-                <div className="relative h-72 overflow-hidden bg-[#181513]">
+                <div className="relative h-48 sm:h-52 md:h-56 overflow-hidden bg-[#181513]">
                   <img
                     src={post.imageUrl}
                     alt={post.caption}
@@ -70,16 +70,16 @@ export const SocialFeedSection: React.FC<SocialFeedSectionProps> = ({ posts }) =
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
 
                   {/* Author Header on Top Right */}
-                  <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-semibold">
+                  <div className="absolute top-2.5 right-2.5 px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[11px] font-semibold">
                     {post.author}
                   </div>
 
-                  {/* Bottom Image Info (sem avaliações/curtidas e sem botão saindo do forno) */}
-                  <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between text-white text-xs">
-                    <span className="text-white/90 bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-full">
+                  {/* Bottom Image Info */}
+                  <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-white text-[11px]">
+                    <span className="text-white/90 bg-black/50 backdrop-blur-md px-2 py-0.5 rounded-full">
                       {post.timestamp}
                     </span>
-                    <span className="text-white/90 bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-medium flex items-center gap-1">
+                    <span className="text-white/90 bg-black/50 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] font-medium flex items-center gap-1">
                       <Camera className="w-3 h-3 text-[#E5A93C]" />
                       <span>Ver foto</span>
                     </span>
@@ -87,14 +87,14 @@ export const SocialFeedSection: React.FC<SocialFeedSectionProps> = ({ posts }) =
                 </div>
 
                 {/* Caption Body */}
-                <div className="p-5 flex flex-col flex-1 justify-between">
-                  <p className="text-xs text-[#5C554E] leading-relaxed line-clamp-3 mb-3">
+                <div className="p-3.5 sm:p-4 flex flex-col flex-1 justify-between">
+                  <p className="text-xs text-[#5C554E] leading-relaxed line-clamp-2 mb-2">
                     {post.caption}
                   </p>
 
                   <div className="flex flex-wrap gap-1.5 pt-2 border-t border-[#F0EAE1]">
                     {post.tags.map((tag, tIdx) => (
-                      <span key={tIdx} className="text-[11px] font-semibold text-[#1B382B]">
+                      <span key={tIdx} className="text-[10px] sm:text-[11px] font-semibold text-[#1B382B]">
                         {tag}
                       </span>
                     ))}

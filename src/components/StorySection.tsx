@@ -13,42 +13,42 @@ interface StorySectionProps {
 export const StorySection: React.FC<StorySectionProps> = ({ siteInfo }) => {
 
   return (
-    <section id="historia" className="py-12 sm:py-16 bg-[#FAF7F2] text-[#1E1B18] border-b border-[#EADFCF] scroll-mt-20">
+    <section id="historia" className="pt-3 sm:pt-4 pb-12 bg-[#FAF7F2] text-[#1E1B18] border-b border-[#EADFCF] scroll-mt-16 sm:scroll-mt-18">
       <div className="w-full max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#1B382B]/10 text-[#1B382B] text-xs font-bold uppercase tracking-widest mb-3">
-            <Heart className="w-4 h-4 text-[#C24D2C]" />
+        <div className="text-center max-w-3xl mx-auto mb-3 sm:mb-5">
+          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#1B382B]/10 text-[#1B382B] text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-1.5">
+            <Heart className="w-3.5 h-3.5 text-[#C24D2C]" />
             <span>{siteInfo?.storyBadge || 'Tradição Familiar & Paixão'}</span>
           </div>
-          <h2 className="font-serif-italian text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[#181513] mb-4">
+          <h2 className="font-serif-italian text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-[#181513] mb-1 leading-tight">
             {siteInfo?.storyTitle || 'A História da Nonna Deolinda'}
           </h2>
-          <p className="text-[#5C554E] text-base sm:text-lg">
+          <p className="text-[#5C554E] text-xs sm:text-sm max-w-xl mx-auto leading-relaxed">
             {siteInfo?.storySubtitle || 'Mais do que uma receita, um legado sagrado de amor, farinha pura e paciência transmitido de geração em geração desde as ruelas de Nápoles.'}
           </p>
         </div>
 
         {/* Feature Story Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center mb-20">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-center mb-8 sm:mb-10">
           
           {/* Main Visual Image (Left 5 cols) */}
           <div className="lg:col-span-5 relative">
-            <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white">
+            <div className="relative rounded-2xl overflow-hidden shadow-xl border-2 sm:border-4 border-white">
               <img
                 src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80"
                 alt="História da Pizzaria Deolinda"
-                className="w-full h-[450px] object-cover"
+                className="w-full h-[280px] sm:h-[320px] lg:h-[350px] object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6 text-white">
-                <span className="text-xs uppercase font-bold text-[#E5A93C] tracking-wider mb-1">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent flex flex-col justify-end p-4 sm:p-5 text-white">
+                <span className="text-[10px] sm:text-xs uppercase font-bold text-[#E5A93C] tracking-wider mb-1">
                   Nápoles, 1952
                 </span>
-                <p className="font-serif-italian text-xl font-bold text-[#FAF7F2]">
+                <p className="font-serif-italian text-base sm:text-lg lg:text-xl font-bold text-[#FAF7F2] leading-snug">
                   "{siteInfo?.storyQuote || 'A massa tem alma. Se você tiver paciência, ela recompensará todos à sua mesa.'}"
                 </p>
-                <span className="text-xs text-white/70 italic mt-1">
+                <span className="text-[11px] sm:text-xs text-white/70 italic mt-1">
                   — {siteInfo?.storyQuoteAuthor || 'Nonna Deolinda Bertolli'}
                 </span>
               </div>
@@ -56,8 +56,8 @@ export const StorySection: React.FC<StorySectionProps> = ({ siteInfo }) => {
           </div>
 
           {/* Narrative Text (Right 7 cols) */}
-          <div className="lg:col-span-7 space-y-6">
-            <div className="space-y-4 text-sm sm:text-base text-[#5C554E] leading-relaxed">
+          <div className="lg:col-span-7 space-y-3 sm:space-y-4">
+            <div className="space-y-2 sm:space-y-3 text-xs sm:text-sm text-[#5C554E] leading-relaxed">
               <p>
                 {siteInfo?.storyParagraph1 || (
                   <>
@@ -75,14 +75,14 @@ export const StorySection: React.FC<StorySectionProps> = ({ siteInfo }) => {
             </div>
 
             {/* 4 Pillars of Excellence */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
               {ARTISAN_PILLARS.map((pillar, pIdx) => (
                 <div
                   key={pIdx}
-                  className="bg-white p-3.5 rounded-2xl border border-[#EADFCF] shadow-sm flex items-start gap-3"
+                  className="bg-white p-2.5 sm:p-3 rounded-xl border border-[#EADFCF] shadow-2xs flex items-start gap-2.5"
                 >
-                  <div className="p-2 rounded-xl bg-[#1B382B]/10 text-[#1B382B] shrink-0 mt-0.5">
-                    <CheckCircle className="w-4 h-4 text-[#1B382B]" />
+                  <div className="p-1.5 rounded-lg bg-[#1B382B]/10 text-[#1B382B] shrink-0 mt-0.5">
+                    <CheckCircle className="w-3.5 h-3.5 text-[#1B382B]" />
                   </div>
                   <div>
                     <h4 className="font-bold text-xs text-[#181513]">{pillar.title}</h4>

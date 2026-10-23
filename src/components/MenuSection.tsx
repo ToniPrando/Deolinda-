@@ -188,7 +188,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
   };
 
   return (
-    <section id="cardapio" className="py-12 sm:py-16 bg-[#F4EFE6] text-[#1E1B18] scroll-mt-20">
+    <section id="cardapio" className="pt-3 sm:pt-4 pb-12 bg-[#F4EFE6] text-[#1E1B18] scroll-mt-16 sm:scroll-mt-18">
       <div className="w-full max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Floating Notification */}
@@ -199,74 +199,74 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
           </div>
         )}
 
-        {/* Section Title */}
+        {/* Section Title - Compacto para priorizar visualização da grade */}
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-40px' }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="text-center max-w-3xl mx-auto mb-10"
+          viewport={{ once: true, margin: '-20px' }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          className="text-center max-w-3xl mx-auto mb-3 sm:mb-4"
         >
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#C24D2C]/10 text-[#C24D2C] text-xs font-bold uppercase tracking-widest mb-3">
-            <UtensilsCrossed className="w-4 h-4" />
-            <span>Cardápio Autêntico Italiano</span>
+          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#C24D2C]/10 text-[#C24D2C] text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-1.5">
+            <UtensilsCrossed className="w-3.5 h-3.5" />
+            <span>Cardápio Autêntico Napolitano</span>
           </div>
-          <h2 className="font-serif-italian text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[#181513] mb-4">
+          <h2 className="font-serif-italian text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-[#181513] mb-1 leading-tight">
             A Tradição Napolitana no seu Paladar
           </h2>
-          <p className="text-[#5C554E] text-base sm:text-lg">
-            Todas as nossas pizzas são individuais (30cm), com massa de 72h de fermentação, assadas a 450°C e cortadas ao estilo de Nápoles.
+          <p className="text-[#5C554E] text-xs sm:text-sm max-w-xl mx-auto line-clamp-1 sm:line-clamp-none">
+            Pizzas individuais (30cm) com fermentação lenta de 72h, ingredientes D.O.P. e assadas a 450°C.
           </p>
         </motion.div>
 
-        {/* Search and Tag Filters Bar */}
+        {/* Search and Tag Filters Bar - Design Compacto */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 14 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-40px' }}
-          transition={{ duration: 0.5, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
-          className="bg-white p-4 sm:p-6 rounded-2xl border border-[#E0D5C3] shadow-sm mb-10 space-y-4"
+          viewport={{ once: true, margin: '-20px' }}
+          transition={{ duration: 0.4, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
+          className="bg-white p-2.5 sm:p-3.5 rounded-2xl border border-[#E0D5C3] shadow-xs mb-3.5 sm:mb-4.5 space-y-2 sm:space-y-2.5"
         >
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-center justify-between">
             {/* Search Input */}
             <div className="relative w-full max-w-md">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8C827A]" />
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#8C827A]" />
               <input
                 type="text"
                 placeholder="Buscar por pizza ou ingrediente..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C] transition-all"
+                className="w-full pl-9 pr-8 py-1.5 sm:py-2 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C] transition-all"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
 
-            <div className="text-xs font-semibold text-[#8C827A] flex items-center gap-1.5 self-center">
-              <span>🍕 {filteredItems.length} {filteredItems.length === 1 ? 'opção disponível' : 'opções disponíveis'}</span>
+            <div className="text-[11px] sm:text-xs font-semibold text-[#8C827A] flex items-center gap-1.5 self-end sm:self-center">
+              <span>🍕 {filteredItems.length} {filteredItems.length === 1 ? 'opção' : 'opções'}</span>
             </div>
           </div>
 
           {/* Category Tabs & Grid View Control */}
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-3 sm:gap-4 border-t border-[#F0EAE1] pt-3.5">
-            <div className="flex items-center gap-2 sm:gap-2.5 overflow-x-auto pb-1 pt-0.5 scrollbar-none flex-1 w-full lg:w-auto">
+          <div className="flex items-center justify-between gap-2 border-t border-[#F0EAE1] pt-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-0.5 pt-0.5 scrollbar-none flex-1 w-full lg:w-auto">
               {categories.map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 lg:shrink ${
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                     selectedCategory === cat.id
-                      ? 'bg-[#C24D2C] text-white shadow-md shadow-[#C24D2C]/30 scale-[1.02]'
+                      ? 'bg-[#C24D2C] text-white shadow-xs scale-[1.02]'
                       : 'bg-[#FAF7F2] text-[#5C554E] hover:bg-[#EAE4D9] border border-[#E0D5C3]'
                   }`}
                 >
-                  <span className="text-sm">{cat.icon}</span>
+                  <span className="text-xs sm:text-sm">{cat.icon}</span>
                   <span>{cat.label}</span>
                 </button>
               ))}
@@ -275,7 +275,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
             {/* Grid Configuration Button with Hover Menu (Reduzido pela metade do tamanho) */}
             <div 
               ref={gridMenuContainerRef}
-              className="hidden md:block relative shrink-0 self-center lg:self-center"
+              className="hidden md:block relative shrink-0 self-center"
               onMouseEnter={handleGridMouseEnter}
               onMouseLeave={handleGridMouseLeave}
             >
@@ -395,7 +395,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                 {/* Image & Badges */}
                 <div 
                   onClick={() => openCustomizer(item)}
-                  className="relative h-44 sm:h-48 overflow-hidden bg-[#181513] cursor-pointer"
+                  className="relative h-36 sm:h-40 md:h-42 overflow-hidden bg-[#181513] cursor-pointer"
                   title="Clique para ver detalhes e personalizar"
                 >
                   <img
@@ -407,34 +407,34 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
                   {/* Price Tag (Bottom Right of Image) */}
-                  <div className="absolute bottom-2.5 right-2.5 bg-[#181513]/90 backdrop-blur-md px-3 py-1 rounded-full border border-[#E5A93C]/40 text-[#E5A93C] font-black text-sm sm:text-base shadow-lg">
+                  <div className="absolute bottom-2 right-2 bg-[#181513]/90 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-[#E5A93C]/40 text-[#E5A93C] font-black text-xs sm:text-sm shadow-md">
                     {formatBRL(item.price)}
                   </div>
                 </div>
 
                 {/* Content Body */}
-                <div className="p-4 sm:p-4.5 flex flex-col flex-1 justify-between">
+                <div className="p-3 sm:p-3.5 flex flex-col flex-1 justify-between">
                   <div>
                     {item.italianName && (
-                      <p className="text-[10px] font-cinzel font-semibold uppercase tracking-wider text-[#C24D2C] mb-1 truncate">
+                      <p className="text-[9px] sm:text-[10px] font-cinzel font-semibold uppercase tracking-wider text-[#C24D2C] mb-0.5 truncate">
                         {item.italianName}
                       </p>
                     )}
 
                     <h3 
                       onClick={() => openCustomizer(item)}
-                      className="font-serif-italian text-base sm:text-lg font-bold text-[#181513] mb-1.5 group-hover:text-[#C24D2C] transition-colors leading-snug line-clamp-2 cursor-pointer"
+                      className="font-serif-italian text-sm sm:text-base font-bold text-[#181513] mb-1 group-hover:text-[#C24D2C] transition-colors leading-snug line-clamp-2 cursor-pointer"
                       title="Clique para ver detalhes e personalizar"
                     >
                       {item.name}
                     </h3>
 
-                    <p className="text-xs text-[#5C554E] leading-relaxed mb-3 line-clamp-2">
+                    <p className="text-[11px] sm:text-xs text-[#5C554E] leading-relaxed mb-2 line-clamp-2">
                       {item.description}
                     </p>
 
                     {/* Ingredients Pills */}
-                    <div className="flex flex-wrap gap-1 mb-3">
+                    <div className="flex flex-wrap gap-1 mb-2">
                       {item.ingredients.slice(0, 3).map((ing, iIdx) => (
                         <span
                           key={iIdx}

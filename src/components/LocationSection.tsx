@@ -59,19 +59,19 @@ export const LocationSection: React.FC<LocationSectionProps> = ({ siteInfo }) =>
   };
 
   return (
-    <section id="localizacao" className="py-8 sm:py-10 bg-[#181513] text-[#FAF7F2] relative overflow-hidden scroll-mt-20">
+    <section id="localizacao" className="pt-3 sm:pt-4 pb-10 sm:pb-12 bg-[#181513] text-[#FAF7F2] relative overflow-hidden scroll-mt-16 sm:scroll-mt-18">
       <div className="w-full max-w-[820px] mx-auto px-4 sm:px-6 relative z-10">
         
         {/* Section Header */}
-        <div className="text-center max-w-2xl mx-auto mb-8">
-          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#C24D2C]/20 text-[#E5A93C] text-[11px] font-bold uppercase tracking-widest mb-2 border border-[#C24D2C]/40">
+        <div className="text-center max-w-2xl mx-auto mb-3 sm:mb-4">
+          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#C24D2C]/20 text-[#E5A93C] text-[10px] sm:text-[11px] font-bold uppercase tracking-widest mb-1.5 border border-[#C24D2C]/40">
             <MapPin className="w-3.5 h-3.5 text-[#C24D2C]" />
             <span>{siteInfo?.locationBadge || 'Onde Nos Encontrar'}</span>
           </div>
-          <h2 className="font-serif-italian text-2xl sm:text-3xl font-bold tracking-tight text-white mb-2">
+          <h2 className="font-serif-italian text-2xl sm:text-3xl font-bold tracking-tight text-white mb-1">
             {siteInfo?.locationTitle || 'Visite a Deolinda Pizzaria Napoletana'}
           </h2>
-          <p className="text-white/70 text-xs sm:text-sm">
+          <p className="text-white/70 text-xs sm:text-sm max-w-xl mx-auto">
             {siteInfo?.locationSubtitle || 'Um refúgio italiano aconchegante com aroma de lenha queimando, vinhos selecionados e a verdadeira hospitalidade de Nápoles.'}
           </p>
         </div>

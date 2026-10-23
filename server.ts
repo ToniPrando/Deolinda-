@@ -30,6 +30,26 @@ app.use("/api", (req, res, next) => {
   next();
 });
 
+// Automatic production custom domain redirect to www. (e.g., deolindapizzaria.com.br -> www.deolindapizzaria.com.br)
+app.use((req, res, next) => {
+  const host = req.headers.host || "";
+  if (
+    host &&
+    !host.startsWith("www.") &&
+    !host.includes("localhost") &&
+    !host.includes("127.0.0.1") &&
+    !host.endsWith(".run.app") &&
+    !host.includes("webcontainer") &&
+    !host.includes("aistudio") &&
+    !host.includes("google") &&
+    host.includes(".")
+  ) {
+    const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+    return res.redirect(301, `${protocol}://www.${host}${req.originalUrl}`);
+  }
+  next();
+});
+
 // ==========================================
 // INTERNAL DATABASE SYSTEM (File-Backed JSON)
 // ==========================================
@@ -475,6 +495,30 @@ app.post("/api/settings/site-info", (req, res) => {
   } catch (error: any) {
     console.error("Error saving site info:", error);
     res.status(500).json({ error: error.message || "Failed to save site info" });
+  }
+});
+
+// Admin Authentication Password API
+app.get("/api/settings/admin-password", (_req, res) => {
+  try {
+    res.json({ hasCustomPassword: Boolean((db as any).adminPassword) });
+  } catch (error: any) {
+    res.json({ hasCustomPassword: false });
+  }
+});
+
+app.post("/api/settings/admin-password", (req, res) => {
+  try {
+    const { password } = req.body;
+    if (typeof password === "string" && password.trim().length >= 4) {
+      (db as any).adminPassword = password.trim();
+      saveDatabase();
+      return res.json({ success: true, message: "Senha da área administrativa atualizada com sucesso" });
+    }
+    return res.status(400).json({ error: "Senha inválida. Deve conter pelo menos 4 caracteres." });
+  } catch (error: any) {
+    console.error("Error saving admin password:", error);
+    res.status(500).json({ error: error.message || "Failed to save admin password" });
   }
 });
 

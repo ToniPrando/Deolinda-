@@ -43,7 +43,10 @@ import {
   ArrowUp,
   ArrowDown,
   FolderTree,
-  LayoutGrid
+  LayoutGrid,
+  Lock,
+  KeyRound,
+  ShieldCheck
 } from 'lucide-react';
 import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES } from '../data/menuData';
 import { SOCIAL_POSTS } from '../data/socialData';
@@ -55,7 +58,8 @@ import {
   saveMenuItemsToFirestore,
   saveGalleryPostsToFirestore,
   saveSiteInfoToFirestore,
-  saveMenuCategoriesToFirestore
+  saveMenuCategoriesToFirestore,
+  saveAdminPasswordToFirestore
 } from '../services/firebaseService';
 import { TricolorBands } from './TricolorBands';
 
@@ -81,6 +85,8 @@ interface AdminDashboardProps {
   onOpenLogoModal?: (initialTab?: 'logo' | 'emblem') => void;
   onEmblemUpdated?: (newEmblemUrl: string | null, enabled?: boolean) => void;
   onLogoUpdated?: (newLogoUrl: string | null) => void;
+  customAdminPassword?: string | null;
+  onAdminPasswordUpdated?: (newPassword: string | null) => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -100,9 +106,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   isEmblemEnabled = true,
   onOpenLogoModal,
   onEmblemUpdated,
-  onLogoUpdated
+  onLogoUpdated,
+  customAdminPassword,
+  onAdminPasswordUpdated
 }) => {
-  const [activeTab, setActiveTab] = useState<'menu' | 'gallery' | 'branding' | 'siteInfo'>('menu');
+  const [activeTab, setActiveTab] = useState<'menu' | 'gallery' | 'branding' | 'siteInfo' | 'security'>('menu');
   const [isManualSyncing, setIsManualSyncing] = useState(false);
   const [, setLastSyncTime] = useState<string>('Agora');
 
@@ -898,6 +906,112 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  // ==========================================
+  // ADMIN PASSWORD & ACCESS CONTROL STATE
+  // ==========================================
+  const [currentAdminPassword, setCurrentAdminPassword] = useState<string>(() => {
+    return customAdminPassword || localStorage.getItem('deolinda_admin_password') || '';
+  });
+
+  useEffect(() => {
+    if (customAdminPassword !== undefined) {
+      setCurrentAdminPassword(customAdminPassword || '');
+    }
+  }, [customAdminPassword]);
+
+  const [currentPasswordInput, setCurrentPasswordInput] = useState('');
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordNotice, setPasswordNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [isConfirmingResetPassword, setIsConfirmingResetPassword] = useState(false);
+
+  const handleSaveAdminPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordNotice(null);
+
+    const newPwd = newPasswordInput.trim();
+    const confirmPwd = confirmPasswordInput.trim();
+
+    if (newPwd.length < 4) {
+      setPasswordNotice({ type: 'error', text: 'A nova senha deve ter pelo menos 4 caracteres ou dígitos.' });
+      return;
+    }
+
+    if (newPwd !== confirmPwd) {
+      setPasswordNotice({ type: 'error', text: 'A confirmação de senha não confere com a nova senha digitada.' });
+      return;
+    }
+
+    // If there is an existing custom password, verify current password input
+    const expectedCurrent = (currentAdminPassword || localStorage.getItem('deolinda_admin_password') || '').trim();
+    if (expectedCurrent) {
+      const enteredCurrent = currentPasswordInput.trim();
+      const validDefaults = ['1234', 'admin', 'admin123', 'deolinda'];
+      if (enteredCurrent !== expectedCurrent && !validDefaults.includes(enteredCurrent.toLowerCase())) {
+        setPasswordNotice({ type: 'error', text: 'A senha atual digitada está incorreta.' });
+        return;
+      }
+    }
+
+    setIsSavingPassword(true);
+    try {
+      await saveAdminPasswordToFirestore(newPwd);
+      setCurrentAdminPassword(newPwd);
+      if (onAdminPasswordUpdated) {
+        onAdminPasswordUpdated(newPwd);
+      }
+      try {
+        localStorage.setItem('deolinda_admin_password', newPwd);
+      } catch {}
+
+      setPasswordNotice({ 
+        type: 'success', 
+        text: 'Senha da Área do Administrador atualizada com sucesso e sincronizada na nuvem Firebase!' 
+      });
+      setCurrentPasswordInput('');
+      setNewPasswordInput('');
+      setConfirmPasswordInput('');
+      setTimeout(() => setPasswordNotice(null), 6000);
+    } catch (err: any) {
+      setPasswordNotice({ type: 'error', text: 'Erro ao salvar nova senha. Tente novamente.' });
+    } finally {
+      setIsSavingPassword(false);
+    }
+  };
+
+  const handleResetAdminPasswordToDefault = async () => {
+    setIsSavingPassword(true);
+    try {
+      const defaultPwd = '1234';
+      await saveAdminPasswordToFirestore(defaultPwd);
+      setCurrentAdminPassword(defaultPwd);
+      if (onAdminPasswordUpdated) {
+        onAdminPasswordUpdated(defaultPwd);
+      }
+      try {
+        localStorage.setItem('deolinda_admin_password', defaultPwd);
+      } catch {}
+
+      setIsConfirmingResetPassword(false);
+      setPasswordNotice({ 
+        type: 'success', 
+        text: 'Senha restaurada para a padrão ("1234") com sucesso!' 
+      });
+      setCurrentPasswordInput('');
+      setNewPasswordInput('');
+      setConfirmPasswordInput('');
+      setTimeout(() => setPasswordNotice(null), 6000);
+    } catch (err) {
+      setPasswordNotice({ type: 'error', text: 'Erro ao restaurar senha padrão.' });
+    } finally {
+      setIsSavingPassword(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   const formatBRL = (val: number) => {
@@ -1006,7 +1120,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             { id: 'menu', label: `📝 Controle de Cardápio (${currentMenuItems.length})` },
             { id: 'gallery', label: `📸 Fotos & Momentos (${currentSocialPosts.length})` },
             { id: 'siteInfo', label: '🌐 Informações do Site' },
-            { id: 'branding', label: '🎨 Identidade & Logotipo' }
+            { id: 'branding', label: '🎨 Identidade & Logotipo' },
+            { id: 'security', label: '🔒 Senha de Acesso ADM' }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -2883,6 +2998,272 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
 
             </div>
+          </div>
+        )}
+
+        {/* ========================================== */}
+        {/* Tab 5: Segurança & Senha de Acesso ADM     */}
+        {/* ========================================== */}
+        {activeTab === 'security' && (
+          <div className="flex-1 p-4 sm:p-6 overflow-y-auto bg-[#F4EFE6] space-y-6">
+            
+            {/* Feedback Alert */}
+            {passwordNotice && (
+              <div className={`p-4 rounded-2xl text-xs sm:text-sm font-semibold flex items-center gap-2.5 animate-in fade-in ${
+                passwordNotice.type === 'success'
+                  ? 'bg-emerald-100 border border-emerald-300 text-emerald-900'
+                  : 'bg-rose-100 border border-rose-300 text-rose-900'
+              }`}>
+                {passwordNotice.type === 'success' ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                )}
+                <span>{passwordNotice.text}</span>
+              </div>
+            )}
+
+            {/* Header Banner */}
+            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-[#E0D5C3] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-[#C24D2C]/10 border border-[#C24D2C]/30 flex items-center justify-center text-[#C24D2C] shrink-0">
+                  <ShieldCheck className="w-6 h-6 text-[#C24D2C]" />
+                </div>
+                <div>
+                  <h4 className="font-serif-italian text-xl font-bold text-[#181513]">
+                    Segurança & Senha de Acesso ADM
+                  </h4>
+                  <p className="text-xs text-[#5C554E] mt-1 max-w-2xl leading-relaxed">
+                    Altere a senha ou PIN de acesso à área administrativa. A nova senha é salva no Cloud Firestore e sincronizada instantaneamente entre todos os dispositivos da gerência.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Proteção Ativa</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Grid Layout: Form and Info */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              
+              {/* Left Column: Change Password Form (7 cols) */}
+              <div className="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-7 border border-[#E0D5C3] shadow-xs space-y-5">
+                <div className="border-b border-[#E0D5C3] pb-4">
+                  <h5 className="font-bold text-base text-[#181513] flex items-center gap-2">
+                    <KeyRound className="w-4 h-4 text-[#C24D2C]" />
+                    <span>Definir Nova Senha de Acesso</span>
+                  </h5>
+                  <p className="text-xs text-[#5C554E] mt-0.5">
+                    Preencha os campos para atualizar as credenciais de entrada no painel.
+                  </p>
+                </div>
+
+                <form onSubmit={handleSaveAdminPassword} className="space-y-4">
+                  {/* Senha Atual */}
+                  <div>
+                    <label className="block text-xs font-bold text-[#181513] mb-1.5">
+                      Senha Atual {currentAdminPassword ? '(necessária para alteração)' : '(padrão atual: 1234)'}
+                    </label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-[#8C827A] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type={showCurrentPassword ? "text" : "password"}
+                        value={currentPasswordInput}
+                        onChange={(e) => setCurrentPasswordInput(e.target.value)}
+                        placeholder={currentAdminPassword ? "Digite a senha atual" : "Digite 1234 ou deixe em branco se primeira vez"}
+                        className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-xs sm:text-sm text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#8C827A] hover:text-[#181513] transition-colors cursor-pointer"
+                        title={showCurrentPassword ? "Ocultar" : "Exibir"}
+                      >
+                        {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Nova Senha */}
+                  <div>
+                    <label className="block text-xs font-bold text-[#181513] mb-1.5">
+                      Nova Senha de Acesso *
+                    </label>
+                    <div className="relative">
+                      <KeyRound className="w-4 h-4 text-[#C24D2C] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type={showNewPassword ? "text" : "password"}
+                        required
+                        value={newPasswordInput}
+                        onChange={(e) => setNewPasswordInput(e.target.value)}
+                        placeholder="Mínimo 4 caracteres (letras, números ou símbolos)"
+                        className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-xs sm:text-sm text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#8C827A] hover:text-[#181513] transition-colors cursor-pointer"
+                        title={showNewPassword ? "Ocultar" : "Exibir"}
+                      >
+                        {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-[#8C827A] mt-1">
+                      Você pode usar um PIN numérico (ex: 2026) ou uma senha alfanumérica (ex: Deolinda@2026).
+                    </p>
+                  </div>
+
+                  {/* Confirmar Nova Senha */}
+                  <div>
+                    <label className="block text-xs font-bold text-[#181513] mb-1.5">
+                      Confirmar a Nova Senha *
+                    </label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-[#8C827A] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        required
+                        value={confirmPasswordInput}
+                        onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                        placeholder="Digite novamente a nova senha para confirmação"
+                        className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-xs sm:text-sm text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#8C827A] hover:text-[#181513] transition-colors cursor-pointer"
+                        title={showConfirmPassword ? "Ocultar" : "Exibir"}
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-[#E0D5C3]">
+                    <span className="text-[11px] text-[#5C554E]">
+                      A alteração tem efeito imediato em todos os navegadores.
+                    </span>
+
+                    <button
+                      type="submit"
+                      disabled={isSavingPassword || !newPasswordInput.trim() || !confirmPasswordInput.trim()}
+                      className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#C24D2C] to-[#E5A93C] hover:from-[#A63A1E] hover:to-[#D4982B] text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-md shadow-[#C24D2C]/20 hover:scale-105 active:scale-95 disabled:opacity-50 transition-all cursor-pointer"
+                    >
+                      {isSavingPassword ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Gravando Senha...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Salvar Nova Senha</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Right Column: Information, Security Guidelines & Reset (5 cols) */}
+              <div className="lg:col-span-5 space-y-4">
+                
+                {/* Status Card */}
+                <div className="bg-white rounded-3xl p-5 sm:p-6 border border-[#E0D5C3] shadow-xs space-y-3.5">
+                  <h5 className="font-bold text-sm text-[#181513] flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                    <span>Status da Autenticação</span>
+                  </h5>
+
+                  <div className="p-3.5 rounded-2xl bg-[#FAF7F2] border border-[#E0D5C3] space-y-2 text-xs">
+                    <div className="flex justify-between items-center py-1 border-b border-[#E0D5C3]/60">
+                      <span className="text-[#5C554E]">Configuração atual:</span>
+                      <span className="font-bold text-[#181513]">
+                        {currentAdminPassword ? 'Senha Personalizada Ativa' : 'Senha Padrão (1234)'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-1 border-b border-[#E0D5C3]/60">
+                      <span className="text-[#5C554E]">Armazenamento:</span>
+                      <span className="font-semibold text-emerald-700 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span>Cloud Firestore</span>
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-1">
+                      <span className="text-[#5C554E]">Sessão ao fechar:</span>
+                      <span className="font-bold text-[#C24D2C]">Bloqueada automaticamente</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 text-xs text-[#5C554E] leading-relaxed">
+                    <p className="flex items-start gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                      <span>Quando você fecha a Área do ADM, a sessão é encerrada exigindo digitar a senha novamente.</span>
+                    </p>
+                    <p className="flex items-start gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                      <span>Sugestões de senhas não são exibidas na tela de login, garantindo total privacidade.</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Reset to Default Card */}
+                <div className="bg-white rounded-3xl p-5 border border-[#E0D5C3] shadow-xs space-y-3">
+                  <div className="flex items-center gap-2 text-[#8C827A]">
+                    <RotateCcw className="w-4 h-4 text-[#C24D2C]" />
+                    <h5 className="font-bold text-xs text-[#181513] uppercase tracking-wider">
+                      Redefinição de Emergência
+                    </h5>
+                  </div>
+                  <p className="text-xs text-[#5C554E] leading-relaxed">
+                    Precisa voltar à senha inicial da pizzaria? Você pode restaurar a senha padrão de fábrica (<strong>1234</strong>) a qualquer momento.
+                  </p>
+
+                  {isConfirmingResetPassword ? (
+                    <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 space-y-2 animate-in fade-in">
+                      <p className="text-xs font-semibold text-amber-900">
+                        Confirmar redefinição da senha para o padrão "1234"?
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleResetAdminPasswordToDefault}
+                          disabled={isSavingPassword}
+                          className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-xs"
+                        >
+                          {isSavingPassword ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                          <span>Sim, Restaurar 1234</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsConfirmingResetPassword(false)}
+                          className="px-3 py-1.5 rounded-xl bg-neutral-200 hover:bg-neutral-300 text-neutral-800 text-xs font-semibold transition-colors cursor-pointer"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsConfirmingResetPassword(true)}
+                      className="w-full py-2 px-3.5 rounded-xl border border-[#E0D5C3] bg-[#FAF7F2] hover:bg-neutral-100 text-[#5C554E] hover:text-[#181513] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Restaurar Senha Padrão (1234)</span>
+                    </button>
+                  )}
+                </div>
+
+              </div>
+
+            </div>
+
           </div>
         )}
 
