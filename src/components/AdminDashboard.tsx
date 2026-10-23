@@ -906,7 +906,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   return (
     <div 
-      className={`fixed inset-0 z-50 overflow-hidden bg-black/80 backdrop-blur-md flex items-center justify-center transition-all duration-200 ${
+      className={`fixed inset-0 z-[60] overflow-hidden bg-black/80 backdrop-blur-md flex items-center justify-center transition-all duration-200 ${
         isMaximized ? 'p-0' : 'p-2 sm:p-6'
       }`}
     >

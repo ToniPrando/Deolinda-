@@ -692,9 +692,31 @@ export default function App() {
     document.title = 'Área do Administrador | Deolinda Pizzaria Napoletana';
   };
 
+  const handleAdminAuthSuccess = () => {
+    setIsAdminAuthOpen(false);
+    setIsAdminOpen(true);
+    if (window.location.pathname !== '/admin') {
+      window.history.pushState({ section: 'admin' }, '', '/admin');
+    }
+    document.title = 'Painel do Administrador | Deolinda Pizzaria Napoletana';
+  };
+
+  const handleCloseAdminAuth = () => {
+    setIsAdminAuthOpen(false);
+    if (!isAdminOpen && window.location.pathname === '/admin') {
+      const route = getRouteById(activeSection);
+      window.history.pushState({ section: activeSection }, '', route ? route.path : '/');
+      document.title = route ? route.title : 'Deolinda Pizzaria Napoletana | Fermentação Lenta & Tradição';
+    }
+  };
+
   const handleCloseAdmin = () => {
     setIsAdminOpen(false);
     setIsAdminAuthOpen(false);
+    try {
+      sessionStorage.removeItem('deolinda_admin_authenticated');
+      localStorage.removeItem('deolinda_admin_authenticated');
+    } catch {}
     const route = getRouteById(activeSection);
     const targetPath = route ? route.path : '/';
     if (window.location.pathname === '/admin') {
@@ -915,8 +937,8 @@ export default function App() {
       {/* Administrator Protected Authentication Modal */}
       <AdminAuthModal
         isOpen={isAdminAuthOpen}
-        onClose={handleCloseAdmin}
-        onSuccess={() => setIsAdminOpen(true)}
+        onClose={handleCloseAdminAuth}
+        onSuccess={handleAdminAuthSuccess}
       />
 
       {/* Admin Dashboard */}

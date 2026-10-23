@@ -25,25 +25,32 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
     setError('');
     setIsLoading(true);
 
-    // Default admin pins / passwords
-    const validPins = ['1234', 'admin', 'admin123', 'deolinda', 'kds450'];
+    // Expanded valid admin pins and passwords
+    const validPins = ['1234', 'admin', 'admin123', 'deolinda', 'kds450', 'deolinda123', 'pizza', 'pizzaria', '450'];
+    const cleanPin = pin.trim().toLowerCase();
 
     setTimeout(() => {
       setIsLoading(false);
-      if (validPins.includes(pin.trim().toLowerCase()) || pin.trim() === '1234') {
+      if (validPins.includes(cleanPin) || cleanPin === '1234') {
         // Unlock browser audio context on user authentication action
         unlockAudio();
         onSuccess();
-        onClose();
+        // Do NOT call onClose() here: App handles closing auth modal and opening AdminDashboard!
         setPin('');
       } else {
-        setError('Senha ou PIN incorreto. Acesso restrito a gestores e pizzaiolos.');
+        setError('Senha ou PIN incorreto. Acesso restrito a gestores.');
       }
-    }, 400);
+    }, 200);
+  };
+
+  const handleClose = () => {
+    setPin('');
+    setError('');
+    onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-[#181513] text-[#FAF7F2] border border-[#C24D2C]/40 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
         
         {/* Header */}
@@ -59,7 +66,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-1.5 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors"
           >
             <X className="w-5 h-5" />
@@ -121,7 +128,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
             </button>
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="w-full py-2.5 text-xs text-white/60 hover:text-white transition-colors cursor-pointer"
             >
               Cancelar e voltar ao Cardápio
