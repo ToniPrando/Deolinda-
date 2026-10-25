@@ -39,24 +39,41 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, []);
 
   const handleNavClick = (id: string, path: string) => {
+    const wasMobileMenuOpen = mobileMenuOpen;
     setMobileMenuOpen(false);
-    if (onNavigate) {
-      onNavigate(id, path);
-    } else {
-      const element = document.getElementById(id);
-      if (element) {
-        const offset = 80;
-        const bodyRect = document.body.getBoundingClientRect().top;
-        const elementRect = element.getBoundingClientRect().top;
-        const elementPosition = elementRect - bodyRect;
-        const offsetPosition = elementPosition - offset;
 
-        window.scrollTo({
-          top: offsetPosition,
-          behavior: 'smooth'
-        });
+    // On mobile, if dropdown was open, delay execution slightly so dropdown unmounts
+    // and does not distort scroll position calculations
+    const delay = wasMobileMenuOpen ? 120 : 0;
+
+    setTimeout(() => {
+      if (onNavigate) {
+        onNavigate(id, path);
+      } else {
+        if (id === 'hero' || id === 'inicio') {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          return;
+        }
+
+        const element = document.getElementById(id);
+        if (element) {
+          const isMobile = window.innerWidth < 1024;
+          // Target the title heading on mobile so content displays from the title
+          const targetEl = isMobile && element.querySelector('h2') ? (element.querySelector('h2') || element) : element;
+          const headerEl = document.querySelector('header');
+          const headerHeight = headerEl ? Math.min(headerEl.offsetHeight, 72) : (isMobile ? 64 : 76);
+          const bodyRect = document.body.getBoundingClientRect().top;
+          const elementRect = targetEl.getBoundingClientRect().top;
+          const elementPosition = elementRect - bodyRect;
+          const offsetPosition = Math.max(0, elementPosition - headerHeight - (isMobile ? 10 : 16));
+
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+          });
+        }
       }
-    }
+    }, delay);
   };
 
   return (

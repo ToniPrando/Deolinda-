@@ -24,7 +24,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo, onNavigat
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 items-center md:items-start mb-10">
           
           {/* Left Column: Brand & Social */}
-          <div className="space-y-4 text-left">
+          <div className="space-y-4 text-left order-1 md:order-1">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-[#181513] flex items-center justify-center shadow-lg border border-[#E5A93C]/50 overflow-hidden p-0.5 shrink-0">
                 <img
@@ -73,8 +73,8 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo, onNavigat
             </div>
           </div>
 
-          {/* Center Column: Criado por ToniAep */}
-          <div className="flex flex-col items-center justify-center text-center space-y-1.5 py-1 my-auto">
+          {/* Center Column: Criado por ToniAep (No celular fica abaixo da navegação rápida) */}
+          <div className="order-3 md:order-2 flex flex-col items-center justify-center text-center space-y-1.5 py-3 md:py-1 my-auto w-full pt-4 md:pt-1 border-t border-white/5 md:border-none">
             <span className="text-[10px] font-semibold uppercase tracking-widest text-[#E5A93C]/90 font-cinzel">
               Criado por
             </span>
@@ -102,8 +102,8 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo, onNavigat
             </a>
           </div>
 
-          {/* Right Column: Navegação Rápida */}
-          <div className="space-y-3 flex flex-col items-start md:items-end">
+          {/* Right Column: Navegação Rápida (No celular fica antes de Criado por) */}
+          <div className="order-2 md:order-3 space-y-3 flex flex-col items-start md:items-end">
             <h4 className="font-serif-italian text-base font-bold text-white border-b border-white/10 pb-2 w-full md:text-right">
               Navegação Rápida
             </h4>

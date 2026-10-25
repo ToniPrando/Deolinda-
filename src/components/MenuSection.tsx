@@ -107,6 +107,31 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
     });
   }, [currentItems, selectedCategory, searchQuery]);
 
+  const handleSelectCategory = (catId: CategoryType | 'all') => {
+    setSelectedCategory(catId);
+    
+    // On mobile, ensure content is displayed starting from the menu title
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      const cardapioSection = document.getElementById('cardapio');
+      if (cardapioSection) {
+        const titleEl = cardapioSection.querySelector('h2') || cardapioSection;
+        const headerEl = document.querySelector('header');
+        const headerHeight = headerEl ? Math.min(headerEl.offsetHeight, 72) : 64;
+        const bodyRect = document.body.getBoundingClientRect().top;
+        const elementRect = titleEl.getBoundingClientRect().top;
+        const elementPosition = elementRect - bodyRect;
+        const targetScroll = Math.max(0, elementPosition - headerHeight - 10);
+
+        if (window.scrollY > targetScroll + 30) {
+          window.scrollTo({
+            top: targetScroll,
+            behavior: 'smooth'
+          });
+        }
+      }
+    }
+  };
+
   const openCustomizer = (item: MenuItem) => {
     if (!currentUser) {
       setAddedNotice('Faça login ou cadastre-se para adicionar ao pedido.');
@@ -259,7 +284,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
               {categories.map((cat) => (
                 <button
                   key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
+                  onClick={() => handleSelectCategory(cat.id)}
                   className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                     selectedCategory === cat.id
                       ? 'bg-[#C24D2C] text-white shadow-xs scale-[1.02]'

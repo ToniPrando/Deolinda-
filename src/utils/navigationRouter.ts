@@ -82,11 +82,23 @@ export function navigateToSection(id: string, pathOverride?: string, pushHistory
 
     const el = document.getElementById(id);
     if (el) {
-      const offset = 80;
+      const isMobile = window.innerWidth < 1024;
+      // On mobile, precisely display starting from the section's title (h2 or badge header)
+      const targetElement = isMobile && el.querySelector('h2')
+        ? (el.querySelector('h2') || el)
+        : el;
+
+      // Base sticky header height (clamped to collapsed navbar height)
+      const headerEl = document.querySelector('header');
+      const headerHeight = headerEl ? Math.min(headerEl.offsetHeight, 72) : (isMobile ? 64 : 76);
+
       const bodyRect = document.body.getBoundingClientRect().top;
-      const elementRect = el.getBoundingClientRect().top;
+      const elementRect = targetElement.getBoundingClientRect().top;
       const elementPosition = elementRect - bodyRect;
-      const offsetPosition = elementPosition - offset;
+
+      // Position title right below the header with comfortable padding
+      const extraPadding = isMobile ? 10 : 16;
+      const offsetPosition = Math.max(0, elementPosition - headerHeight - extraPadding);
 
       window.scrollTo({
         top: offsetPosition,
