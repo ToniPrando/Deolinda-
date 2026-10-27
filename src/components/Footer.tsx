@@ -83,7 +83,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo, onNavigat
               target="_blank"
               rel="noopener noreferrer"
               title="Visitar ToniAep Projetos (Criando Inovação)"
-              className="footer-logo relative group inline-flex items-center justify-center p-1 rounded-xl bg-white/[0.02] hover:bg-white/[0.08] transition-all cursor-pointer max-w-[140px]"
+              className="footer-logo relative group inline-flex items-center justify-center p-1 rounded-xl bg-white/[0.02] hover:bg-white/[0.08] transition-all cursor-pointer max-w-[105px]"
             >
               <img 
                 src={toniaepLogo || TONIAEP_CREATOR_LOGO_BASE64} 
