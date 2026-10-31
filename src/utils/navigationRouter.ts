@@ -62,7 +62,7 @@ export function getRouteById(id: string): RouteConfig | undefined {
 }
 
 /**
- * Smoothly scrolls to section and updates URL and document title
+ * Navigates to a specific page route, updating history, title and scrolling to top
  */
 export function navigateToSection(id: string, pathOverride?: string, pushHistory = true) {
   const route = getRouteById(id);
@@ -74,36 +74,6 @@ export function navigateToSection(id: string, pathOverride?: string, pushHistory
       window.history.pushState({ section: id }, '', targetPath);
     }
     document.title = targetTitle;
-
-    if (id === 'hero' || id === 'inicio') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
-    const el = document.getElementById(id);
-    if (el) {
-      const isMobile = window.innerWidth < 1024;
-      // On mobile, precisely display starting from the section's title (h2 or badge header)
-      const targetElement = isMobile && el.querySelector('h2')
-        ? (el.querySelector('h2') || el)
-        : el;
-
-      // Base sticky header height (clamped to collapsed navbar height)
-      const headerEl = document.querySelector('header');
-      const headerHeight = headerEl ? Math.min(headerEl.offsetHeight, 72) : (isMobile ? 64 : 76);
-
-      const bodyRect = document.body.getBoundingClientRect().top;
-      const elementRect = targetElement.getBoundingClientRect().top;
-      const elementPosition = elementRect - bodyRect;
-
-      // Position title right below the header with comfortable padding
-      const extraPadding = isMobile ? 10 : 16;
-      const offsetPosition = Math.max(0, elementPosition - headerHeight - extraPadding);
-
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
-    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }

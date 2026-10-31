@@ -9,6 +9,7 @@ export const DEFAULT_SITE_INFO: SiteInfo = {
   whatsappMessage: 'Olá Deolinda Pizzaria! Gostaria de informações.',
   instagramHandle: '@deolindapizzaria',
   instagramUrl: 'https://www.instagram.com/deolindapizzaria/',
+  facebookUrl: 'https://www.facebook.com/p/Deolinda-Pizzeria-61593126269315/',
   email: 'contato@deolindapizzaria.com.br',
   address: 'Rua Santa Cruz, 232',
   addressNeighborhood: 'Centro',

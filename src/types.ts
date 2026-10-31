@@ -146,6 +146,7 @@ export interface SiteInfo {
   whatsappMessage: string;
   instagramHandle: string;
   instagramUrl: string;
+  facebookUrl?: string;
   email: string;
   address: string;
   addressNeighborhood: string;

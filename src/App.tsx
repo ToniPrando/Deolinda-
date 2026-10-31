@@ -16,7 +16,7 @@ import { CartItem, Order, Reservation, OrderStatus, CustomerUser, MenuItem, Soci
 import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES } from './data/menuData';
 import { SOCIAL_POSTS } from './data/socialData';
 import { DEFAULT_SITE_INFO } from './data/siteInfoData';
-import { Flame, Maximize2 } from 'lucide-react';
+import { Home, ChevronRight } from 'lucide-react';
 import { 
   subscribeToOrders, 
   subscribeToReservations, 
@@ -34,7 +34,13 @@ import {
 import { navigateToSection, getRouteByPath, getRouteById } from './utils/navigationRouter';
 
 export default function App() {
-  const [activeSection, setActiveSection] = useState<string>('hero');
+  const [activeSection, setActiveSection] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const route = getRouteByPath(window.location.pathname);
+      if (route) return route.id;
+    }
+    return 'hero';
+  });
   const isNavigatingRef = useRef(false);
 
   const [currentUser, setCurrentUser] = useState<CustomerUser | null>(() => {
@@ -697,12 +703,9 @@ export default function App() {
   };
 
   const handleNavigate = (id: string, pathOverride?: string, pushHistory = true) => {
-    isNavigatingRef.current = true;
     setActiveSection(id);
     navigateToSection(id, pathOverride, pushHistory);
-    setTimeout(() => {
-      isNavigatingRef.current = false;
-    }, 850);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleOpenAdminAuth = () => {
@@ -762,12 +765,11 @@ export default function App() {
       targetRoute = getRouteById(initialHash);
     }
 
-    if (targetRoute && targetRoute.id !== 'hero') {
+    if (targetRoute) {
       setActiveSection(targetRoute.id);
-      setTimeout(() => {
-        navigateToSection(targetRoute.id, targetRoute.path, false);
-      }, 200);
+      document.title = targetRoute.title;
     } else {
+      setActiveSection('hero');
       document.title = 'Deolinda Pizzaria Napoletana | Fermentação Lenta & Tradição';
     }
 
@@ -784,89 +786,33 @@ export default function App() {
       const route = getRouteByPath(currentPath);
       if (route) {
         setActiveSection(route.id);
-        navigateToSection(route.id, route.path, false);
+        document.title = route.title;
       } else {
         setActiveSection('hero');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        document.title = 'Deolinda Pizzaria Napoletana | Fermentação Lenta & Tradição';
       }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // 2. Real-time scroll spy that synchronizes current section with browser address bar
-  useEffect(() => {
-    let ticking = false;
-
-    const onScroll = () => {
-      if (isNavigatingRef.current) return;
-      if (isAdminOpen || isAdminAuthOpen) return;
-
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const scrollY = window.scrollY;
-          const viewportHeight = window.innerHeight;
-
-          if (scrollY < 180) {
-            if (activeSection !== 'hero') {
-              setActiveSection('hero');
-              if (window.location.pathname !== '/') {
-                window.history.replaceState({ section: 'hero' }, '', '/');
-                document.title = 'Deolinda Pizzaria Napoletana | Fermentação Lenta & Tradição';
-              }
-            }
-            ticking = false;
-            return;
-          }
-
-          if (window.innerHeight + scrollY >= document.body.offsetHeight - 80) {
-            if (activeSection !== 'localizacao') {
-              setActiveSection('localizacao');
-              if (window.location.pathname !== '/localizacao') {
-                window.history.replaceState({ section: 'localizacao' }, '', '/localizacao');
-                document.title = 'Localização & Horários de Atendimento | Deolinda Pizzaria Napoletana';
-              }
-            }
-            ticking = false;
-            return;
-          }
-
-          const sections = ['fermentacao', 'cardapio', 'historia', 'galeria', 'localizacao'];
-          let bestSection: string | null = null;
-          let minDistance = Infinity;
-
-          for (const secId of sections) {
-            const el = document.getElementById(secId);
-            if (!el) continue;
-            const rect = el.getBoundingClientRect();
-            const dist = Math.abs(rect.top - 90);
-            if (rect.top <= viewportHeight * 0.55 && rect.bottom >= 120) {
-              if (dist < minDistance) {
-                minDistance = dist;
-                bestSection = secId;
-              }
-            }
-          }
-
-          if (bestSection && bestSection !== activeSection) {
-            setActiveSection(bestSection);
-            const route = getRouteById(bestSection);
-            if (route && window.location.pathname !== route.path) {
-              window.history.replaceState({ section: bestSection }, '', route.path);
-              document.title = route.title;
-            }
-          }
-
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, [activeSection, isAdminOpen, isAdminAuthOpen]);
+  const renderBreadcrumb = (title: string) => (
+    <nav aria-label="Navegação da página" className="bg-[#181513] border-b border-white/10 py-3 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[1550px] mx-auto flex items-center gap-2 text-xs text-white/60">
+        <button
+          onClick={() => handleNavigate('hero', '/')}
+          className="hover:text-[#E5A93C] transition-colors flex items-center gap-1.5 cursor-pointer"
+        >
+          <Home className="w-3.5 h-3.5 text-[#E5A93C]" />
+          <span>Início</span>
+        </button>
+        <ChevronRight className="w-3 h-3 text-white/30" />
+        <span className="text-[#E5A93C] font-semibold tracking-wide">{title}</span>
+      </div>
+    </nav>
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF7F2] text-[#1E1B18] dark:bg-[#12100E] dark:text-[#FAF7F2] font-sans selection:bg-[#C24D2C] selection:text-white transition-colors duration-200">
@@ -883,42 +829,66 @@ export default function App() {
         onNavigate={handleNavigate}
       />
 
-      {/* Main Content */}
+      {/* Main Content: Renderiza uma página diferente para cada link do menu */}
       <main className="flex-grow">
-        {/* 1. Hero Section */}
-        <Hero
-          onOpenMenu={() => handleNavigate('cardapio', '/cardapio')}
-          onOpenConcierge={() => {
-            const chatTrigger = document.querySelector<HTMLButtonElement>('button[aria-label*="Suporte"]');
-            if (chatTrigger) chatTrigger.click();
-          }}
-          customLogoUrl={customLogoUrl}
-          customEmblemUrl={customEmblemUrl}
-          isEmblemEnabled={isEmblemEnabled}
-          siteInfo={siteInfo}
-        />
+        {/* Página 1: Processo & Massa (/processo) */}
+        {activeSection === 'fermentacao' && (
+          <div className="animate-fade-in">
+            {renderBreadcrumb('Processo & Massa (Fermentação Lenta 72h)')}
+            <FermentationProcess siteInfo={siteInfo} />
+          </div>
+        )}
 
-        {/* 2. Artisanal Fermentation & Fresh Ingredients */}
-        <FermentationProcess siteInfo={siteInfo} />
+        {/* Página 2: Cardápio (/cardapio) */}
+        {activeSection === 'cardapio' && (
+          <div className="animate-fade-in">
+            {renderBreadcrumb('Cardápio Tradicional & Especialidades')}
+            <MenuSection 
+              menuItems={menuItems}
+              menuCategories={menuCategories}
+              onAddToCart={handleAddToCart}
+              currentUser={currentUser}
+              onRequireLogin={handleOpenAuth}
+              siteInfo={siteInfo}
+            />
+          </div>
+        )}
 
-        {/* 3. Authentic Neapolitan Menu */}
-        <MenuSection 
-          menuItems={menuItems}
-          menuCategories={menuCategories}
-          onAddToCart={handleAddToCart}
-          currentUser={currentUser}
-          onRequireLogin={handleOpenAuth}
-          siteInfo={siteInfo}
-        />
+        {/* Página 3: Nossa História & Tradição (/historia) */}
+        {activeSection === 'historia' && (
+          <div className="animate-fade-in">
+            {renderBreadcrumb('Nossa História & Tradição Napolitana')}
+            <StorySection siteInfo={siteInfo} />
+          </div>
+        )}
 
-        {/* 4. Family Tradition & Heritage */}
-        <StorySection siteInfo={siteInfo} />
+        {/* Página 4: Fotos & Momentos (/galeria) */}
+        {activeSection === 'galeria' && (
+          <div className="animate-fade-in">
+            {renderBreadcrumb('Fotos & Momentos (#DeolindaNapoletana)')}
+            <SocialFeedSection posts={socialPosts} />
+          </div>
+        )}
 
-        {/* 5. Fotos & Momentos */}
-        <SocialFeedSection posts={socialPosts} />
+        {/* Página 5: Localização & Horários (/localizacao) */}
+        {activeSection === 'localizacao' && (
+          <div className="animate-fade-in">
+            {renderBreadcrumb('Localização, Horários & Contato')}
+            <LocationSection siteInfo={siteInfo} />
+          </div>
+        )}
 
-        {/* 6. Location & Directions */}
-        <LocationSection siteInfo={siteInfo} />
+        {/* Página Inicial: Home (/) */}
+        {activeSection === 'hero' && (
+          <div className="animate-fade-in">
+            <Hero
+              customLogoUrl={customLogoUrl}
+              customEmblemUrl={customEmblemUrl}
+              isEmblemEnabled={isEmblemEnabled}
+              siteInfo={siteInfo}
+            />
+          </div>
+        )}
       </main>
 
       {/* Footer */}

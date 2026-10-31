@@ -1864,6 +1864,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                   <div>
                     <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
+                      Link da Página do Facebook
+                    </label>
+                    <input
+                      type="url"
+                      value={currentSiteInfo.facebookUrl || ''}
+                      onChange={(e) => handleUpdateSiteInfoField('facebookUrl', e.target.value)}
+                      placeholder="https://www.facebook.com/p/Deolinda-Pizzeria-61593126269315/"
+                      className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
                       E-mail Institucional
                     </label>
                     <input

@@ -3,7 +3,7 @@ import deolindaLogo from '../assets/images/deolinda_logo.png';
 import { 
   Menu as MenuIcon, 
   X,
-  Instagram
+  Home
 } from 'lucide-react';
 import { CustomerUser, SiteInfo } from '../types';
 import { TricolorBands } from './TricolorBands';
@@ -39,41 +39,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, []);
 
   const handleNavClick = (id: string, path: string) => {
-    const wasMobileMenuOpen = mobileMenuOpen;
     setMobileMenuOpen(false);
 
-    // On mobile, if dropdown was open, delay execution slightly so dropdown unmounts
-    // and does not distort scroll position calculations
-    const delay = wasMobileMenuOpen ? 120 : 0;
-
-    setTimeout(() => {
-      if (onNavigate) {
-        onNavigate(id, path);
-      } else {
-        if (id === 'hero' || id === 'inicio') {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-          return;
-        }
-
-        const element = document.getElementById(id);
-        if (element) {
-          const isMobile = window.innerWidth < 1024;
-          // Target the title heading on mobile so content displays from the title
-          const targetEl = isMobile && element.querySelector('h2') ? (element.querySelector('h2') || element) : element;
-          const headerEl = document.querySelector('header');
-          const headerHeight = headerEl ? Math.min(headerEl.offsetHeight, 72) : (isMobile ? 64 : 76);
-          const bodyRect = document.body.getBoundingClientRect().top;
-          const elementRect = targetEl.getBoundingClientRect().top;
-          const elementPosition = elementRect - bodyRect;
-          const offsetPosition = Math.max(0, elementPosition - headerHeight - (isMobile ? 10 : 16));
-
-          window.scrollTo({
-            top: offsetPosition,
-            behavior: 'smooth'
-          });
-        }
-      }
-    }, delay);
+    if (onNavigate) {
+      onNavigate(id, path);
+    } else {
+      window.history.pushState({ section: id }, '', path);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   return (
@@ -133,6 +106,22 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Desktop Navigation Links spanning all remaining space in the header */}
         <nav className="hidden lg:flex flex-1 items-center justify-between mx-4 lg:mx-6 xl:mx-10 2xl:mx-14 text-sm tracking-wide">
           <TricolorBands direction="left" theme="dark" className="w-6 xl:w-8 shrink-0" size="sm" />
+          
+          {/* Ícone de Casa para levar à Página Inicial */}
+          <button
+            onClick={() => handleNavClick('hero', '/')}
+            title="Ir para a Página Inicial"
+            aria-label="Página Inicial"
+            className={`p-2 xl:px-3.5 py-2 rounded-full whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeSection === 'hero'
+                ? 'bg-white/15 text-[#E5A93C] font-bold shadow-sm ring-1 ring-[#E5A93C]/40'
+                : 'text-[#FAF7F2]/90 hover:text-[#E5A93C] hover:bg-white/5 font-semibold'
+            }`}
+          >
+            <Home className="w-4 h-4" />
+            <span className="hidden xl:inline text-xs font-semibold tracking-wider uppercase font-cinzel">Início</span>
+          </button>
+
           <button
             onClick={() => handleNavClick('fermentacao', '/processo')}
             className={`px-3.5 xl:px-4 py-2 rounded-full whitespace-nowrap transition-all cursor-pointer ${
@@ -164,16 +153,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             Nossa Tradição
           </button>
           <button
-            onClick={() => handleNavClick('galeria', '/galeria')}
-            className={`px-3.5 xl:px-4 py-2 rounded-full whitespace-nowrap transition-all cursor-pointer ${
-              activeSection === 'galeria'
-                ? 'bg-white/15 text-[#E5A93C] font-bold shadow-sm ring-1 ring-[#E5A93C]/40'
-                : 'text-[#FAF7F2]/90 hover:text-[#E5A93C] hover:bg-white/5 font-semibold'
-            }`}
-          >
-            Fotos & Momentos
-          </button>
-          <button
             onClick={() => handleNavClick('localizacao', '/localizacao')}
             className={`px-3.5 xl:px-4 py-2 rounded-full whitespace-nowrap transition-all cursor-pointer ${
               activeSection === 'localizacao'
@@ -186,44 +165,15 @@ export const Navbar: React.FC<NavbarProps> = ({
           <TricolorBands direction="right" theme="dark" className="w-6 xl:w-8 shrink-0" size="sm" />
         </nav>
 
-        {/* Right Side: WhatsApp & Instagram Action Icons + Mobile Menu Trigger */}
-        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-          {/* WhatsApp Header Icon Button */}
-          <a
-            href={`https://wa.me/${siteInfo?.whatsappNumber || '5511915331853'}?text=${encodeURIComponent(siteInfo?.whatsappMessage || 'Olá Deolinda Pizzaria! Gostaria de informações.')}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Fale conosco pelo WhatsApp"
-            aria-label="WhatsApp da Deolinda Pizzaria"
-            className="w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white shadow-sm hover:shadow flex items-center justify-center transition-all hover:scale-105 active:scale-95 group/wa cursor-pointer"
+        {/* Right Side: Mobile Menu Trigger (hidden on desktop) */}
+        <div className="flex items-center lg:hidden shrink-0">
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-1.5 rounded-lg text-[#FAF7F2] hover:bg-white/10 transition-colors"
+            aria-label="Abrir menu"
           >
-            <svg className="w-4.5 h-4.5 fill-current transition-transform group-hover/wa:scale-110" viewBox="0 0 24 24">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-            </svg>
-          </a>
-
-          {/* Instagram Header Icon Button */}
-          <a
-            href={siteInfo?.instagramUrl || 'https://www.instagram.com/deolindapizzaria/'}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={`Siga a Deolinda no Instagram (${siteInfo?.instagramHandle || '@deolindapizzaria'})`}
-            aria-label="Instagram da Deolinda Pizzaria"
-            className="w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white shadow-sm hover:shadow flex items-center justify-center transition-all hover:scale-105 active:scale-95 group/ig cursor-pointer"
-          >
-            <Instagram className="w-4.5 h-4.5 transition-transform group-hover/ig:scale-110" />
-          </a>
-
-          {/* Mobile Menu Trigger */}
-          <div className="flex items-center lg:hidden ml-1">
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-1.5 rounded-lg text-[#FAF7F2] hover:bg-white/10 transition-colors"
-              aria-label="Abrir menu"
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <MenuIcon className="w-6 h-6" />}
-            </button>
-          </div>
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <MenuIcon className="w-6 h-6" />}
+          </button>
         </div>
       </div>
 
@@ -236,6 +186,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             <TricolorBands direction="right" theme="dark" className="w-12 shrink-0" size="sm" />
           </div>
           <div className="flex flex-col space-y-1 text-base font-medium pt-1">
+            <button
+              onClick={() => handleNavClick('hero', '/')}
+              className={`text-left py-2 px-3 rounded transition-colors flex items-center gap-2.5 ${
+                activeSection === 'hero' ? 'bg-white/15 text-[#E5A93C] font-bold' : 'hover:bg-white/10 text-[#FAF7F2]'
+              }`}
+            >
+              <Home className="w-4 h-4 text-[#E5A93C]" />
+              <span>Página Inicial</span>
+            </button>
             <button
               onClick={() => handleNavClick('fermentacao', '/processo')}
               className={`text-left py-2 px-3 rounded transition-colors ${
@@ -259,14 +218,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               Nossa História & Tradição
-            </button>
-            <button
-              onClick={() => handleNavClick('galeria', '/galeria')}
-              className={`text-left py-2 px-3 rounded transition-colors ${
-                activeSection === 'galeria' ? 'bg-white/15 text-[#E5A93C] font-bold' : 'hover:bg-white/10 text-[#FAF7F2]'
-              }`}
-            >
-              Fotos & Momentos (#DeolindaNapoletana)
             </button>
             <button
               onClick={() => handleNavClick('localizacao', '/localizacao')}
