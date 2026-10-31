@@ -35,23 +35,12 @@ export const StorySection: React.FC<StorySectionProps> = ({ siteInfo }) => {
           
           {/* Main Visual Image (Left 5 cols) */}
           <div className="lg:col-span-5 relative">
-            <div className="relative rounded-2xl overflow-hidden shadow-xl border-2 sm:border-4 border-white">
+            <div className="relative rounded-2xl overflow-hidden shadow-xl border-2 sm:border-4 border-white bg-black/10">
               <img
-                src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80"
+                src={siteInfo?.storyImageUrl || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80"}
                 alt="História da Pizzaria Deolinda"
                 className="w-full h-[280px] sm:h-[320px] lg:h-[350px] object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent flex flex-col justify-end p-4 sm:p-5 text-white">
-                <span className="text-[10px] sm:text-xs uppercase font-bold text-[#E5A93C] tracking-wider mb-1">
-                  Nápoles, 1952
-                </span>
-                <p className="font-serif-italian text-base sm:text-lg lg:text-xl font-bold text-[#FAF7F2] leading-snug">
-                  "{siteInfo?.storyQuote || 'A massa tem alma. Se você tiver paciência, ela recompensará todos à sua mesa.'}"
-                </p>
-                <span className="text-[11px] sm:text-xs text-white/70 italic mt-1">
-                  — {siteInfo?.storyQuoteAuthor || 'Nonna Deolinda Bertolli'}
-                </span>
-              </div>
             </div>
           </div>
 

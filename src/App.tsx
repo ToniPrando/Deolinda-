@@ -895,6 +895,7 @@ export default function App() {
       <Footer
         onOpenAdmin={handleOpenAdminAuth}
         siteInfo={siteInfo}
+        customLogoUrl={customLogoUrl}
         onNavigate={handleNavigate}
       />
 

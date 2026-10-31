@@ -14,50 +14,53 @@ interface FooterProps {
   onOpenReservation?: () => void;
   onOpenAdmin: () => void;
   siteInfo?: SiteInfo;
+  customLogoUrl?: string | null;
   onNavigate?: (id: string, pathOverride?: string) => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo }) => {
+export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo, customLogoUrl }) => {
   return (
     <footer className="site-footer bg-[#120F0D] text-[#FAF7F2] border-t border-[#C24D2C]/30 pt-10 pb-8">
       <div className="footer-content w-full max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Main Center Block: Logo, Endereço Centralizado e Botões Sociais */}
+        {/* Main Center Block: Logo e Nome ao lado do Endereço, e Botões Sociais */}
         <div className="flex flex-col items-center justify-center text-center space-y-4 mb-8">
-          {/* Brand Logo & Name */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#181513] flex items-center justify-center shadow-lg border border-[#E5A93C]/50 overflow-hidden p-0.5 shrink-0">
-              <img
-                src="/deolinda_logo.png"
-                alt="Deolinda Logo"
-                className="w-full h-full object-contain"
-                loading="eager"
-                referrerPolicy="no-referrer"
-              />
+          {/* Logo e Nome ao lado do Endereço */}
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 text-center">
+            {/* Brand Logo & Name */}
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-full bg-[#181513] flex items-center justify-center shadow-lg border border-[#E5A93C]/50 overflow-hidden p-0.5 shrink-0">
+                <img
+                  src={customLogoUrl || "/deolinda_logo.png"}
+                  alt={siteInfo?.restaurantName || "Deolinda Logo"}
+                  className="w-full h-full object-contain"
+                  loading="eager"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+              <div className="text-left">
+                <span className="font-serif-italian text-lg sm:text-xl font-bold text-[#FAF7F2] leading-tight block">
+                  {siteInfo?.restaurantName || 'Deolinda Pizzaria Napoletana'}
+                </span>
+              </div>
             </div>
-            <div className="text-left">
-              <span className="font-serif-italian text-xl font-bold text-[#FAF7F2]">
-                Deolinda
-              </span>
-              <p className="text-[9px] tracking-widest uppercase font-semibold text-[#E5A93C] font-cinzel">
-                Pizzaria Napoletana
-              </p>
-            </div>
-          </div>
 
-          {/* Endereço Centralizado */}
-          <div className="text-center text-xs text-white/80 space-y-1">
-            <p className="font-medium text-white/90 flex items-center justify-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-[#E5A93C] shrink-0" />
-              <span>
-                {siteInfo?.address || 'Rua Santa Cruz, 232'}, {siteInfo?.addressNeighborhood || 'Centro'} — {siteInfo?.addressCityState || 'Itu - SP'}
-              </span>
-            </p>
-            {siteInfo?.openingHoursSummary && (
-              <p className="text-white/60 text-[11px]">
-                {siteInfo.openingHoursSummary}
+            <span className="hidden sm:inline text-white/20">•</span>
+
+            {/* Endereço ao lado */}
+            <div className="text-center sm:text-left text-xs text-white/80 space-y-0.5">
+              <p className="font-medium text-white/90 flex items-center justify-center sm:justify-start gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-[#E5A93C] shrink-0" />
+                <span>
+                  {siteInfo?.address || 'Rua Santa Cruz, 232'}, {siteInfo?.addressNeighborhood || 'Centro'} — {siteInfo?.addressCityState || 'Itu - SP'}
+                </span>
               </p>
-            )}
+              {siteInfo?.openingHoursSummary && (
+                <p className="text-white/60 text-[11px] sm:pl-5">
+                  {siteInfo.openingHoursSummary}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Botões das Redes Sociais Centralizados (Instagram, WhatsApp e Facebook) */}

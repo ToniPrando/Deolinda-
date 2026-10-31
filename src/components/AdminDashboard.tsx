@@ -1888,6 +1888,65 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     />
                   </div>
 
+                  {/* Logotipo ao lado do Endereço */}
+                  <div className="md:col-span-2 p-4 sm:p-5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/20 border border-[#E5A93C]/40 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-14 h-14 rounded-full bg-[#181513] border-2 border-[#E5A93C] p-1 flex items-center justify-center shadow-md overflow-hidden shrink-0">
+                        <img
+                          src={customLogoUrl || "/deolinda_logo.png"}
+                          alt="Logo ao lado do Endereço"
+                          className="w-full h-full object-contain"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).src = '/deolinda_logo.png';
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold uppercase tracking-wider text-[#181513] dark:text-[#FAF7F2] block">
+                          Logotipo ao Lado do Endereço & Identidade
+                        </span>
+                        <p className="text-xs text-[#5C554E] dark:text-white/60 mt-0.5">
+                          Exibido na página inicial e no rodapé junto ao nome e endereço da pizzaria.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      {onOpenLogoModal && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenLogoModal('logo')}
+                          className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#C24D2C] to-[#E5A93C] hover:from-[#A63A1E] hover:to-[#D4982B] text-white font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+                        >
+                          <Camera className="w-3.5 h-3.5" />
+                          <span>Alterar Logotipo</span>
+                        </button>
+                      )}
+                      <label className="px-3.5 py-2 rounded-xl bg-white hover:bg-gray-50 border border-[#E0D5C3] text-xs font-semibold text-[#181513] flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors">
+                        <Upload className="w-3.5 h-3.5 text-[#C24D2C]" />
+                        <span>Carregar Imagem</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                const base64 = event.target?.result as string;
+                                if (base64 && onLogoUpdated) {
+                                  onLogoUpdated(base64);
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
                       Endereço (Rua e Número)
@@ -2326,8 +2385,73 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     História, Legado Familiar & Nonna Deolinda
                   </h5>
                   <p className="text-xs text-[#5C554E]">
-                    Narrativa da família, origem em Nápoles, travessia para o Brasil e a frase marcante da Nonna.
+                    Narrativa da família, origem em Nápoles, foto ilustrativa e travessia para o Brasil.
                   </p>
+                </div>
+
+                {/* Foto da História da Nonna Deolinda */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-[#FAF7F2] border border-[#E0D5C3] flex flex-col sm:flex-row items-center justify-between gap-5 shadow-xs">
+                  <div className="flex items-center gap-4">
+                    <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden border-2 border-white shadow-md shrink-0 bg-black/10">
+                      <img
+                        src={currentSiteInfo.storyImageUrl || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80"}
+                        alt="Foto da História da Nonna Deolinda"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80";
+                        }}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs font-bold uppercase tracking-wider text-[#181513] block">
+                        Foto da História da Nonna Deolinda
+                      </span>
+                      <p className="text-xs text-[#5C554E]">
+                        Imagem que ilustra a tradição e a história da casa na seção "História".
+                      </p>
+                      <p className="text-[11px] text-[#C24D2C]">
+                        Carregue uma imagem do seu dispositivo ou informe uma URL externa.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto shrink-0">
+                    <label className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-colors">
+                      <Upload className="w-4 h-4" />
+                      <span>Carregar Foto</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              const base64 = event.target?.result as string;
+                              if (base64) {
+                                handleUpdateSiteInfoField('storyImageUrl', base64);
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = window.prompt('Insira o link direto (URL) da foto da história:', currentSiteInfo.storyImageUrl || '');
+                        if (url && url.trim()) {
+                          handleUpdateSiteInfoField('storyImageUrl', url.trim());
+                        }
+                      }}
+                      className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl bg-white hover:bg-gray-50 border border-[#E0D5C3] text-xs font-semibold text-[#181513] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <ImageIcon className="w-3.5 h-3.5 text-[#C24D2C]" />
+                      <span>URL Externa</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

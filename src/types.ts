@@ -194,6 +194,7 @@ export interface SiteInfo {
   storyParagraph2: string;
   storyQuote: string;
   storyQuoteAuthor: string;
+  storyImageUrl?: string;
 
   // Horários & Localização
   locationBadge: string;

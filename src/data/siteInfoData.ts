@@ -57,6 +57,7 @@ export const DEFAULT_SITE_INFO: SiteInfo = {
   storyParagraph2: 'Quando a família decidiu atravessar o Atlântico rumo ao Brasil, o bem mais precioso na bagagem era um pote de vidro protegido com o fermento natural da bisavó. Esse mesmo fermento biológico vivo é alimentado todos os dias em nossa cozinha há mais de um século, dando vida à massa de 72 horas que você saboreia hoje.',
   storyQuote: 'A pizza napoletana não é só comida, è un atto d\'amore. O tempo não é pressa, é o ingrediente secreto que transforma farinha, água e alma em arte.',
   storyQuoteAuthor: 'Nonna Deolinda — Matriarca & Pizzaiola (1902-1988)',
+  storyImageUrl: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80',
 
   // Horários & Localização
   locationBadge: 'Onde Nos Encontrar',
