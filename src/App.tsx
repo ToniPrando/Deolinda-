@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
-import { FermentationProcess } from './components/FermentationProcess';
 import { MenuSection } from './components/MenuSection';
 import { StorySection } from './components/StorySection';
 import { SocialFeedSection } from './components/SocialFeedSection';
@@ -16,7 +15,6 @@ import { CartItem, Order, Reservation, OrderStatus, CustomerUser, MenuItem, Soci
 import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES } from './data/menuData';
 import { SOCIAL_POSTS } from './data/socialData';
 import { DEFAULT_SITE_INFO } from './data/siteInfoData';
-import { Home, ChevronRight } from 'lucide-react';
 import { 
   subscribeToOrders, 
   subscribeToReservations, 
@@ -798,22 +796,6 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const renderBreadcrumb = (title: string) => (
-    <nav aria-label="Navegação da página" className="bg-[#181513] border-b border-white/10 py-3 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-[1550px] mx-auto flex items-center gap-2 text-xs text-white/60">
-        <button
-          onClick={() => handleNavigate('hero', '/')}
-          className="hover:text-[#E5A93C] transition-colors flex items-center gap-1.5 cursor-pointer"
-        >
-          <Home className="w-3.5 h-3.5 text-[#E5A93C]" />
-          <span>Início</span>
-        </button>
-        <ChevronRight className="w-3 h-3 text-white/30" />
-        <span className="text-[#E5A93C] font-semibold tracking-wide">{title}</span>
-      </div>
-    </nav>
-  );
-
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF7F2] text-[#1E1B18] dark:bg-[#12100E] dark:text-[#FAF7F2] font-sans selection:bg-[#C24D2C] selection:text-white transition-colors duration-200">
       
@@ -831,18 +813,9 @@ export default function App() {
 
       {/* Main Content: Renderiza uma página diferente para cada link do menu */}
       <main className="flex-grow">
-        {/* Página 1: Processo & Massa (/processo) */}
-        {activeSection === 'fermentacao' && (
-          <div className="animate-fade-in">
-            {renderBreadcrumb('Processo & Massa (Fermentação Lenta 72h)')}
-            <FermentationProcess siteInfo={siteInfo} />
-          </div>
-        )}
-
-        {/* Página 2: Cardápio (/cardapio) */}
+        {/* Página 1: Cardápio (/cardapio) */}
         {activeSection === 'cardapio' && (
           <div className="animate-fade-in">
-            {renderBreadcrumb('Cardápio Tradicional & Especialidades')}
             <MenuSection 
               menuItems={menuItems}
               menuCategories={menuCategories}
@@ -857,7 +830,6 @@ export default function App() {
         {/* Página 3: Nossa História & Tradição (/historia) */}
         {activeSection === 'historia' && (
           <div className="animate-fade-in">
-            {renderBreadcrumb('Nossa História & Tradição Napolitana')}
             <StorySection siteInfo={siteInfo} />
           </div>
         )}
@@ -865,7 +837,6 @@ export default function App() {
         {/* Página 4: Fotos & Momentos (/galeria) */}
         {activeSection === 'galeria' && (
           <div className="animate-fade-in">
-            {renderBreadcrumb('Fotos & Momentos (#DeolindaNapoletana)')}
             <SocialFeedSection posts={socialPosts} />
           </div>
         )}
@@ -873,7 +844,6 @@ export default function App() {
         {/* Página 5: Localização & Horários (/localizacao) */}
         {activeSection === 'localizacao' && (
           <div className="animate-fade-in">
-            {renderBreadcrumb('Localização, Horários & Contato')}
             <LocationSection siteInfo={siteInfo} />
           </div>
         )}

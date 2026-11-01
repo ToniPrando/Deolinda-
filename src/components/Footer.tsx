@@ -98,64 +98,55 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo, customLog
           </div>
         </div>
 
-        {/* Bottom Section: Copyright & Criado por ToniAep Centralizados Lado a Lado */}
-        <div className="pt-6 border-t border-white/10 flex flex-col items-center justify-center gap-3.5 text-center">
-          
-          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-white/60">
+        {/* Bottom Section: Copyright à esquerda, Cadeado Admin centralizado, Criado por à direita */}
+        <div className="pt-6 border-t border-white/10 grid grid-cols-1 sm:grid-cols-3 items-center justify-between gap-3 text-xs text-white/60">
+          {/* Lado Esquerdo: Copyright */}
+          <div className="text-center sm:text-left">
             <span>
               © {new Date().getFullYear()} Deolinda Pizzaria Napoletana. Fatta con amore
             </span>
-
-            <span className="hidden sm:inline text-white/20">•</span>
-
-            {/* Criado por ToniAep centralizado ao lado do texto */}
-            <div className="inline-flex items-center gap-2">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-[#E5A93C]/90 font-cinzel">
-                Criado por
-              </span>
-              <a
-                href="https://toniaepprojetos.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Visitar ToniAep Projetos (Criando Inovação)"
-                className="footer-logo relative group inline-flex items-center justify-center p-0.5 rounded-lg bg-white/[0.02] hover:bg-white/[0.08] transition-all cursor-pointer max-w-[105px]"
-              >
-                <img 
-                  src={toniaepLogo || TONIAEP_CREATOR_LOGO_BASE64} 
-                  onError={(e) => {
-                    const target = e.currentTarget as HTMLImageElement;
-                    if (target.src !== TONIAEP_CREATOR_LOGO_BASE64) {
-                      target.src = TONIAEP_CREATOR_LOGO_BASE64;
-                    }
-                  }}
-                  alt="ToniAep - Criando Inovação" 
-                  referrerPolicy="no-referrer"
-                  loading="eager"
-                  decoding="sync"
-                  className="w-full max-w-[105px] h-auto object-contain drop-shadow-[0_2px_8px_rgba(0,180,255,0.25)] transition-transform duration-300 group-hover:scale-105"
-                />
-              </a>
-            </div>
           </div>
 
-          {/* Área Restrita Admin */}
-          <div className="flex items-center justify-center gap-3 text-xs text-white/40 pt-1">
+          {/* Centro: Cadeado Admin */}
+          <div className="flex items-center justify-center">
             <button
               onClick={onOpenAdmin}
-              className="text-white/40 hover:text-white/80 transition-colors flex items-center gap-1 cursor-pointer"
-              title="Acesso restrito para funcionários e gestores"
+              className="text-white/30 hover:text-[#E5A93C] transition-colors p-1.5 rounded-md hover:bg-white/5 cursor-pointer flex items-center justify-center"
+              title="Área Restrita (Administrador)"
+              aria-label="Área Restrita"
             >
-              <Lock className="w-3 h-3 text-white/40" />
-              <span>Área Restrita (Administrador)</span>
+              <Lock className="w-3.5 h-3.5" />
             </button>
-            {siteInfo?.footerAssociationText && siteInfo.footerAssociationText.trim() !== '' && siteInfo.footerAssociationText !== 'Associazione Verace Pizza Napoletana' && (
-              <>
-                <span>•</span>
-                <span className="text-[#E5A93C]/80 font-semibold">{siteInfo.footerAssociationText}</span>
-              </>
-            )}
           </div>
 
+          {/* Lado Direito: Criado por ToniAep */}
+          <div className="flex items-center justify-center sm:justify-end gap-2">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-[#E5A93C]/90 font-cinzel">
+              Criado por
+            </span>
+            <a
+              href="https://toniaepprojetos.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Visitar ToniAep Projetos (Criando Inovação)"
+              className="footer-logo relative group inline-flex items-center justify-center p-0.5 rounded-lg bg-white/[0.02] hover:bg-white/[0.08] transition-all cursor-pointer max-w-[105px]"
+            >
+              <img 
+                src={toniaepLogo || TONIAEP_CREATOR_LOGO_BASE64} 
+                onError={(e) => {
+                  const target = e.currentTarget as HTMLImageElement;
+                  if (target.src !== TONIAEP_CREATOR_LOGO_BASE64) {
+                    target.src = TONIAEP_CREATOR_LOGO_BASE64;
+                  }
+                }}
+                alt="ToniAep - Criando Inovação" 
+                referrerPolicy="no-referrer"
+                loading="eager"
+                decoding="sync"
+                className="w-full max-w-[105px] h-auto object-contain drop-shadow-[0_2px_8px_rgba(0,180,255,0.25)] transition-transform duration-300 group-hover:scale-105"
+              />
+            </a>
+          </div>
         </div>
 
       </div>

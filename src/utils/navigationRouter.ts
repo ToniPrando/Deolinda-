@@ -12,13 +12,7 @@ export const APP_ROUTES: RouteConfig[] = [
     id: 'hero',
     path: '/',
     title: 'Deolinda Pizzaria Napoletana | Fermentação Lenta & Tradição',
-    aliases: ['/home', '/inicio', '/deolinda']
-  },
-  {
-    id: 'fermentacao',
-    path: '/processo',
-    title: 'Processo & Massa 72h | Deolinda Pizzaria Napoletana',
-    aliases: ['/fermentacao', '/massa', '/processo-massa']
+    aliases: ['/home', '/inicio', '/deolinda', '/processo', '/fermentacao', '/massa']
   },
   {
     id: 'cardapio',

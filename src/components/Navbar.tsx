@@ -123,16 +123,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           <button
-            onClick={() => handleNavClick('fermentacao', '/processo')}
-            className={`px-3.5 xl:px-4 py-2 rounded-full whitespace-nowrap transition-all cursor-pointer ${
-              activeSection === 'fermentacao'
-                ? 'bg-white/15 text-[#E5A93C] font-bold shadow-sm ring-1 ring-[#E5A93C]/40'
-                : 'text-[#FAF7F2]/90 hover:text-[#E5A93C] hover:bg-white/5 font-semibold'
-            }`}
-          >
-            Processo & Massa
-          </button>
-          <button
             onClick={() => handleNavClick('cardapio', '/cardapio')}
             className={`px-3.5 xl:px-4 py-2 rounded-full whitespace-nowrap transition-all cursor-pointer ${
               activeSection === 'cardapio'
@@ -154,13 +144,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
           <button
             onClick={() => handleNavClick('localizacao', '/localizacao')}
-            className={`px-3.5 xl:px-4 py-2 rounded-full whitespace-nowrap transition-all cursor-pointer ${
+            className={`px-3 xl:px-4 py-2 rounded-full whitespace-nowrap transition-all cursor-pointer ${
               activeSection === 'localizacao'
                 ? 'bg-white/15 text-[#E5A93C] font-bold shadow-sm ring-1 ring-[#E5A93C]/40'
                 : 'text-[#FAF7F2]/90 hover:text-[#E5A93C] hover:bg-white/5 font-semibold'
             }`}
           >
-            Localização
+            Localização & Horários
           </button>
           <TricolorBands direction="right" theme="dark" className="w-6 xl:w-8 shrink-0" size="sm" />
         </nav>
@@ -194,14 +184,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Home className="w-4 h-4 text-[#E5A93C]" />
               <span>Página Inicial</span>
-            </button>
-            <button
-              onClick={() => handleNavClick('fermentacao', '/processo')}
-              className={`text-left py-2 px-3 rounded transition-colors ${
-                activeSection === 'fermentacao' ? 'bg-white/15 text-[#E5A93C] font-bold' : 'hover:bg-white/10 text-[#FAF7F2]'
-              }`}
-            >
-              Processo & Massa (Fermentação 72h)
             </button>
             <button
               onClick={() => handleNavClick('cardapio', '/cardapio')}

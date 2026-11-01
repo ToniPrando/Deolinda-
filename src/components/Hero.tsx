@@ -84,23 +84,23 @@ export const Hero: React.FC<HeroProps> = ({
         </p>
 
         {/* Artisan Highlights Bar */}
-        <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-xl mx-auto border-t border-white/10 pt-8 text-left">
-          <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3.5 border border-white/10 flex items-start gap-3">
+        <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-xl mx-auto border-t border-white/10 pt-8 text-center sm:text-left">
+          <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3.5 border border-white/10 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2.5 sm:gap-3">
             <div className="p-2 rounded-lg bg-[#C24D2C]/30 text-[#E5A93C] shrink-0">
               <Clock className="w-5 h-5" />
             </div>
-            <div>
+            <div className="flex flex-col items-center sm:items-start">
               <p className="text-xs uppercase font-bold text-[#E5A93C] tracking-wider">Fermentação</p>
               <p className="text-sm font-semibold text-white">{siteInfo?.heroFermentationHighlight || '72 Horas Lenta'}</p>
               <p className="text-[11px] text-white/60">{siteInfo?.heroFermentationSubtext || 'Leve e digestiva'}</p>
             </div>
           </div>
 
-          <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3.5 border border-white/10 flex items-start gap-3">
+          <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3.5 border border-white/10 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-2.5 sm:gap-3">
             <div className="p-2 rounded-lg bg-[#C24D2C]/30 text-[#C24D2C] shrink-0">
               <Flame className="w-5 h-5 animate-pulse" />
             </div>
-            <div>
+            <div className="flex flex-col items-center sm:items-start">
               <p className="text-xs uppercase font-bold text-[#E5A93C] tracking-wider">Forno a Lenha</p>
               <p className="text-sm font-semibold text-white">{siteInfo?.heroOvenHighlight || '450°C em 90s'}</p>
               <p className="text-[11px] text-white/60">{siteInfo?.heroOvenSubtext || 'Pedra vulcânica'}</p>
