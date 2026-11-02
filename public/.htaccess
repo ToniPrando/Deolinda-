@@ -3,21 +3,32 @@
 # Compatible with Hostinger, Apache, LiteSpeed, OpenLiteSpeed, cPanel
 # ----------------------------------------------------------------------
 
+Options -MultiViews
+
+<IfModule mod_dir.c>
+  # Prevent Apache mod_dir from forcing 301 redirects on virtual routes
+  DirectorySlash Off
+</IfModule>
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
 
-  # Allow existing static files or folders to pass through
-  RewriteCond %{REQUEST_FILENAME} -f [OR]
-  RewriteCond %{REQUEST_FILENAME} -d
+  # 1. Direct SPA Routes: Always rewrite /cardapio, /cardápio and others directly to index.html
+  RewriteRule ^(cardapio|cardápio|historia|história|galeria|localizacao|localização|admin)/?$ index.html [L,QSA]
+
+  # 2. Never rewrite real existing static asset files (JS, CSS, PNG, SVG, JPG, WebP, WOFF2, etc.)
+  RewriteCond %{REQUEST_FILENAME} -f
   RewriteRule ^ - [L]
 
-  # Route all other URLs (including /cardapio, /cardápio, /historia, /galeria, /localizacao, /admin) to index.html
-  RewriteRule ^ index.html [L]
+  # 3. Universal SPA Fallback: Any other non-file request rewrites to index.html
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule . /index.html [L]
 </IfModule>
 
 <IfModule mod_headers.c>
-  # Disable caching for index.html so updates are immediate
+  # Disable caching for index.html so updates and F5 refreshes are always immediate
   <Files "index.html">
     Header set Cache-Control "no-cache, no-store, must-revalidate"
     Header set Pragma "no-cache"
