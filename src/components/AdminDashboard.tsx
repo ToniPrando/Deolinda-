@@ -62,6 +62,7 @@ import {
   saveAdminPasswordToFirestore
 } from '../services/firebaseService';
 import { TricolorBands } from './TricolorBands';
+import { compressImageFile } from '../utils/imageCompressor';
 
 interface AdminDashboardProps {
   isOpen: boolean;
@@ -4016,14 +4017,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     if (e.target.files && e.target.files[0]) {
-                      const reader = new FileReader();
-                      reader.onload = (ev) => {
-                        const res = ev.target?.result as string;
-                        setItemFormData({ ...itemFormData, image: res });
-                      };
-                      reader.readAsDataURL(e.target.files[0]);
+                      const file = e.target.files[0];
+                      try {
+                        const compressed = await compressImageFile(file, 800, 800, 0.75);
+                        setItemFormData(prev => ({ ...prev, image: compressed }));
+                      } catch (err) {
+                        console.warn('Fallback to standard file reading:', err);
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                          const res = ev.target?.result as string;
+                          setItemFormData(prev => ({ ...prev, image: res }));
+                        };
+                        reader.readAsDataURL(file);
+                      }
                     }
                   }}
                 />

@@ -6,6 +6,9 @@ import {
   setDoc, 
   updateDoc, 
   getDoc,
+  getDocs,
+  deleteDoc,
+  writeBatch,
   getDocFromServer,
   onSnapshot, 
   serverTimestamp 
@@ -472,6 +475,28 @@ export function sanitizeMenuItemForFirestore(item: MenuItem): Record<string, any
 export async function saveMenuItemsToFirestore(items: MenuItem[]): Promise<void> {
   const sanitizedItems = items.map(sanitizeMenuItemForFirestore);
 
+  // 1. Update localStorage immediately (guaranteed local availability)
+  try {
+    localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(sanitizedItems));
+  } catch (localErr) {
+    console.warn('[LocalStorage] Notice saving menu items locally:', localErr);
+  }
+
+  // 2. Backup to Express backend API
+  try {
+    await fetch('/api/settings/menu', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: sanitizedItems })
+    });
+  } catch (backendErr) {
+    console.warn('[Backend] Menu save notice:', backendErr);
+  }
+
+  // 3. Persist to Cloud Firestore settings/menu and menu_items collection
+  let firestoreSuccess = false;
+  let firestoreError: any = null;
+
   try {
     const menuDocRef = doc(db, 'settings', 'menu');
     await setDoc(menuDocRef, {
@@ -480,26 +505,34 @@ export async function saveMenuItemsToFirestore(items: MenuItem[]): Promise<void>
       type: 'menu_items',
       _serverTimestamp: serverTimestamp()
     }, { merge: true });
-    console.log(`[Firestore] Menu items (${sanitizedItems.length}) saved successfully to Cloud Firestore.`);
+    firestoreSuccess = true;
+    console.log(`[Firestore] Menu items (${sanitizedItems.length}) saved successfully to Cloud Firestore settings/menu.`);
   } catch (error: any) {
-    console.error('[Firestore] Error saving menu items to Cloud Firestore:', error);
+    firestoreError = error;
+    console.error('[Firestore] Error saving menu items to settings/menu in Cloud Firestore:', error);
   }
 
-  // Backup to Express backend API
+  // 4. Also persist individual items to menu_items collection for high resilience
   try {
-    await fetch('/api/settings/menu', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: sanitizedItems })
-    });
-  } catch (e) {
-    console.warn('[Backend] Menu save error:', e);
+    for (const item of sanitizedItems) {
+      if (item.id) {
+        const itemDocRef = doc(db, 'menu_items', item.id);
+        await setDoc(itemDocRef, {
+          ...item,
+          updatedAt: new Date().toISOString(),
+          _serverTimestamp: serverTimestamp()
+        }, { merge: true });
+      }
+    }
+    firestoreSuccess = true;
+  } catch (indivErr: any) {
+    console.warn('[Firestore] Notice syncing individual menu item docs:', indivErr?.message || indivErr);
   }
 
-  // Local storage fallback
-  try {
-    localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(sanitizedItems));
-  } catch {}
+  // If both failed and we had an error, throw so the UI can notify the user
+  if (!firestoreSuccess && firestoreError) {
+    throw firestoreError;
+  }
 }
 
 /**

@@ -17,6 +17,11 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // Menu Items collection: Individual menu items persisted and synchronized
+    match /menu_items/{itemId} {
+      allow read, write: if true;
+    }
+
     // Global match for settings and test connectivity
     match /{document=**} {
       allow read, write: if true;
