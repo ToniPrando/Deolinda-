@@ -30,26 +30,6 @@ app.use("/api", (req, res, next) => {
   next();
 });
 
-// Automatic production custom domain redirect to www. (e.g., deolindapizzaria.com.br -> www.deolindapizzaria.com.br)
-app.use((req, res, next) => {
-  const host = req.headers.host || "";
-  if (
-    host &&
-    !host.startsWith("www.") &&
-    !host.includes("localhost") &&
-    !host.includes("127.0.0.1") &&
-    !host.endsWith(".run.app") &&
-    !host.includes("webcontainer") &&
-    !host.includes("aistudio") &&
-    !host.includes("google") &&
-    host.includes(".")
-  ) {
-    const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
-    return res.redirect(301, `${protocol}://www.${host}${req.originalUrl}`);
-  }
-  next();
-});
-
 // ==========================================
 // INTERNAL DATABASE SYSTEM (File-Backed JSON)
 // ==========================================
@@ -708,7 +688,8 @@ async function startServer() {
   // Always serve static assets from public/ folder with proper mime types
   app.use(express.static(path.join(process.cwd(), "public")));
 
-  const isProduction = process.env.NODE_ENV === "production" && fs.existsSync(path.join(process.cwd(), "dist", "index.html"));
+  const distHtmlPath = path.join(process.cwd(), "dist", "index.html");
+  const isProduction = process.env.NODE_ENV === "production" || fs.existsSync(distHtmlPath);
 
   if (!isProduction) {
     const { createServer: createViteServer } = await import("vite");
@@ -742,10 +723,13 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get("*", (_req, res) => {
-      const indexPath = path.join(distPath, "index.html");
-      if (fs.existsSync(indexPath)) {
-        res.sendFile(indexPath);
+    // SPA Fallback: Any direct URL navigation (e.g., /cardapio, /historia, /galeria, /localizacao, /admin)
+    app.get("*", (req, res, next) => {
+      if (req.originalUrl.startsWith("/api/")) {
+        return next();
+      }
+      if (fs.existsSync(distHtmlPath)) {
+        res.sendFile(distHtmlPath);
       } else {
         res.sendFile(path.join(process.cwd(), "index.html"));
       }

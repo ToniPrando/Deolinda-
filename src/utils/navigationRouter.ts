@@ -12,19 +12,19 @@ export const APP_ROUTES: RouteConfig[] = [
     id: 'hero',
     path: '/',
     title: 'Deolinda Pizzaria Napoletana | Fermentação Lenta & Tradição',
-    aliases: ['/home', '/inicio', '/deolinda', '/processo', '/fermentacao', '/massa']
+    aliases: ['/home', '/inicio', '/início', '/deolinda', '/processo', '/fermentacao', '/fermentação', '/massa']
   },
   {
     id: 'cardapio',
     path: '/cardapio',
     title: 'Cardápio Tradicional & Especialidades | Deolinda Pizzaria Napoletana',
-    aliases: ['/menu', '/pizzas', '/cardapio-napoletano']
+    aliases: ['/cardápio', '/menu', '/pizzas', '/cardapio-napoletano', '/cardápio-napoletano']
   },
   {
     id: 'historia',
     path: '/historia',
     title: 'Nossa Tradição & História | Deolinda Pizzaria Napoletana',
-    aliases: ['/tradicao', '/sobre', '/nossa-historia']
+    aliases: ['/história', '/tradicao', '/tradição', '/sobre', '/nossa-historia', '/nossa-história']
   },
   {
     id: 'galeria',
@@ -36,18 +36,27 @@ export const APP_ROUTES: RouteConfig[] = [
     id: 'localizacao',
     path: '/localizacao',
     title: 'Localização & Horários de Atendimento | Deolinda Pizzaria Napoletana',
-    aliases: ['/contato', '/onde-estamos', '/horarios', '/endereco', '/onde-nos-encontrar']
+    aliases: ['/localização', '/contato', '/onde-estamos', '/horarios', '/horários', '/endereco', '/endereço', '/onde-nos-encontrar']
   },
   {
     id: 'admin',
     path: '/admin',
     title: 'Área do Administrador & Gestão | Deolinda Pizzaria Napoletana',
-    aliases: ['/gestao', '/painel', '/dashboard']
+    aliases: ['/gestao', '/gestão', '/painel', '/dashboard']
   }
 ];
 
 export function getRouteByPath(pathname: string): RouteConfig | undefined {
-  const clean = pathname.toLowerCase().replace(/\/$/, '') || '/';
+  if (!pathname) return APP_ROUTES[0];
+  let raw = pathname;
+  try {
+    raw = decodeURIComponent(pathname);
+  } catch {
+    // ignore decode error
+  }
+  // Strip query string, trailing slash and hashes
+  const withoutParams = raw.split('?')[0].split('#')[0];
+  const clean = withoutParams.toLowerCase().trim().replace(/\/+$/, '') || '/';
   return APP_ROUTES.find(r => r.path === clean || r.aliases?.includes(clean));
 }
 
