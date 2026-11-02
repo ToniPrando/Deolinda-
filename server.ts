@@ -722,17 +722,36 @@ async function startServer() {
     });
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    // SPA Fallback: Any direct URL navigation (e.g., /cardapio, /historia, /galeria, /localizacao, /admin)
-    app.get("*", (req, res, next) => {
+
+    // Explicit SPA routes (including accented, unaccented, and URL-encoded variants)
+    const knownSpaRoutes = [
+      "/cardapio", "/cardápio", "/card%C3%A1pio", "/card%c3%a1pio",
+      "/historia", "/história", "/hist%C3%B3ria", "/hist%c3%b3ria",
+      "/galeria",
+      "/localizacao", "/localização", "/localiza%C3%A7%C3%A3o", "/localiza%c3%a7%c3%a3o",
+      "/admin"
+    ];
+
+    knownSpaRoutes.forEach((route) => {
+      app.get([route, `${route}/`], (_req, res) => {
+        if (fs.existsSync(distHtmlPath)) {
+          return res.sendFile(distHtmlPath);
+        }
+        res.sendFile(path.join(process.cwd(), "index.html"));
+      });
+    });
+
+    app.use(express.static(distPath, { redirect: false }));
+
+    // Universal SPA Fallback for all other non-API URLs
+    app.use((req, res, next) => {
       if (req.originalUrl.startsWith("/api/")) {
         return next();
       }
       if (fs.existsSync(distHtmlPath)) {
-        res.sendFile(distHtmlPath);
-      } else {
-        res.sendFile(path.join(process.cwd(), "index.html"));
+        return res.sendFile(distHtmlPath);
       }
+      res.sendFile(path.join(process.cwd(), "index.html"));
     });
   }
 

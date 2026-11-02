@@ -1,0 +1,26 @@
+# ----------------------------------------------------------------------
+# Deolinda Pizzaria Napoletana - Single Page Application Router
+# Compatible with Hostinger, Apache, LiteSpeed, OpenLiteSpeed, cPanel
+# ----------------------------------------------------------------------
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Allow existing static files or folders to pass through
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Route all other URLs (including /cardapio, /cardápio, /historia, /galeria, /localizacao, /admin) to index.html
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+  # Disable caching for index.html so updates are immediate
+  <Files "index.html">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires 0
+  </Files>
+</IfModule>

@@ -46,6 +46,14 @@ export const APP_ROUTES: RouteConfig[] = [
   }
 ];
 
+function stripAccents(str: string): string {
+  try {
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  } catch {
+    return str;
+  }
+}
+
 export function getRouteByPath(pathname: string): RouteConfig | undefined {
   if (!pathname) return APP_ROUTES[0];
   let raw = pathname;
@@ -54,10 +62,32 @@ export function getRouteByPath(pathname: string): RouteConfig | undefined {
   } catch {
     // ignore decode error
   }
+
+  // Handle hash-based deep links like #cardapio, #/cardapio, #cardápio
+  if (raw.startsWith('#/')) raw = raw.replace('#/', '/');
+  else if (raw.startsWith('#')) raw = raw.replace('#', '/');
+
   // Strip query string, trailing slash and hashes
   const withoutParams = raw.split('?')[0].split('#')[0];
-  const clean = withoutParams.toLowerCase().trim().replace(/\/+$/, '') || '/';
-  return APP_ROUTES.find(r => r.path === clean || r.aliases?.includes(clean));
+  let clean = withoutParams.toLowerCase().trim().replace(/\/+$/, '');
+  if (!clean.startsWith('/')) clean = '/' + clean;
+  if (!clean || clean === '') clean = '/';
+
+  const cleanUnaccented = stripAccents(clean);
+
+  return APP_ROUTES.find(r => {
+    const routePath = r.path.toLowerCase();
+    const routePathUnaccented = stripAccents(routePath);
+    if (routePath === clean || routePathUnaccented === cleanUnaccented) return true;
+
+    if (r.aliases && r.aliases.length > 0) {
+      return r.aliases.some(alias => {
+        const al = alias.toLowerCase();
+        return al === clean || stripAccents(al) === cleanUnaccented;
+      });
+    }
+    return false;
+  });
 }
 
 export function getRouteById(id: string): RouteConfig | undefined {

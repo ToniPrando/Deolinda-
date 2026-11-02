@@ -34,7 +34,9 @@ import { navigateToSection, getRouteByPath, getRouteById } from './utils/navigat
 export default function App() {
   const [activeSection, setActiveSection] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      const route = getRouteByPath(window.location.pathname);
+      const pathname = window.location.pathname;
+      const hash = window.location.hash;
+      const route = getRouteByPath(pathname) || (hash ? getRouteByPath(hash) : undefined);
       if (route) return route.id;
     }
     return 'hero';
@@ -749,31 +751,33 @@ export default function App() {
 
   // 1. Initial deep linking by pathname or hash, and browser history popstate
   useEffect(() => {
-    const initialPath = window.location.pathname;
-    const initialHash = window.location.hash.replace('#', '');
-
-    if (initialPath === '/admin' || initialHash === 'admin') {
-      setIsAdminAuthOpen(true);
-      document.title = 'Área do Administrador | Deolinda Pizzaria Napoletana';
-      return;
-    }
-
-    let targetRoute = getRouteByPath(initialPath);
-    if (!targetRoute && initialHash) {
-      targetRoute = getRouteById(initialHash);
-    }
-
-    if (targetRoute) {
-      setActiveSection(targetRoute.id);
-      document.title = targetRoute.title;
-    } else {
-      setActiveSection('hero');
-      document.title = 'Deolinda Pizzaria Napoletana | Fermentação Lenta & Tradição';
-    }
-
-    const handlePopState = () => {
+    const resolveCurrentRoute = () => {
       const currentPath = window.location.pathname;
-      if (currentPath === '/admin') {
+      const currentHash = window.location.hash;
+
+      if (currentPath === '/admin' || currentHash === '#admin' || currentHash === '#/admin') {
+        setIsAdminAuthOpen(true);
+        document.title = 'Área do Administrador | Deolinda Pizzaria Napoletana';
+        return;
+      }
+
+      const route = getRouteByPath(currentPath) || (currentHash ? getRouteByPath(currentHash) : undefined);
+      if (route) {
+        setActiveSection(route.id);
+        document.title = route.title;
+      } else {
+        setActiveSection('hero');
+        document.title = 'Deolinda Pizzaria Napoletana | Fermentação Lenta & Tradição';
+      }
+    };
+
+    resolveCurrentRoute();
+
+    const handleNavigationEvent = () => {
+      const currentPath = window.location.pathname;
+      const currentHash = window.location.hash;
+
+      if (currentPath === '/admin' || currentHash === '#admin' || currentHash === '#/admin') {
         setIsAdminAuthOpen(true);
         return;
       } else {
@@ -781,7 +785,7 @@ export default function App() {
         setIsAdminAuthOpen(false);
       }
 
-      const route = getRouteByPath(currentPath);
+      const route = getRouteByPath(currentPath) || (currentHash ? getRouteByPath(currentHash) : undefined);
       if (route) {
         setActiveSection(route.id);
         document.title = route.title;
@@ -792,8 +796,12 @@ export default function App() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('popstate', handleNavigationEvent);
+    window.addEventListener('hashchange', handleNavigationEvent);
+    return () => {
+      window.removeEventListener('popstate', handleNavigationEvent);
+      window.removeEventListener('hashchange', handleNavigationEvent);
+    };
   }, []);
 
   return (
