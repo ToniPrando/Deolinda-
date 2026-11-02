@@ -176,5 +176,539 @@
     }
   ],
   "logs": [],
-  "customLogo": null
+  "customLogo": null,
+  "menuItems": [
+    {
+      "id": "pizza-margherita-dop",
+      "name": "Margherita Verace D.O.P.",
+      "category": "tradizionali",
+      "price": 68,
+      "description": "O ícone de Nápoles. Pomodoro San Marzano D.O.P., Mozzarella di Bufala Campana D.O.P., Parmigiano Reggiano 24 meses ralado na hora, folhas frescas de manjericão genovês e fio de azeite extravirgem toscano.",
+      "ingredients": [
+        "Pomodoro San Marzano D.O.P.",
+        "Mozzarella di Bufala",
+        "Parmigiano Reggiano",
+        "Manjericão Fresco",
+        "Azeite EVOO"
+      ],
+      "image": "https://images.unsplash.com/photo-1604382355076-af4b0eb60143?auto=format&fit=crop&w=800&q=80",
+      "tags": [
+        "D.O.P.",
+        "Vegetariana",
+        "Chef Choice"
+      ],
+      "isAvailable": true,
+      "isPopular": true,
+      "italianName": "Pizza Margherita Verace D.O.P.",
+      "pairing": "Chianti Classico DOCG ou Cerveja Peroni Nastro Azzurro",
+      "pointsEarned": 68,
+      "pointsToRedeem": 400,
+      "pointsBonusTag": "⭐ 68 pts"
+    },
+    {
+      "id": "pizza-marinara-antica",
+      "name": "Marinara Antica Napoletana",
+      "category": "tradizionali",
+      "price": 56,
+      "description": "A pizza mais antiga de Nápoles, datada de 1734. Molho de tomate San Marzano D.O.P., alho laminado confitado no azeite, orégano selvagem do Monte Vesúvio e azeite extravirgem.",
+      "ingredients": [
+        "Pomodoro San Marzano",
+        "Alho Confitado",
+        "Orégano Selvagem do Vesúvio",
+        "Azeite EVOO"
+      ],
+      "image": "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=800&q=80",
+      "tags": [
+        "Vegetariana",
+        "D.O.P.",
+        "Sem Lactose Adaptável"
+      ],
+      "isAvailable": true,
+      "isPopular": false,
+      "italianName": "Marinara Antica Tradizionale",
+      "pairing": "Vinho Branco Greco di Tufo DOCG",
+      "pointsEarned": 56,
+      "pointsToRedeem": 350,
+      "pointsBonusTag": "⭐ 56 pts"
+    },
+    {
+      "id": "pizza-diavola-piccante",
+      "name": "Diavola Calabra Piccante",
+      "category": "tradizionali",
+      "price": 76,
+      "description": "Molho San Marzano D.O.P., Fior di Latte di Agerola, salame artesanal tipo Spianata Piccante curado, cebola roxa marinada e flocos de peperoncino calabreso.",
+      "ingredients": [
+        "Pomodoro San Marzano",
+        "Fior di Latte",
+        "Salame Spianata Piccante",
+        "Peperoncino Calabrese",
+        "Cebola Roxa"
+      ],
+      "image": "https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=800&q=80",
+      "tags": [
+        "Picante",
+        "D.O.P."
+      ],
+      "isAvailable": true,
+      "isPopular": true,
+      "italianName": "Pizza Diavola Artigianale",
+      "pairing": "Primitivo di Manduria ou Cerveja IPA Italiana",
+      "pointsEarned": 76,
+      "pointsToRedeem": 440,
+      "pointsBonusTag": "⭐ 76 pts"
+    },
+    {
+      "id": "pizza-quattro-formaggi",
+      "name": "Quattro Formaggi di Bufala",
+      "category": "tradizionali",
+      "price": 79,
+      "description": "Harmonia perfeita entre Mozzarella di Bufala, Gorgonzola Dolce D.O.P. cremoso, Provolone del Monaco defumado e Parmigiano Reggiano 24 meses.",
+      "ingredients": [
+        "Mozzarella di Bufala",
+        "Gorgonzola Dolce D.O.P.",
+        "Provolone del Monaco",
+        "Parmigiano Reggiano"
+      ],
+      "image": "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=800&q=80",
+      "tags": [
+        "Vegetariana",
+        "D.O.P."
+      ],
+      "isAvailable": true,
+      "isPopular": false,
+      "italianName": "Quattro Formaggi Campani",
+      "pairing": "Vinho Tinto Valpolicella Ripasso",
+      "pointsEarned": 79,
+      "pointsToRedeem": 460,
+      "pointsBonusTag": "⭐ 79 pts"
+    },
+    {
+      "id": "pizza-capricciosa",
+      "name": "Capricciosa Reale",
+      "category": "tradizionali",
+      "price": 82,
+      "description": "San Marzano D.O.P., Fior di Latte, presunto cozido artesanal italiano (Prosciutto Cotto), corações de alcachofra grelhados, cogumelos Portobello frescos e azeitonas Gaeta.",
+      "ingredients": [
+        "San Marzano",
+        "Fior di Latte",
+        "Prosciutto Cotto",
+        "Alcachofras",
+        "Cogumelos Portobello",
+        "Azeitonas Gaeta"
+      ],
+      "image": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=800&q=80",
+      "tags": [
+        "D.O.P."
+      ],
+      "isAvailable": true,
+      "isPopular": false,
+      "italianName": "Pizza Capricciosa alla Napoletana",
+      "pairing": "Nero d’Avola Siciliano",
+      "pointsEarned": 82,
+      "pointsToRedeem": 480,
+      "pointsBonusTag": "⭐ 82 pts"
+    },
+    {
+      "id": "pizza-deolinda-suprema",
+      "name": "Deolinda Suprema al Tartufo",
+      "category": "speciali",
+      "price": 89,
+      "description": "Nossa criação mais premiada. Base bianca com Fior di Latte, creme artesanal de trufas negras de Norcia, Stracciatella fresca de búfala colocada após o forno, fatias finas de Prosciutto di Parma 18 meses e raspas de limão siciliano.",
+      "ingredients": [
+        "Creme de Trufas Negras",
+        "Stracciatella de Búfala",
+        "Prosciutto di Parma 18m",
+        "Fior di Latte",
+        "Raspas de Limão Siciliano"
+      ],
+      "image": "https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=800&q=80",
+      "tags": [
+        "Chef Choice",
+        "D.O.P."
+      ],
+      "isAvailable": true,
+      "isPopular": true,
+      "italianName": "Deolinda Signature Tartufata",
+      "pairing": "Brunello di Montalcino ou Barolo DOCG",
+      "pointsEarned": 110,
+      "pointsToRedeem": 520,
+      "pointsBonusTag": "🔥 +21 pts BÔNUS CHEF"
+    },
+    {
+      "id": "pizza-mortadella-pistacchio",
+      "name": "Mortadella & Pistacchio di Bronte",
+      "category": "speciali",
+      "price": 86,
+      "description": "Base bianca com Fior di Latte di Agerola. Ao sair do forno a 450°C, recebe fartas lâminas de Mortadella Bologna I.G.P., Pesto artesanal de Pistache Siciliano de Bronte, Burrata fresca e grãos crocantes de pistache tostado.",
+      "ingredients": [
+        "Mortadella Bologna IGP",
+        "Pesto de Pistacchio di Bronte",
+        "Burrata Fresca",
+        "Pistache Tostado",
+        "Fior di Latte"
+      ],
+      "image": "https://images.unsplash.com/photo-1579751626657-72bc17010498?auto=format&fit=crop&w=800&q=80",
+      "tags": [
+        "Chef Choice",
+        "D.O.P."
+      ],
+      "isAvailable": true,
+      "isPopular": true,
+      "italianName": "Mortadella Bologna IGP e Pistacchio",
+      "pairing": "Prosecco di Valdobbiadene DOCG Superiore",
+      "pointsEarned": 105,
+      "pointsToRedeem": 500,
+      "pointsBonusTag": "🔥 +19 pts BÔNUS CHEF"
+    },
+    {
+      "id": "pizza-parma-burrata",
+      "name": "Parma, Burrata & Fichi Caramellati",
+      "category": "speciali",
+      "price": 88,
+      "description": "Pomodoro San Marzano D.O.P., Fior di Latte, Prosciutto di Parma D.O.P. 24 meses, centro generoso de Burrata cremosa, figos caramelizados no balsâmico de Modena e redução de aceto.",
+      "ingredients": [
+        "San Marzano D.O.P.",
+        "Burrata Inteira",
+        "Prosciutto di Parma 24m",
+        "Figos Caramelizados",
+        "Aceto Balsamico di Modena"
+      ],
+      "image": "https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?auto=format&fit=crop&w=800&q=80",
+      "tags": [
+        "Chef Choice",
+        "D.O.P."
+      ],
+      "isAvailable": true,
+      "isPopular": true,
+      "italianName": "Prosciutto di Parma & Burrata al Fico",
+      "pairing": "Amarone della Valpolicella",
+      "pointsEarned": 108,
+      "pointsToRedeem": 510,
+      "pointsBonusTag": "🔥 +20 pts BÔNUS CHEF"
+    },
+    {
+      "id": "pizza-burrata-pesto",
+      "name": "Burratina al Pesto Genovese",
+      "category": "speciali",
+      "price": 82,
+      "description": "Tomatinhos confitados na brasa, coração de Burrata fresca rasgada, pesto genovês de manjericão fresco e pinoli italianos, finalizada com flor de sal de Cervia.",
+      "ingredients": [
+        "Burrata de Búfala",
+        "Pesto Genovês Fresco",
+        "Tomatinhos Confitados",
+        "Pinoli Italianos",
+        "Flor de Sal"
+      ],
+      "image": "https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?auto=format&fit=crop&w=800&q=80",
+      "tags": [
+        "Vegetariana",
+        "D.O.P."
+      ],
+      "isAvailable": true,
+      "isPopular": false,
+      "italianName": "Burrata e Pesto Fresco",
+      "pairing": "Vinho Branco Vermentino di Sardegna",
+      "pointsEarned": 95,
+      "pointsToRedeem": 480,
+      "pointsBonusTag": "🔥 +13 pts BÔNUS"
+    },
+    {
+      "id": "anti-burrata-forno",
+      "name": "Burrata al Forno a Legna",
+      "category": "antipasti",
+      "price": 48,
+      "description": "Burrata di Bufala inteira de 250g assada no nosso forno a lenha com tomatinhos cereja doces, alho assado, pesto e azeite extravirgem. Acompanha nossa Focaccia napolitana com alecrim e flor de sal.",
+      "ingredients": [
+        "Burrata de Búfala 250g",
+        "Tomatinhos da Terra",
+        "Focaccia ao Alecrim",
+        "Pesto Genovês",
+        "Azeite EVOO"
+      ],
+      "image": "https://images.unsplash.com/photo-1592417817098-8f3d6eb22521?auto=format&fit=crop&w=800&q=80",
+      "tags": [
+        "Vegetariana",
+        "Chef Choice",
+        "D.O.P."
+      ],
+      "isAvailable": true,
+      "isPopular": true,
+      "italianName": "Burrata Campana in Crosta",
+      "pairing": "Aperol Spritz ou Taça de Prosecco",
+      "pointsEarned": 48,
+      "pointsToRedeem": 280,
+      "pointsBonusTag": "⭐ 48 pts"
+    },
+    {
+      "id": "anti-bruschetta-caprese",
+      "name": "Bruschetta Caprese Rustica (4 un)",
+      "category": "antipasti",
+      "price": 36,
+      "description": "Pão rústico artesanal de fermentação natural tostado no forno a lenha, coberto com tomates em cubos maturados, Mozzarella di Bufala fresca, folhas de manjericão e redução de balsâmico tradicional.",
+      "ingredients": [
+        "Pão Rústico de Fermentação",
+        "Tomates Sweet Grape",
+        "Mozzarella di Bufala",
+        "Manjericão",
+        "Balsâmico"
+      ],
+      "image": "https://images.unsplash.com/photo-1572695157366-5e585ab2b69f?auto=format&fit=crop&w=800&q=80",
+      "tags": [
+        "Vegetariana",
+        "D.O.P."
+      ],
+      "isAvailable": true,
+      "isPopular": false,
+      "italianName": "Bruschette al Pomodoro e Bufala",
+      "pairing": "Campari Spritz",
+      "pointsEarned": 36,
+      "pointsToRedeem": 120,
+      "pointsBonusTag": "🎁 Recompensa 120 pts"
+    },
+    {
+      "id": "anti-focaccia-rosmarino",
+      "name": "Focaccia al Rosmarino e Sale di Maldon",
+      "category": "antipasti",
+      "price": 28,
+      "description": "Nossa massa napolitana de 72h aberta à mão, pincelada com azeite toscano extravirgem, alecrim fresco da nossa horta e flocos de flor de sal.",
+      "ingredients": [
+        "Massa Lievito Madre 72h",
+        "Azeite EVOO",
+        "Alecrim Fresco",
+        "Flor de Sal"
+      ],
+      "image": "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=800&q=80",
+      "tags": [
+        "Vegetariana",
+        "Sem Lactose Adaptável"
+      ],
+      "isAvailable": true,
+      "isPopular": false,
+      "italianName": "Focaccia Napoletana Classica",
+      "pairing": "Cerveja Birra Moretti",
+      "pointsEarned": 28,
+      "pointsToRedeem": 160,
+      "pointsBonusTag": "⭐ 28 pts"
+    },
+    {
+      "id": "anti-arancini",
+      "name": "Arancini al Ragù Napoletano (4 un)",
+      "category": "antipasti",
+      "price": 38,
+      "description": "Bolinhos crocantes de risoto de açafrão recheados com ragù de carne cozido por 6 horas e coração de mozzarella derretida.",
+      "ingredients": [
+        "Arroz Arbório",
+        "Açafrão",
+        "Ragù 6 Horas",
+        "Mozzarella di Bufala"
+      ],
+      "image": "https://images.unsplash.com/photo-1541529086526-db283c563270?auto=format&fit=crop&w=800&q=80",
+      "tags": [
+        "Chef Choice"
+      ],
+      "isAvailable": true,
+      "isPopular": false,
+      "italianName": "Arancini di Riso alla Napoletana",
+      "pairing": "Vinho Tinto Montepulciano d’Abruzzo",
+      "pointsEarned": 38,
+      "pointsToRedeem": 220,
+      "pointsBonusTag": "⭐ 38 pts"
+    },
+    {
+      "id": "dolce-tiramisu",
+      "name": "Tiramisù Tradizionale al Mascarpone",
+      "category": "dolci",
+      "price": 32,
+      "description": "Receita autêntica da Nonna Deolinda passada por três gerações. Biscoitos savoiardi embebidos em espresso italiano e licor Amaretto di Saronno, camadas de creme de mascarpone aveludado e cacau amargo belga 100%.",
+      "ingredients": [
+        "Mascarpone Italiano",
+        "Savoiardi Artesanais",
+        "Espresso Illy",
+        "Amaretto di Saronno",
+        "Cacau 100%"
+      ],
+      "image": "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?auto=format&fit=crop&w=800&q=80",
+      "tags": [
+        "Chef Choice"
+      ],
+      "isAvailable": true,
+      "isPopular": true,
+      "italianName": "Tiramisù Artigianale di Nonna Deolinda",
+      "pairing": "Vinho de Sobremesa Vin Santo DOC ou Espresso Italiano",
+      "pointsEarned": 32,
+      "pointsToRedeem": 220,
+      "pointsBonusTag": "🎁 Recompensa 220 pts"
+    },
+    {
+      "id": "dolce-cannoli",
+      "name": "Cannoli Siciliani Tradizionali (2 un)",
+      "category": "dolci",
+      "price": 28,
+      "description": "Casquinhas crocantes fritas com gotas de vinho Marsala, recheadas na hora com creme de ricota doce fresca, gotas de chocolate meio amargo e finalizadas com pistaches picados de Bronte.",
+      "ingredients": [
+        "Massa Folhada Crocante",
+        "Ricota Fresca",
+        "Gotas de Chocolate",
+        "Pistache Siciliano",
+        "Açúcar de Confeiteiro"
+      ],
+      "image": "https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=800&q=80",
+      "tags": [
+        "D.O.P."
+      ],
+      "isAvailable": true,
+      "isPopular": true,
+      "italianName": "Cannoli con Ricotta di Pecora e Pistacchio",
+      "pairing": "Limoncello Gelado da Casa",
+      "pointsEarned": 28,
+      "pointsToRedeem": 180,
+      "pointsBonusTag": "⭐ 28 pts"
+    },
+    {
+      "id": "dolce-pizza-nutella",
+      "name": "Pizza Fritta Dolce com Nutella & Morangos",
+      "category": "dolci",
+      "price": 44,
+      "description": "Massa napolitana assada no forno a lenha, coberta generosamente com Nutella italiana pura, morangos frescos laminados, raspas de chocolate branco e avelãs tostadas.",
+      "ingredients": [
+        "Massa Napolitana",
+        "Nutella Original",
+        "Morangos Frescos",
+        "Avelãs Tostadas"
+      ],
+      "image": "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&w=800&q=80",
+      "tags": [
+        "Vegetariana"
+      ],
+      "isAvailable": true,
+      "isPopular": false,
+      "italianName": "Pizza Dolce con Crema di Nocciole",
+      "pairing": "Espumante Moscato d’Asti",
+      "pointsEarned": 44,
+      "pointsToRedeem": 260,
+      "pointsBonusTag": "⭐ 44 pts"
+    },
+    {
+      "id": "bev-chianti",
+      "name": "Chianti Classico DOCG - Castello di Gabbiano (750ml)",
+      "category": "bevande",
+      "price": 145,
+      "description": "Vinho tinto italiano encorpado da Toscana. Notas de cerejas maduras, violetas e especiarias com taninos aveludados e ótima acidez.",
+      "ingredients": [
+        "Sangiovese 90%",
+        "Colorino 10%"
+      ],
+      "image": "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=800&q=80",
+      "tags": [
+        "Chef Choice"
+      ],
+      "isAvailable": true,
+      "isPopular": true,
+      "italianName": "Chianti Classico DOCG Toscana",
+      "pairing": "Pizzas Margherita, Diavola e Capricciosa",
+      "pointsEarned": 145,
+      "pointsToRedeem": 750,
+      "pointsBonusTag": "⭐ 145 pts (VIP)"
+    },
+    {
+      "id": "bev-primitivo",
+      "name": "Primitivo di Manduria DOC - Feudo Badala (750ml)",
+      "category": "bevande",
+      "price": 160,
+      "description": "Tinto potente e aveludado da Puglia. Aromas intensos de ameixa negra, baunilha e notas de cacau. Perfeito para pizzas de queijos e carnes curadas.",
+      "ingredients": [
+        "Uva Primitivo 100%"
+      ],
+      "image": "https://images.unsplash.com/photo-1558001373-7b93ee48ffa0?auto=format&fit=crop&w=800&q=80",
+      "tags": [],
+      "isAvailable": true,
+      "isPopular": false,
+      "italianName": "Primitivo di Manduria Puglia",
+      "pairing": "Pizza Deolinda Suprema e Quattro Formaggi",
+      "pointsEarned": 160,
+      "pointsToRedeem": 820,
+      "pointsBonusTag": "⭐ 160 pts (VIP)"
+    },
+    {
+      "id": "bev-prosecco",
+      "name": "Prosecco Superiore Valdobbiadene DOCG (750ml)",
+      "category": "bevande",
+      "price": 130,
+      "description": "Espumante italiano de prestígio do Vêneto. Borbulhas finas e persistentes com frescor cítrico e notas florais delicadas.",
+      "ingredients": [
+        "Uva Glera 100%"
+      ],
+      "image": "https://images.unsplash.com/photo-1584916201218-f4242ceb4809?auto=format&fit=crop&w=800&q=80",
+      "tags": [],
+      "isAvailable": true,
+      "isPopular": false,
+      "italianName": "Prosecco Valdobbiadene Brut",
+      "pairing": "Burrata ao Forno, Entradas e Pizza Mortadella",
+      "pointsEarned": 130,
+      "pointsToRedeem": 680,
+      "pointsBonusTag": "⭐ 130 pts"
+    },
+    {
+      "id": "bev-peroni",
+      "name": "Birra Peroni Nastro Azzurro (330ml)",
+      "category": "bevande",
+      "price": 22,
+      "description": "A clássica cerveja lager premium de Roma. Refrescante, leve e com amargor suave e notas cítricas equilibradas.",
+      "ingredients": [
+        "Malte de Cevada",
+        "Lúpulo Saaz",
+        "Milho Nostrano"
+      ],
+      "image": "https://images.unsplash.com/photo-1608270586620-248524c67de9?auto=format&fit=crop&w=800&q=80",
+      "tags": [],
+      "isAvailable": true,
+      "isPopular": true,
+      "italianName": "Cerveja Premium Italiana",
+      "pairing": "Todas as pizzas napolitanas",
+      "pointsEarned": 22,
+      "pointsToRedeem": 130,
+      "pointsBonusTag": "⭐ 22 pts"
+    },
+    {
+      "id": "bev-limoncello",
+      "name": "Limoncello Artigianale di Sorrento (Dose 50ml)",
+      "category": "bevande",
+      "price": 18,
+      "description": "Digestivo clássico italiano servido bem gelado em taça congelada. Feito com as cascas dos limões gigantes de Sorrento.",
+      "ingredients": [
+        "Limões de Sorrento I.G.P.",
+        "Álcool de Cereais",
+        "Açúcar"
+      ],
+      "image": "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80",
+      "tags": [
+        "Chef Choice"
+      ],
+      "isAvailable": true,
+      "isPopular": true,
+      "italianName": "Limoncello di Sorrento I.G.P.",
+      "pairing": "Finalizador perfeito após as sobremesas",
+      "pointsEarned": 18,
+      "pointsToRedeem": 110,
+      "pointsBonusTag": "⭐ 18 pts"
+    },
+    {
+      "id": "bev-sanpellegrino",
+      "name": "San Pellegrino Sparkling Water (505ml)",
+      "category": "bevande",
+      "price": 16,
+      "description": "Água mineral gaseificada natural dos Alpes Italianos.",
+      "ingredients": [
+        "Água mineral natural com gás"
+      ],
+      "image": "https://images.unsplash.com/photo-1560512823-829485b8bf24?auto=format&fit=crop&w=800&q=80",
+      "tags": [],
+      "isAvailable": true,
+      "isPopular": false,
+      "italianName": "Acqua Minerale San Pellegrino",
+      "pointsEarned": 16,
+      "pointsToRedeem": 90,
+      "pointsBonusTag": "⭐ 16 pts"
+    }
+  ]
 }

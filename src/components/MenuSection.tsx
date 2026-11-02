@@ -13,7 +13,8 @@ import {
   Lock,
   Star,
   LayoutGrid,
-  ChevronDown
+  ChevronDown,
+  Wine
 } from 'lucide-react';
 import { MenuItem, CategoryType, CartItem, CustomerUser, MenuCategory, SiteInfo } from '../types';
 import { MENU_ITEMS, CRUST_OPTIONS, EXTRA_TOPPINGS, DEFAULT_MENU_CATEGORIES } from '../data/menuData';
@@ -73,13 +74,24 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
     };
   }, []);
 
-  // Modal State for Pizza Customizer
-  const [customizingItem, setCustomizingItem] = useState<MenuItem | null>(null);
-  const [selectedCrust, setSelectedCrust] = useState<string>(CRUST_OPTIONS[0].name);
-  const [selectedExtras, setSelectedExtras] = useState<{ name: string; price: number }[]>([]);
-  const [specialNotes, setSpecialNotes] = useState<string>('');
-  const [itemQuantity, setItemQuantity] = useState<number>(1);
-  const [addedNotice, setAddedNotice] = useState<string | null>(null);
+  // Modal State for Item Photo & Details (abre foto, nome do prato, descrição e valor)
+  const [viewingItem, setViewingItem] = useState<MenuItem | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setViewingItem(null);
+      }
+    };
+    if (viewingItem) {
+      window.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'unset';
+    };
+  }, [viewingItem]);
 
   const categories: { id: CategoryType | 'all'; label: string; icon: string }[] = useMemo(() => {
     const list = menuCategories && menuCategories.length > 0 ? menuCategories : DEFAULT_MENU_CATEGORIES;
@@ -132,80 +144,21 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
     }
   };
 
-  const openCustomizer = (item: MenuItem) => {
-    if (!currentUser) {
-      setAddedNotice('Faça login ou cadastre-se para adicionar ao pedido.');
-      setTimeout(() => setAddedNotice(null), 3500);
-      onRequireLogin();
-      return;
+  const openItemDetails = (item: MenuItem) => {
+    setViewingItem(item);
+  };
+
+  const getCategoryLabel = (catId: string) => {
+    const found = categories.find(c => c.id === catId);
+    if (found) return found.label;
+    switch (catId) {
+      case 'tradizionali': return 'Pizzas Tradicionais';
+      case 'speciali': return 'Pizzas Especiais';
+      case 'antipasti': return 'Entradas & Aperitivos';
+      case 'dolci': return 'Sobremesas';
+      case 'bevande': return 'Bebidas & Vinhos';
+      default: return 'Cardápio';
     }
-    setCustomizingItem(item);
-    setSelectedCrust(CRUST_OPTIONS[0].name);
-    setSelectedExtras([]);
-    setSpecialNotes('');
-    setItemQuantity(1);
-  };
-
-  const handleToggleExtra = (extra: { name: string; price: number }) => {
-    if (selectedExtras.some(e => e.name === extra.name)) {
-      setSelectedExtras(selectedExtras.filter(e => e.name !== extra.name));
-    } else {
-      setSelectedExtras([...selectedExtras, extra]);
-    }
-  };
-
-  const calculateCustomizedPrice = () => {
-    if (!customizingItem) return 0;
-    const crustObj = CRUST_OPTIONS.find(c => c.name === selectedCrust);
-    const crustPrice = crustObj ? crustObj.price : 0;
-    const extrasTotal = selectedExtras.reduce((sum, e) => sum + e.price, 0);
-    return (customizingItem.price + crustPrice + extrasTotal) * itemQuantity;
-  };
-
-  const buildCustomizedWhatsAppText = () => {
-    if (!customizingItem) return '';
-    const crustObj = CRUST_OPTIONS.find(c => c.name === selectedCrust);
-    const crustPart = (customizingItem.category === 'tradizionali' || customizingItem.category === 'speciali') && selectedCrust
-      ? ` - Borda: ${selectedCrust}${crustObj && crustObj.price > 0 ? ` (+${formatBRL(crustObj.price)})` : ''}`
-      : '';
-    const extrasPart = selectedExtras.length > 0
-      ? ` - Adicionais: ${selectedExtras.map(e => `${e.name} (+${formatBRL(e.price)})`).join(', ')}`
-      : '';
-    const notesPart = specialNotes.trim() ? ` - Obs: ${specialNotes.trim()}` : '';
-    const total = formatBRL(calculateCustomizedPrice());
-
-    return `Olá Deolinda Pizzaria! Gostaria de pedir: *${itemQuantity}x ${customizingItem.name}* (${total})${crustPart}${extrasPart}${notesPart}.`;
-  };
-
-  const handleConfirmAddToCart = () => {
-    if (!currentUser) {
-      onRequireLogin();
-      return;
-    }
-    if (!customizingItem) return;
-
-    const crustObj = CRUST_OPTIONS.find(c => c.name === selectedCrust);
-    const crustPrice = crustObj ? crustObj.price : 0;
-    const extrasTotal = selectedExtras.reduce((sum, e) => sum + e.price, 0);
-    const unitPrice = customizingItem.price + crustPrice + extrasTotal;
-
-    const cartItem: CartItem = {
-      id: `${customizingItem.id}-${Date.now()}`,
-      menuItem: customizingItem,
-      quantity: itemQuantity,
-      crustOption: customizingItem.category.includes('pizze') || customizingItem.category === 'tradizionali' || customizingItem.category === 'speciali' 
-        ? selectedCrust 
-        : 'Padrão',
-      extraIngredients: selectedExtras,
-      specialNotes: specialNotes.trim() || undefined,
-      itemTotalPrice: unitPrice * itemQuantity
-    };
-
-    onAddToCart(cartItem);
-
-    setAddedNotice(`"${customizingItem.name}" adicionado ao pedido!`);
-    setTimeout(() => setAddedNotice(null), 3500);
-    setCustomizingItem(null);
   };
 
   const formatBRL = (val: number) => {
@@ -215,15 +168,6 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
   return (
     <section id="cardapio" className="pt-3 sm:pt-4 pb-12 bg-[#F4EFE6] text-[#1E1B18] scroll-mt-16 sm:scroll-mt-18">
       <div className="w-full max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Floating Notification */}
-        {addedNotice && (
-          <div className="fixed bottom-6 right-6 z-50 bg-[#1B382B] text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border border-[#2D5F49] animate-in slide-in-from-bottom-5">
-            <ShoppingBag className="w-5 h-5 text-[#E5A93C]" />
-            <span className="font-semibold text-sm">{addedNotice}</span>
-          </div>
-        )}
-
         {/* Section Title - Compacto para priorizar visualização da grade */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -419,9 +363,9 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
               >
                 {/* Image & Badges */}
                 <div 
-                  onClick={() => openCustomizer(item)}
+                  onClick={() => openItemDetails(item)}
                   className="relative h-36 sm:h-40 md:h-42 overflow-hidden bg-[#181513] cursor-pointer"
-                  title="Clique para ver detalhes e personalizar"
+                  title="Clique para ver foto e detalhes"
                 >
                   <img
                     src={item.image}
@@ -447,14 +391,18 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                     )}
 
                     <h3 
-                      onClick={() => openCustomizer(item)}
+                      onClick={() => openItemDetails(item)}
                       className="font-serif-italian text-sm sm:text-base font-bold text-[#181513] mb-1 group-hover:text-[#C24D2C] transition-colors leading-snug line-clamp-2 cursor-pointer"
-                      title="Clique para ver detalhes e personalizar"
+                      title="Clique para ver foto e detalhes"
                     >
                       {item.name}
                     </h3>
 
-                    <p className="text-[11px] sm:text-xs text-[#5C554E] leading-relaxed mb-2 line-clamp-2">
+                    <p 
+                      onClick={() => openItemDetails(item)}
+                      className="text-[11px] sm:text-xs text-[#5C554E] leading-relaxed mb-2 line-clamp-2 cursor-pointer"
+                      title="Clique para ver foto e detalhes"
+                    >
                       {item.description}
                     </p>
 
@@ -499,197 +447,134 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
 
       </div>
 
-      {/* Pizza Customizer Modal */}
-      {customizingItem && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-[#E0D5C3] animate-in zoom-in-95 duration-200 my-8">
-            
-            {/* Modal Header with Image */}
-            <div className="relative h-44 bg-[#181513]">
+      {/* Modal: Apenas Foto do Item, Nome do Prato, Descrição e Valor */}
+      {viewingItem && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+          onClick={() => setViewingItem(null)}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-[#E0D5C3] animate-in zoom-in-95 duration-200 relative my-auto flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Imagem do Item em Destaque */}
+            <div className="relative h-64 sm:h-72 w-full bg-[#181513] overflow-hidden">
               <img
-                src={customizingItem.image}
-                alt={customizingItem.name}
-                className="w-full h-full object-cover opacity-80"
+                src={viewingItem.image}
+                alt={viewingItem.name}
+                className="w-full h-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
               
+              {/* Botão Fechar (X) */}
               <button
-                onClick={() => setCustomizingItem(null)}
-                className="absolute top-4 right-4 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
+                type="button"
+                onClick={() => setViewingItem(null)}
+                className="absolute top-3.5 right-3.5 w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center backdrop-blur-md transition-all cursor-pointer shadow-lg z-10 hover:scale-105 active:scale-95"
+                title="Fechar"
+                aria-label="Fechar"
               >
                 <X className="w-5 h-5" />
               </button>
 
-              <div className="absolute bottom-4 left-6 right-6 text-white">
-                <span className="text-xs uppercase font-bold text-[#E5A93C] tracking-wider">
-                  {customizingItem.category === 'tradizionali' || customizingItem.category === 'speciali' ? 'Personalizar Pizza' : 'Adicionar ao Pedido'}
+              {/* Tag da Categoria */}
+              <div className="absolute top-3.5 left-4 flex items-center gap-1.5 flex-wrap">
+                <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-black/75 text-[#E5A93C] border border-[#E5A93C]/30 backdrop-blur-md shadow-sm">
+                  {getCategoryLabel(viewingItem.category)}
                 </span>
-                <h3 className="font-serif-italian text-2xl font-bold">{customizingItem.name}</h3>
+                {viewingItem.tags && viewingItem.tags.map((tag, tIdx) => (
+                  <span key={tIdx} className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-white/20 text-white backdrop-blur-md">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+
+              {/* Destaque do Valor no Canto Inferior Direito da Foto */}
+              <div className="absolute bottom-3.5 right-4 bg-[#181513]/95 backdrop-blur-md px-4 py-1.5 rounded-2xl border border-[#E5A93C]/50 text-[#E5A93C] font-black text-lg sm:text-xl shadow-xl flex items-center gap-1.5">
+                <span className="text-[11px] font-normal text-white/70 uppercase">Valor:</span>
+                <span>{formatBRL(viewingItem.price)}</span>
               </div>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
-              
-              {/* Crust Selection (for pizzas) */}
-              {(customizingItem.category === 'tradizionali' || customizingItem.category === 'speciali') && (
+            {/* Informações: Nome do Prato, Descrição e Detalhes */}
+            <div className="p-5 sm:p-6 space-y-4">
+              <div>
+                {viewingItem.italianName && (
+                  <p className="text-xs font-cinzel font-semibold uppercase tracking-widest text-[#C24D2C] mb-1">
+                    {viewingItem.italianName}
+                  </p>
+                )}
+                <h3 className="font-serif-italian text-2xl sm:text-3xl font-bold text-[#181513] leading-tight">
+                  {viewingItem.name}
+                </h3>
+              </div>
+
+              {/* Descrição do Prato */}
+              <div>
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#8C827A] mb-1.5">
+                  Descrição
+                </h4>
+                <p className="text-sm sm:text-base text-[#5C554E] leading-relaxed">
+                  {viewingItem.description}
+                </p>
+              </div>
+
+              {/* Ingredientes Principais (se houver) */}
+              {viewingItem.ingredients && viewingItem.ingredients.length > 0 && (
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#181513] mb-2 flex items-center justify-between">
-                    <span>1. Escolha a Borda (Cornicione)</span>
-                    <span className="text-[#C24D2C] font-normal normal-case text-xs">Obrigatório</span>
-                  </label>
-                  <div className="space-y-2">
-                    {CRUST_OPTIONS.map((crust) => (
-                      <div
-                        key={crust.id}
-                        onClick={() => setSelectedCrust(crust.name)}
-                        className={`p-3 rounded-xl border flex items-center justify-between text-xs cursor-pointer transition-all ${
-                          selectedCrust === crust.name
-                            ? 'bg-[#FAF7F2] border-[#C24D2C] ring-1 ring-[#C24D2C] font-semibold text-[#181513]'
-                            : 'bg-white border-[#E0D5C3] text-[#5C554E] hover:bg-[#FAF7F2]'
-                        }`}
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#8C827A] mb-1.5">
+                    Ingredientes Principais
+                  </h4>
+                  <div className="flex flex-wrap gap-1.5">
+                    {viewingItem.ingredients.map((ing, idx) => (
+                      <span 
+                        key={idx} 
+                        className="px-2.5 py-1 rounded-lg bg-[#FAF7F2] text-[#181513] text-xs font-medium border border-[#EADFCF]"
                       >
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                              selectedCrust === crust.name
-                                ? 'border-[#C24D2C] bg-[#C24D2C] text-white'
-                                : 'border-gray-400'
-                            }`}
-                          >
-                            {selectedCrust === crust.name && <Check className="w-3 h-3" />}
-                          </div>
-                          <span>{crust.name}</span>
-                        </div>
-                        <span className="font-bold text-[#181513]">
-                          {crust.price === 0 ? 'Incluso' : `+ ${formatBRL(crust.price)}`}
-                        </span>
-                      </div>
+                        {ing}
+                      </span>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Extra Toppings */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#181513] mb-2">
-                  2. Adicionais Especiais (Opcional)
-                </label>
-                <div className="space-y-2">
-                  {EXTRA_TOPPINGS.map((extra, eIdx) => {
-                    const isChecked = selectedExtras.some(e => e.name === extra.name);
-                    return (
-                      <div
-                        key={eIdx}
-                        onClick={() => handleToggleExtra(extra)}
-                        className={`p-3 rounded-xl border flex items-center justify-between text-xs cursor-pointer transition-all ${
-                          isChecked
-                            ? 'bg-[#FAF7F2] border-[#1B382B] ring-1 ring-[#1B382B] font-semibold text-[#181513]'
-                            : 'bg-white border-[#E0D5C3] text-[#5C554E] hover:bg-[#FAF7F2]'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className={`w-4 h-4 rounded-md border flex items-center justify-center ${
-                              isChecked
-                                ? 'border-[#1B382B] bg-[#1B382B] text-white'
-                                : 'border-gray-400'
-                            }`}
-                          >
-                            {isChecked && <Check className="w-3 h-3" />}
-                          </div>
-                          <span>{extra.name}</span>
-                        </div>
-                        <span className="font-bold text-[#181513]">
-                          + {formatBRL(extra.price)}
-                        </span>
-                      </div>
-                    );
-                  })}
+              {/* Harmonização do Sommelier (se houver) */}
+              {viewingItem.pairing && (
+                <div className="p-3 rounded-2xl bg-[#F7F4EE] border border-[#E8DEC8] flex items-center gap-2.5 text-xs text-[#1B382B]">
+                  <Wine className="w-4 h-4 text-[#C24D2C] shrink-0" />
+                  <span><strong>Harmonização do Sommelier:</strong> {viewingItem.pairing}</span>
                 </div>
-              </div>
-
-              {/* Special Instructions */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#181513] mb-1.5">
-                  Observações para o Pizzaiolo
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Ex: sem orégano, azeite à parte, massa bem tostada..."
-                  value={specialNotes}
-                  onChange={(e) => setSpecialNotes(e.target.value)}
-                  className="w-full p-3 rounded-xl border border-[#E0D5C3] text-xs focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
-                />
-              </div>
-
-              {/* Quantity */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3]">
-                <span className="text-xs font-bold uppercase tracking-wider text-[#181513]">
-                  Quantidade:
-                </span>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setItemQuantity(Math.max(1, itemQuantity - 1))}
-                    className="w-8 h-8 rounded-lg bg-white border border-[#E0D5C3] font-bold text-base flex items-center justify-center hover:bg-gray-100"
-                  >
-                    -
-                  </button>
-                  <span className="font-bold text-sm text-[#181513]">{itemQuantity}</span>
-                  <button
-                    onClick={() => setItemQuantity(itemQuantity + 1)}
-                    className="w-8 h-8 rounded-lg bg-white border border-[#E0D5C3] font-bold text-base flex items-center justify-center hover:bg-gray-100"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
+              )}
             </div>
 
-            {/* Modal Footer */}
-            <div className="p-6 bg-[#FAF7F2] border-t border-[#E0D5C3] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <p className="text-[10px] text-[#5C554E] uppercase font-bold">Total do Item</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-xl font-extrabold text-[#C24D2C]">
-                    {formatBRL(calculateCustomizedPrice())}
-                  </p>
-                  <span className="text-[10px] font-extrabold text-[#8C5E0A] bg-[#E5A93C]/20 border border-[#E5A93C]/40 px-2 py-0.5 rounded-full flex items-center gap-1">
-                    <Star className="w-3 h-3 fill-[#E5A93C]" />
-                    +{customizingItem ? (customizingItem.pointsEarned ?? Math.round(customizingItem.price)) * itemQuantity : 0} pts
-                  </span>
-                </div>
-              </div>
+            {/* Rodapé do Modal com Botão Fechar e Pedir no WhatsApp */}
+            <div className="p-4 sm:p-5 bg-[#FAF7F2] border-t border-[#E0D5C3] flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setViewingItem(null)}
+                className="px-5 py-2.5 rounded-xl bg-white hover:bg-neutral-100 text-[#5C554E] hover:text-[#181513] border border-[#E0D5C3] font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-xs"
+              >
+                Fechar
+              </button>
 
-              <div className="flex items-center gap-2.5 w-full sm:w-auto">
-                <a
-                  href={`https://wa.me/${siteInfo?.whatsappNumber || '5511915331853'}?text=${encodeURIComponent(buildCustomizedWhatsAppText())}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="Pedir este item personalizado no WhatsApp"
-                  className="flex-1 sm:flex-initial px-4 py-3.5 rounded-2xl bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs uppercase tracking-wider shadow-md flex items-center justify-center gap-2 cursor-pointer transition-transform hover:scale-[1.02] active:scale-95"
-                >
-                  <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-                  </svg>
-                  <span>Pedir no WhatsApp</span>
-                </a>
-
-                <button
-                  type="button"
-                  onClick={handleConfirmAddToCart}
-                  className="flex-1 sm:flex-initial px-5 py-3.5 rounded-2xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-[#C24D2C]/30 flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <ShoppingBag className="w-4 h-4" />
-                  <span>Adicionar</span>
-                </button>
-              </div>
+              <a
+                href={"https://wa.me/" + (siteInfo?.whatsappNumber || "5511915331853") + "?text=" + encodeURIComponent("Olá Deolinda Pizzaria! Gostaria de pedir: *" + viewingItem.name + "* (" + formatBRL(viewingItem.price) + ").")}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={"Pedir " + viewingItem.name + " no WhatsApp"}
+                className="px-5 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs uppercase tracking-wider shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-transform hover:scale-[1.02] active:scale-95"
+              >
+                <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                </svg>
+                <span>Pedir no WhatsApp</span>
+              </a>
             </div>
 
           </div>
         </div>
       )}
+
 
     </section>
   );

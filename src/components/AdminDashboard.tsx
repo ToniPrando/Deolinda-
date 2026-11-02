@@ -375,6 +375,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [isDeletingItem, setIsDeletingItem] = useState(false);
   const [isSavingItem, setIsSavingItem] = useState(false);
   const [isConfirmingRestoreLogo, setIsConfirmingRestoreLogo] = useState(false);
+  const [isConfirmingRestoreDefaultMenu, setIsConfirmingRestoreDefaultMenu] = useState(false);
 
   const [itemFormData, setItemFormData] = useState({
     name: '',
@@ -397,6 +398,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     { label: 'Sobremesa / Dolci', url: 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?auto=format&fit=crop&w=800&q=80' },
     { label: 'Vinho Italiano', url: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=800&q=80' }
   ];
+
+  const handleRestoreDefaultMenu = async () => {
+    setIsSavingItem(true);
+    try {
+      setCurrentMenuItems(MENU_ITEMS);
+      if (onMenuItemsUpdated) {
+        onMenuItemsUpdated(MENU_ITEMS);
+      }
+      await saveMenuItemsToFirestore(MENU_ITEMS);
+      setIsConfirmingRestoreDefaultMenu(false);
+      setEditingItem(null);
+      setMenuNotice({ type: 'success', text: 'Cardápio restaurado com sucesso para as 13 receitas clássicas autênticas!' });
+      setTimeout(() => setMenuNotice(null), 5000);
+    } catch (err) {
+      console.error('Erro ao restaurar cardápio padrão:', err);
+      setMenuNotice({ type: 'error', text: 'Erro ao restaurar o cardápio padrão.' });
+    } finally {
+      setIsSavingItem(false);
+    }
+  };
 
   const openAddItemModal = () => {
     setEditingItem(null);
@@ -461,8 +482,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       ingredients: ingredientsList.length > 0 ? ingredientsList : ['Ingredientes frescos da casa'],
       pairing: itemFormData.pairing.trim() || undefined,
       image: itemFormData.image.trim() || 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=800&q=80',
-      tags: [],
-      isAvailable: itemFormData.isAvailable
+      tags: editingItem?.tags || [],
+      isAvailable: itemFormData.isAvailable,
+      isPopular: editingItem?.isPopular || false,
+      pointsEarned: editingItem?.pointsEarned || Math.round(parsedPrice),
+      pointsToRedeem: editingItem?.pointsToRedeem || Math.round(parsedPrice * 6),
+      pointsBonusTag: editingItem?.pointsBonusTag || undefined
     };
 
     setIsSavingItem(true);
@@ -1170,15 +1195,49 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </p>
               </div>
 
-              {/* Botão Adicionar Prato */}
-              <button
-                type="button"
-                onClick={openAddItemModal}
-                className="px-5 py-3 rounded-2xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-[#C24D2C]/30 hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0"
-              >
-                <Plus className="w-4 h-4 text-[#E5A93C]" />
-                <span>Adicionar Novo Item ao Cardápio</span>
-              </button>
+              <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap shrink-0">
+                {/* Botão Restaurar Cardápio Original */}
+                {isConfirmingRestoreDefaultMenu ? (
+                  <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-amber-50 border border-amber-300 animate-in fade-in">
+                    <span className="text-[11px] font-bold text-amber-900 px-2">Restaurar 13 receitas originais?</span>
+                    <button
+                      type="button"
+                      onClick={handleRestoreDefaultMenu}
+                      disabled={isSavingItem}
+                      className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs cursor-pointer shadow-xs"
+                    >
+                      {isSavingItem ? 'Restaurando...' : 'Sim, Restaurar'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsConfirmingRestoreDefaultMenu(false)}
+                      className="px-2.5 py-1.5 rounded-xl bg-neutral-200 hover:bg-neutral-300 text-neutral-700 font-bold text-xs cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsConfirmingRestoreDefaultMenu(true)}
+                    className="px-4 py-3 rounded-2xl bg-[#FAF7F2] hover:bg-[#EAE4D9] text-[#5C554E] hover:text-[#181513] border border-[#E0D5C3] font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    title="Restaurar o cardápio padrão com as 13 receitas autênticas de Nápoles"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-[#C24D2C]" />
+                    <span>Restaurar Padrão</span>
+                  </button>
+                )}
+
+                {/* Botão Adicionar Prato */}
+                <button
+                  type="button"
+                  onClick={openAddItemModal}
+                  className="px-5 py-3 rounded-2xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-[#C24D2C]/30 hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0"
+                >
+                  <Plus className="w-4 h-4 text-[#E5A93C]" />
+                  <span>Adicionar Novo Item</span>
+                </button>
+              </div>
             </div>
 
             {/* Filters Bar */}

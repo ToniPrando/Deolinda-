@@ -61,6 +61,14 @@ interface InternalDatabase {
   reservations: any[];
   customers: any[];
   logs: { timestamp: string; event: string; details?: any }[];
+  menuItems?: any[];
+  menuCategories?: any[];
+  siteInfo?: any;
+  customLogo?: string | null;
+  customEmblem?: string | null;
+  customEmblemEnabled?: boolean;
+  adminPassword?: string;
+  galleryPosts?: any[];
 }
 
 const initialOrders = [
@@ -225,14 +233,22 @@ function initDatabase() {
     if (fs.existsSync(DB_FILE)) {
       const raw = fs.readFileSync(DB_FILE, "utf-8");
       const parsed = JSON.parse(raw);
-      if (parsed && Array.isArray(parsed.orders)) {
+      if (parsed) {
         db = {
-          orders: parsed.orders || [],
-          reservations: parsed.reservations || [],
-          customers: parsed.customers || [],
-          logs: parsed.logs || []
+          orders: Array.isArray(parsed.orders) ? parsed.orders : [...initialOrders],
+          reservations: Array.isArray(parsed.reservations) ? parsed.reservations : [...initialReservations],
+          customers: Array.isArray(parsed.customers) ? parsed.customers : [...initialCustomers],
+          logs: Array.isArray(parsed.logs) ? parsed.logs : [],
+          menuItems: Array.isArray(parsed.menuItems) ? parsed.menuItems : undefined,
+          menuCategories: Array.isArray(parsed.menuCategories) ? parsed.menuCategories : undefined,
+          siteInfo: parsed.siteInfo || undefined,
+          customLogo: parsed.customLogo !== undefined ? parsed.customLogo : null,
+          customEmblem: parsed.customEmblem !== undefined ? parsed.customEmblem : null,
+          customEmblemEnabled: parsed.customEmblemEnabled !== undefined ? parsed.customEmblemEnabled : true,
+          adminPassword: parsed.adminPassword || undefined,
+          galleryPosts: Array.isArray(parsed.galleryPosts) ? parsed.galleryPosts : undefined
         };
-        console.log(`[Internal DB] Loaded database from file with ${db.orders.length} orders, ${db.reservations.length} reservations, ${db.customers.length} customers.`);
+        console.log(`[Internal DB] Loaded database from file with ${db.orders.length} orders, ${db.reservations.length} reservations, ${db.customers.length} customers, ${db.menuItems ? db.menuItems.length : 0} custom menu items.`);
         return;
       }
     }

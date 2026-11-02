@@ -428,20 +428,61 @@ export function subscribeToReservations(
 }
 
 /**
+ * Sanitizes a MenuItem object so it is 100% compliant with Cloud Firestore restrictions.
+ * Cloud Firestore rejects any write that contains `undefined` values.
+ */
+export function sanitizeMenuItemForFirestore(item: MenuItem): Record<string, any> {
+  const cleanItem: Record<string, any> = {
+    id: String(item.id || `item-${Date.now()}`),
+    name: String(item.name || '').trim(),
+    category: String(item.category || 'tradizionali'),
+    price: Number(item.price || 0),
+    description: String(item.description || '').trim(),
+    ingredients: Array.isArray(item.ingredients)
+      ? item.ingredients.map(i => String(i).trim()).filter(Boolean)
+      : ['Ingredientes frescos da casa'],
+    image: String(item.image || 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=800&q=80').trim(),
+    tags: Array.isArray(item.tags) ? item.tags.map(String) : [],
+    isAvailable: item.isAvailable !== false,
+    isPopular: Boolean(item.isPopular)
+  };
+
+  if (item.italianName && item.italianName.trim()) {
+    cleanItem.italianName = item.italianName.trim();
+  }
+  if (item.pairing && item.pairing.trim()) {
+    cleanItem.pairing = item.pairing.trim();
+  }
+  if (typeof item.pointsEarned === 'number' && !isNaN(item.pointsEarned)) {
+    cleanItem.pointsEarned = item.pointsEarned;
+  }
+  if (typeof item.pointsToRedeem === 'number' && !isNaN(item.pointsToRedeem)) {
+    cleanItem.pointsToRedeem = item.pointsToRedeem;
+  }
+  if (item.pointsBonusTag && item.pointsBonusTag.trim()) {
+    cleanItem.pointsBonusTag = item.pointsBonusTag.trim();
+  }
+
+  return cleanItem;
+}
+
+/**
  * Saves the full menu items collection to Cloud Firestore, backend, and localStorage.
  */
 export async function saveMenuItemsToFirestore(items: MenuItem[]): Promise<void> {
+  const sanitizedItems = items.map(sanitizeMenuItemForFirestore);
+
   try {
     const menuDocRef = doc(db, 'settings', 'menu');
     await setDoc(menuDocRef, {
-      items,
+      items: sanitizedItems,
       updatedAt: new Date().toISOString(),
       type: 'menu_items',
       _serverTimestamp: serverTimestamp()
     }, { merge: true });
-    console.log('[Firestore] Menu items saved successfully to Cloud Firestore.');
+    console.log(`[Firestore] Menu items (${sanitizedItems.length}) saved successfully to Cloud Firestore.`);
   } catch (error: any) {
-    console.warn('[Firestore] Notice while saving menu items to Firestore:', error?.message || error);
+    console.error('[Firestore] Error saving menu items to Cloud Firestore:', error);
   }
 
   // Backup to Express backend API
@@ -449,7 +490,7 @@ export async function saveMenuItemsToFirestore(items: MenuItem[]): Promise<void>
     await fetch('/api/settings/menu', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items })
+      body: JSON.stringify({ items: sanitizedItems })
     });
   } catch (e) {
     console.warn('[Backend] Menu save error:', e);
@@ -457,7 +498,7 @@ export async function saveMenuItemsToFirestore(items: MenuItem[]): Promise<void>
 
   // Local storage fallback
   try {
-    localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(items));
+    localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(sanitizedItems));
   } catch {}
 }
 
@@ -473,9 +514,26 @@ export function subscribeToMenuItems(
       if (snap.exists()) {
         const data = snap.data();
         if (data && Array.isArray(data.items) && data.items.length > 0) {
-          onUpdate(data.items);
+          const loadedItems: MenuItem[] = data.items.map((it: any) => ({
+            id: String(it.id || `item-${Date.now()}`),
+            name: String(it.name || ''),
+            italianName: it.italianName ? String(it.italianName) : undefined,
+            category: (it.category || 'tradizionali') as any,
+            price: Number(it.price || 0),
+            description: String(it.description || ''),
+            ingredients: Array.isArray(it.ingredients) ? it.ingredients : [],
+            pairing: it.pairing ? String(it.pairing) : undefined,
+            image: String(it.image || 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=800&q=80'),
+            tags: Array.isArray(it.tags) ? it.tags : [],
+            isAvailable: it.isAvailable !== false,
+            isPopular: Boolean(it.isPopular),
+            pointsEarned: typeof it.pointsEarned === 'number' ? it.pointsEarned : undefined,
+            pointsToRedeem: typeof it.pointsToRedeem === 'number' ? it.pointsToRedeem : undefined,
+            pointsBonusTag: it.pointsBonusTag ? String(it.pointsBonusTag) : undefined
+          }));
+          onUpdate(loadedItems);
           try {
-            localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(data.items));
+            localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(loadedItems));
           } catch {}
         }
       }
