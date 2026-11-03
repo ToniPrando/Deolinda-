@@ -644,11 +644,27 @@ app.post("/api/settings/gallery", (req, res) => {
 });
 
 // Custom Menu Categories API (Botões do Cardápio)
+const DEFAULT_SERVER_CATEGORIES = [
+  { id: "tradizionali", label: "Pizzas Tradicionais", icon: "🍕" },
+  { id: "speciali", label: "Pizzas Especiais", icon: "✨" },
+  { id: "dolci", label: "Sobremesas", icon: "🍰" },
+  { id: "bevande", label: "Bebidas", icon: "🍷" }
+];
+
 app.get("/api/settings/categories", (_req, res) => {
   try {
-    res.json({ categories: (db as any).menuCategories || null });
+    let cats = (db as any).menuCategories;
+    if (Array.isArray(cats) && cats.length > 0) {
+      cats = cats
+        .filter((c: any) => c && c.id !== 'antipasti' && c.label !== 'Entradas & Aperitivos')
+        .map((c: any) => c.id === 'bevande' ? { ...c, label: 'Bebidas' } : c);
+    } else {
+      cats = DEFAULT_SERVER_CATEGORIES;
+    }
+    (db as any).menuCategories = cats;
+    res.json({ categories: cats });
   } catch (error: any) {
-    res.json({ categories: null });
+    res.json({ categories: DEFAULT_SERVER_CATEGORIES });
   }
 });
 
@@ -656,9 +672,12 @@ app.post("/api/settings/categories", (req, res) => {
   try {
     const { categories } = req.body;
     if (Array.isArray(categories)) {
-      (db as any).menuCategories = categories;
+      const sanitizedCats = categories
+        .filter((c: any) => c && c.id !== 'antipasti' && c.label !== 'Entradas & Aperitivos')
+        .map((c: any) => c.id === 'bevande' ? { ...c, label: 'Bebidas' } : c);
+      (db as any).menuCategories = sanitizedCats;
       saveDatabase();
-      return res.json({ success: true, count: categories.length });
+      return res.json({ success: true, count: sanitizedCats.length, categories: sanitizedCats });
     }
     return res.status(400).json({ error: "Invalid categories array" });
   } catch (error: any) {

@@ -72,7 +72,12 @@ export default function App() {
       const saved = localStorage.getItem('deolinda_custom_menu_categories');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const cleaned = parsed
+            .filter((c: any) => c && c.id !== 'antipasti' && c.label !== 'Entradas & Aperitivos')
+            .map((c: any) => c.id === 'bevande' ? { ...c, label: 'Bebidas' } : c);
+          if (cleaned.length > 0) return cleaned;
+        }
       }
     } catch {}
     return DEFAULT_MENU_CATEGORIES;
@@ -405,8 +410,11 @@ export default function App() {
       .then(res => res.json())
       .then(data => {
         if (data && Array.isArray(data.categories) && data.categories.length > 0) {
-          setMenuCategories(data.categories);
-          localStorage.setItem('deolinda_custom_menu_categories', JSON.stringify(data.categories));
+          const cleaned = data.categories
+            .filter((c: any) => c && c.id !== 'antipasti' && c.label !== 'Entradas & Aperitivos')
+            .map((c: any) => c.id === 'bevande' ? { ...c, label: 'Bebidas' } : c);
+          setMenuCategories(cleaned);
+          localStorage.setItem('deolinda_custom_menu_categories', JSON.stringify(cleaned));
         }
       })
       .catch(() => {});
@@ -414,7 +422,10 @@ export default function App() {
     // 9. Subscribe to Firestore menu categories in real-time
     const unsubCategories = subscribeToMenuCategories((cats) => {
       if (cats && cats.length > 0) {
-        setMenuCategories(cats);
+        const cleaned = cats
+          .filter((c: any) => c && c.id !== 'antipasti' && c.label !== 'Entradas & Aperitivos')
+          .map((c: any) => c.id === 'bevande' ? { ...c, label: 'Bebidas' } : c);
+        setMenuCategories(cleaned);
       }
     });
 

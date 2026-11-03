@@ -642,9 +642,8 @@ export function subscribeToMenuItems(
     const categoryOrder: Record<string, number> = {
       'tradizionali': 1,
       'speciali': 2,
-      'antipasti': 3,
-      'dolci': 4,
-      'bevande': 5
+      'dolci': 3,
+      'bevande': 4
     };
 
     const processSnapshot = (snapshot: any) => {
@@ -890,9 +889,12 @@ export function subscribeToMenuCategories(
       if (snap.exists()) {
         const data = snap.data();
         if (data && Array.isArray(data.categories)) {
-          onUpdate(data.categories);
+          const normalized = data.categories
+            .filter((c: any) => c && c.id !== 'antipasti' && c.label !== 'Entradas & Aperitivos')
+            .map((c: any) => c.id === 'bevande' ? { ...c, label: 'Bebidas' } : c);
+          onUpdate(normalized);
           try {
-            localStorage.setItem('deolinda_custom_menu_categories', JSON.stringify(data.categories));
+            localStorage.setItem('deolinda_custom_menu_categories', JSON.stringify(normalized));
           } catch {}
         }
       }

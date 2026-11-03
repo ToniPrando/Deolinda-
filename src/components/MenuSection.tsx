@@ -156,9 +156,8 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
     switch (catId) {
       case 'tradizionali': return 'Pizzas Tradicionais';
       case 'speciali': return 'Pizzas Especiais';
-      case 'antipasti': return 'Entradas & Aperitivos';
       case 'dolci': return 'Sobremesas';
-      case 'bevande': return 'Bebidas & Vinhos';
+      case 'bevande': return 'Bebidas';
       default: return 'Cardápio';
     }
   };

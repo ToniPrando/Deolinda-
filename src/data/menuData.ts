@@ -3,9 +3,8 @@ import { MenuItem, LoyaltyReward, MenuCategory } from "../types";
 export const DEFAULT_MENU_CATEGORIES: MenuCategory[] = [
   { id: "tradizionali", label: "Pizzas Tradicionais", icon: "🍕" },
   { id: "speciali", label: "Pizzas Especiais", icon: "✨" },
-  { id: "antipasti", label: "Entradas & Aperitivos", icon: "🫒" },
   { id: "dolci", label: "Sobremesas", icon: "🍰" },
-  { id: "bevande", label: "Bebidas & Vinhos", icon: "🍷" }
+  { id: "bevande", label: "Bebidas", icon: "🍷" }
 ];
 
 export const MENU_ITEMS: MenuItem[] = [

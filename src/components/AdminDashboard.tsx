@@ -205,12 +205,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         return 'Pizzas Tradicionais';
       case 'speciali':
         return 'Pizzas Especiais';
-      case 'antipasti':
-        return 'Entradas & Aperitivos';
       case 'dolci':
         return 'Sobremesas';
       case 'bevande':
-        return 'Bebidas & Vinhos';
+        return 'Bebidas';
       default:
         return category;
     }

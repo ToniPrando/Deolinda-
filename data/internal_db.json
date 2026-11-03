@@ -484,5 +484,27 @@
   ],
   "customLogo": null,
   "customEmblem": null,
-  "customEmblemEnabled": true
+  "customEmblemEnabled": true,
+  "menuCategories": [
+    {
+      "id": "tradizionali",
+      "label": "Pizzas Tradicionais",
+      "icon": "🍕"
+    },
+    {
+      "id": "speciali",
+      "label": "Pizzas Especiais",
+      "icon": "✨"
+    },
+    {
+      "id": "dolci",
+      "label": "Sobremesas",
+      "icon": "🍰"
+    },
+    {
+      "id": "bevande",
+      "label": "Bebidas",
+      "icon": "🍷"
+    }
+  ]
 }
