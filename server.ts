@@ -564,13 +564,57 @@ app.get("/api/settings/menu", (_req, res) => {
   }
 });
 
+// Helper to offload base64 images to static files
+function processMenuItemImage(item: any): any {
+  if (!item || !item.image) return item;
+  if (typeof item.image === "string" && item.image.startsWith("data:image/")) {
+    try {
+      const match = item.image.match(/^data:image\/(\w+);base64,(.+)$/);
+      if (match) {
+        const ext = match[1] === "jpeg" ? "jpg" : match[1];
+        const targetDir = path.join(process.cwd(), "public", "menu_images");
+        if (!fs.existsSync(targetDir)) {
+          fs.mkdirSync(targetDir, { recursive: true });
+        }
+        const filename = `${item.id || Date.now()}.${ext}`;
+        const filePath = path.join(targetDir, filename);
+        fs.writeFileSync(filePath, Buffer.from(match[2], "base64"));
+        item.image = `/menu_images/${filename}?v=${Date.now()}`;
+      }
+    } catch (imgErr) {
+      console.warn("[Server] Error saving menu image to disk:", imgErr);
+    }
+  }
+  return item;
+}
+
+// Dedicated Fast Upload Menu Image API
+app.post("/api/settings/upload-menu-image", (req, res) => {
+  try {
+    const { imageBase64, itemId } = req.body;
+    if (!imageBase64) return res.status(400).json({ error: "No image data" });
+    const match = imageBase64.match(/^data:image\/(\w+);base64,(.+)$/);
+    if (!match) return res.status(400).json({ error: "Invalid base64 format" });
+    const ext = match[1] === "jpeg" ? "jpg" : match[1];
+    const targetDir = path.join(process.cwd(), "public", "menu_images");
+    if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
+    const filename = `${itemId || `upload_${Date.now()}`}.${ext}`;
+    fs.writeFileSync(path.join(targetDir, filename), Buffer.from(match[2], "base64"));
+    const publicUrl = `/menu_images/${filename}?v=${Date.now()}`;
+    return res.json({ success: true, url: publicUrl });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to upload image" });
+  }
+});
+
 app.post("/api/settings/menu", (req, res) => {
   try {
     const { items } = req.body;
     if (Array.isArray(items)) {
-      (db as any).menuItems = items;
+      const processedItems = items.map(processMenuItemImage);
+      (db as any).menuItems = processedItems;
       saveDatabase();
-      return res.json({ success: true, count: items.length });
+      return res.json({ success: true, count: processedItems.length });
     }
     return res.status(400).json({ error: "Invalid items array" });
   } catch (error: any) {
@@ -584,17 +628,18 @@ app.post("/api/settings/menu-item", (req, res) => {
   try {
     const { item } = req.body;
     if (item && item.id) {
+      const processedItem = processMenuItemImage(item);
       if (!Array.isArray((db as any).menuItems)) {
         (db as any).menuItems = [];
       }
-      const existingIdx = (db as any).menuItems.findIndex((it: any) => it.id === item.id);
+      const existingIdx = (db as any).menuItems.findIndex((it: any) => it.id === processedItem.id);
       if (existingIdx !== -1) {
-        (db as any).menuItems[existingIdx] = item;
+        (db as any).menuItems[existingIdx] = processedItem;
       } else {
-        (db as any).menuItems = [item, ...(db as any).menuItems];
+        (db as any).menuItems = [processedItem, ...(db as any).menuItems];
       }
       saveDatabase();
-      return res.json({ success: true, item, totalCount: (db as any).menuItems.length });
+      return res.json({ success: true, item: processedItem, totalCount: (db as any).menuItems.length });
     }
     return res.status(400).json({ error: "Invalid item" });
   } catch (error: any) {

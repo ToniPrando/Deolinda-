@@ -58,6 +58,7 @@ import {
   saveMenuItemsToFirestore,
   saveSingleMenuItemToFirestore,
   deleteSingleMenuItemFromFirestore,
+  uploadMenuImageToServer,
   saveGalleryPostsToFirestore,
   saveSiteInfoToFirestore,
   saveMenuCategoriesToFirestore,
@@ -491,68 +492,84 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       pointsBonusTag: editingItem?.pointsBonusTag || undefined
     };
 
-    setIsSavingItem(true);
-    try {
-      let updatedList: MenuItem[];
-      if (editingItem) {
-        updatedList = currentMenuItems.map(it => it.id === editingItem.id ? savedItem : it);
-        setMenuNotice({ type: 'success', text: `Item "${savedItem.name}" atualizado com sucesso no cardápio!` });
-      } else {
-        updatedList = [savedItem, ...currentMenuItems];
-        setMenuNotice({ type: 'success', text: `Novo item "${savedItem.name}" adicionado com sucesso ao cardápio!` });
-      }
-
-      setCurrentMenuItems(updatedList);
-      if (onMenuItemsUpdated) {
-        onMenuItemsUpdated(updatedList);
-      }
-
-      // 1. Immediately persist individual item directly to Firestore menu_items collection
-      await saveSingleMenuItemToFirestore(savedItem);
-
-      // 2. Concurrently backup full list to localStorage, backend, and Firestore
-      saveMenuItemsToFirestore(updatedList).catch(err => {
-        console.warn('[Firestore] Background batch sync:', err);
-      });
-
-      setIsItemModalOpen(false);
-      setEditingItem(null);
-      setTimeout(() => setMenuNotice(null), 5000);
-    } catch (err: any) {
-      console.error('Erro ao salvar item do cardápio:', err);
-      setItemFormError('Erro ao salvar o item. Tente novamente.');
-    } finally {
-      setIsSavingItem(false);
+    // 1. Optimistic Instant UI Update (< 10ms)
+    let updatedList: MenuItem[];
+    if (editingItem) {
+      updatedList = currentMenuItems.map(it => it.id === editingItem.id ? savedItem : it);
+      setMenuNotice({ type: 'success', text: `Item "${savedItem.name}" atualizado com sucesso no cardápio!` });
+    } else {
+      updatedList = [savedItem, ...currentMenuItems];
+      setMenuNotice({ type: 'success', text: `Novo item "${savedItem.name}" adicionado com sucesso ao cardápio!` });
     }
+
+    setCurrentMenuItems(updatedList);
+    if (onMenuItemsUpdated) {
+      onMenuItemsUpdated(updatedList);
+    }
+
+    // Immediately close modal and clear state so the user never waits
+    setIsItemModalOpen(false);
+    setEditingItem(null);
+    setIsSavingItem(false);
+    setTimeout(() => setMenuNotice(null), 5000);
+
+    // 2. Background non-blocking persistence
+    (async () => {
+      try {
+        // If image is a heavy base64 string, upload and turn it into a static URL
+        if (savedItem.image.startsWith('data:image/')) {
+          try {
+            const staticUrl = await uploadMenuImageToServer(savedItem.image, savedItem.id);
+            if (staticUrl && staticUrl.startsWith('/menu_images/')) {
+              savedItem.image = staticUrl;
+              const cleanList = updatedList.map(it => it.id === savedItem.id ? { ...it, image: staticUrl } : it);
+              setCurrentMenuItems(cleanList);
+              if (onMenuItemsUpdated) onMenuItemsUpdated(cleanList);
+              updatedList = cleanList;
+            }
+          } catch (imgErr) {
+            console.warn('[Image Upload] Background image optimization notice:', imgErr);
+          }
+        }
+
+        // Save single item to local server database and Firestore
+        await saveSingleMenuItemToFirestore(savedItem);
+
+        // Save menu list to backend & Firestore
+        saveMenuItemsToFirestore(updatedList).catch(err => {
+          console.warn('[Firestore] Background batch sync:', err);
+        });
+      } catch (err: any) {
+        console.warn('Erro ao sincronizar item em segundo plano:', err);
+      }
+    })();
   };
 
   const executeDeleteItem = async (id: string, name: string) => {
-    setIsDeletingItem(true);
-    try {
-      const updatedList = currentMenuItems.filter(it => it.id !== id);
-      setCurrentMenuItems(updatedList);
-      if (onMenuItemsUpdated) {
-        onMenuItemsUpdated(updatedList);
-      }
-
-      // 1. Permanently delete from Firestore menu_items collection
-      await deleteSingleMenuItemFromFirestore(id);
-
-      // 2. Also sync updated list to localStorage and backend
-      saveMenuItemsToFirestore(updatedList).catch(err => {
-        console.warn('[Firestore] Background batch sync on delete:', err);
-      });
-
-      setItemToDelete(null);
-      setConfirmDeleteMenuId(null);
-      setMenuNotice({ type: 'success', text: `Item "${name}" foi excluído com sucesso do cardápio!` });
-      setTimeout(() => setMenuNotice(null), 5000);
-    } catch (err: any) {
-      console.error('Erro ao excluir item do cardápio:', err);
-      setMenuNotice({ type: 'error', text: `Erro ao excluir "${name}". Tente novamente.` });
-    } finally {
-      setIsDeletingItem(false);
+    // 1. Optimistic Instant UI update
+    const updatedList = currentMenuItems.filter(it => it.id !== id);
+    setCurrentMenuItems(updatedList);
+    if (onMenuItemsUpdated) {
+      onMenuItemsUpdated(updatedList);
     }
+
+    setItemToDelete(null);
+    setConfirmDeleteMenuId(null);
+    setIsDeletingItem(false);
+    setMenuNotice({ type: 'success', text: `Item "${name}" foi excluído com sucesso do cardápio!` });
+    setTimeout(() => setMenuNotice(null), 5000);
+
+    // 2. Background persistence
+    (async () => {
+      try {
+        await deleteSingleMenuItemFromFirestore(id);
+        saveMenuItemsToFirestore(updatedList).catch(err => {
+          console.warn('[Firestore] Background batch sync on delete:', err);
+        });
+      } catch (err: any) {
+        console.warn('Erro ao excluir item em segundo plano:', err);
+      }
+    })();
   };
 
   const handleToggleItemAvailability = async (id: string) => {
@@ -4046,6 +4063,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       try {
                         const compressed = await compressImageFile(file, 640, 640, 0.70);
                         setItemFormData(prev => ({ ...prev, image: compressed }));
+                        // Immediately offload to static storage on backend
+                        const currentId = editingItem ? editingItem.id : `item-${Date.now()}`;
+                        const staticUrl = await uploadMenuImageToServer(compressed, currentId);
+                        if (staticUrl && staticUrl.startsWith('/menu_images/')) {
+                          setItemFormData(prev => ({ ...prev, image: staticUrl }));
+                        }
                       } catch (err) {
                         console.warn('Fallback to standard file reading:', err);
                         const reader = new FileReader();

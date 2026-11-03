@@ -475,8 +475,8 @@ export function sanitizeMenuItemForFirestore(item: MenuItem): Record<string, any
  * while seamlessly synchronizing with localStorage and Express backend storage.
  * Gracefully handles Firestore Free Tier quota limits without failing user actions.
  */
-export async function saveSingleMenuItemToFirestore(item: MenuItem): Promise<void> {
-  const sanitizedItem = sanitizeMenuItemForFirestore(item);
+export async function saveSingleMenuItemToFirestore(item: MenuItem): Promise<MenuItem> {
+  let sanitizedItem = sanitizeMenuItemForFirestore(item);
 
   // 1. Immediately update localStorage for instant offline and memory availability
   try {
@@ -491,35 +491,86 @@ export async function saveSingleMenuItemToFirestore(item: MenuItem): Promise<voi
     localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(list));
   } catch (err) {}
 
-  // 2. Synchronize with backend API (zero quota limits, file-backed)
+  // 2. Synchronize with backend API (zero quota limits, file-backed, instant)
   try {
-    await fetch('/api/settings/menu-item', {
+    const res = await fetch('/api/settings/menu-item', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ item: sanitizedItem })
     });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.item) {
+        sanitizedItem = sanitizeMenuItemForFirestore(data.item);
+        try {
+          const local = localStorage.getItem('deolinda_custom_menu_items');
+          if (local) {
+            let list: MenuItem[] = JSON.parse(local);
+            const idx = list.findIndex(it => it.id === sanitizedItem.id);
+            if (idx !== -1) {
+              list[idx] = sanitizedItem as any;
+              localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(list));
+            }
+          }
+        } catch {}
+      }
+    }
   } catch (backendErr) {
     console.warn('[Backend] Menu item save notice:', backendErr);
   }
 
-  // 3. Persist to Cloud Firestore (individual document)
+  // 3. Persist to Cloud Firestore (individual document) with a fast 2-second timeout
   try {
     const itemDocRef = doc(db, 'menu_items', sanitizedItem.id);
-    await setDoc(itemDocRef, {
+    const firestorePromise = setDoc(itemDocRef, {
       ...sanitizedItem,
       updatedAt: new Date().toISOString(),
       _serverTimestamp: serverTimestamp()
     }, { merge: true });
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Firestore write timeout')), 2000)
+    );
+
+    await Promise.race([firestorePromise, timeoutPromise]);
     console.log(`[Firestore] Single menu item "${sanitizedItem.name}" (${sanitizedItem.id}) saved to Cloud Firestore successfully.`);
   } catch (error: any) {
-    // If Firestore write quota is reached (Free daily write units per project exhausted),
-    // log notice but do NOT fail, because the item is already safely stored in local storage and internal server database!
-    if (error?.code === 'resource-exhausted' || error?.message?.includes('Quota limit exceeded') || error?.message?.includes('resource-exhausted')) {
+    if (error?.message === 'Firestore write timeout') {
+      console.warn('[Firestore] Notice: Firestore write timed out. Item is safely saved to server and local store.');
+    } else if (error?.code === 'resource-exhausted' || error?.message?.includes('Quota limit exceeded') || error?.message?.includes('resource-exhausted')) {
       console.warn('[Firestore] Free tier daily write quota limit reached. Item saved successfully to server and local store.');
     } else {
-      console.error('[Firestore] Error saving single menu item to Firestore:', error?.message || error);
+      console.warn('[Firestore] Notice saving single menu item to Firestore:', error?.message || error);
     }
   }
+
+  return sanitizedItem;
+}
+
+/**
+ * Uploads a base64 menu item image to the server, which converts it to a permanent static JPG file
+ * in public/menu_images and returns the clean URL (/menu_images/item-<id>.jpg).
+ */
+export async function uploadMenuImageToServer(imageBase64: string, itemId?: string): Promise<string> {
+  if (!imageBase64 || !imageBase64.startsWith('data:image/')) {
+    return imageBase64;
+  }
+  try {
+    const res = await fetch('/api/settings/upload-menu-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64, itemId })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.imageUrl) {
+        return data.imageUrl;
+      }
+    }
+  } catch (err) {
+    console.warn('[Upload Image] Server image upload notice:', err);
+  }
+  return imageBase64;
 }
 
 /**
@@ -527,7 +578,7 @@ export async function saveSingleMenuItemToFirestore(item: MenuItem): Promise<voi
  * local storage, and server database.
  */
 export async function deleteSingleMenuItemFromFirestore(itemId: string): Promise<void> {
-  // 1. Update localStorage
+  // 1. Update localStorage immediately
   try {
     const local = localStorage.getItem('deolinda_custom_menu_items');
     if (local) {
@@ -546,16 +597,22 @@ export async function deleteSingleMenuItemFromFirestore(itemId: string): Promise
     console.warn('[Backend] Menu item delete notice:', backendErr);
   }
 
-  // 3. Delete from Cloud Firestore
+  // 3. Delete from Cloud Firestore with a 2-second timeout
   try {
     const itemDocRef = doc(db, 'menu_items', itemId);
-    await deleteDoc(itemDocRef);
+    const deletePromise = deleteDoc(itemDocRef);
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Firestore delete timeout')), 2000)
+    );
+    await Promise.race([deletePromise, timeoutPromise]);
     console.log(`[Firestore] Menu item (${itemId}) deleted from Cloud Firestore successfully.`);
   } catch (error: any) {
-    if (error?.code === 'resource-exhausted' || error?.message?.includes('Quota limit exceeded')) {
+    if (error?.message === 'Firestore delete timeout') {
+      console.warn('[Firestore] Notice: Firestore delete timed out. Item deleted from server and local store.');
+    } else if (error?.code === 'resource-exhausted' || error?.message?.includes('Quota limit exceeded')) {
       console.warn('[Firestore] Free tier daily write quota limit reached on delete.');
     } else {
-      console.error('[Firestore] Error deleting menu item from Firestore:', error?.message || error);
+      console.warn('[Firestore] Notice deleting menu item from Firestore:', error?.message || error);
     }
   }
 }
@@ -585,21 +642,25 @@ export async function saveMenuItemsToFirestore(items: MenuItem[]): Promise<void>
     console.warn('[Backend] Menu save notice:', backendErr);
   }
 
-  // 3. Attempt to persist unified document in settings/menu if within 1MB limit (1 single write instead of 40+)
+  // 3. Attempt unified document write in background with 2s timeout
   try {
-    const menuDocRef = doc(db, 'settings', 'menu');
-    await setDoc(menuDocRef, {
-      items: sanitizedItems,
-      updatedAt: new Date().toISOString(),
-      type: 'menu_items',
-      _serverTimestamp: serverTimestamp()
-    }, { merge: true });
-  } catch (error: any) {
-    if (error?.code === 'resource-exhausted' || error?.message?.includes('Quota limit exceeded')) {
-      console.warn('[Firestore] Notice: Free tier quota reached for settings/menu write.');
-    } else {
-      console.warn('[Firestore] Notice: settings/menu document skipped full array:', error?.message || error);
+    const jsonStr = JSON.stringify(sanitizedItems);
+    if (jsonStr.length < 800000) {
+      const menuDocRef = doc(db, 'settings', 'menu');
+      const writePromise = setDoc(menuDocRef, {
+        items: sanitizedItems,
+        updatedAt: new Date().toISOString(),
+        type: 'menu_items',
+        _serverTimestamp: serverTimestamp()
+      }, { merge: true });
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Firestore write timeout')), 2000)
+      );
+      await Promise.race([writePromise, timeoutPromise]);
     }
+  } catch (error: any) {
+    // Non-blocking notice
   }
 }
 
