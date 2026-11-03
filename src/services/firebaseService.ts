@@ -470,7 +470,43 @@ export function sanitizeMenuItemForFirestore(item: MenuItem): Record<string, any
 }
 
 /**
+ * Saves a single MenuItem directly to the menu_items collection in Cloud Firestore.
+ * Each item has its own document, ensuring it never hits the 1MB single-document limit
+ * and persists instantly regardless of menu size.
+ */
+export async function saveSingleMenuItemToFirestore(item: MenuItem): Promise<void> {
+  const sanitizedItem = sanitizeMenuItemForFirestore(item);
+  try {
+    const itemDocRef = doc(db, 'menu_items', sanitizedItem.id);
+    await setDoc(itemDocRef, {
+      ...sanitizedItem,
+      updatedAt: new Date().toISOString(),
+      _serverTimestamp: serverTimestamp()
+    }, { merge: true });
+    console.log(`[Firestore] Single menu item "${sanitizedItem.name}" (${sanitizedItem.id}) saved to Cloud Firestore successfully.`);
+  } catch (error: any) {
+    console.error('[Firestore] Error saving single menu item to Firestore:', error);
+    throw error;
+  }
+}
+
+/**
+ * Permanently deletes a single MenuItem document from Cloud Firestore menu_items collection.
+ */
+export async function deleteSingleMenuItemFromFirestore(itemId: string): Promise<void> {
+  try {
+    const itemDocRef = doc(db, 'menu_items', itemId);
+    await deleteDoc(itemDocRef);
+    console.log(`[Firestore] Menu item (${itemId}) deleted from Cloud Firestore successfully.`);
+  } catch (error: any) {
+    console.error('[Firestore] Error deleting menu item from Firestore:', error);
+    throw error;
+  }
+}
+
+/**
  * Saves the full menu items collection to Cloud Firestore, backend, and localStorage.
+ * Handles large menus gracefully by writing to menu_items collection in parallel batches.
  */
 export async function saveMenuItemsToFirestore(items: MenuItem[]): Promise<void> {
   const sanitizedItems = items.map(sanitizeMenuItemForFirestore);
@@ -493,10 +529,24 @@ export async function saveMenuItemsToFirestore(items: MenuItem[]): Promise<void>
     console.warn('[Backend] Menu save notice:', backendErr);
   }
 
-  // 3. Persist to Cloud Firestore settings/menu and menu_items collection
-  let firestoreSuccess = false;
-  let firestoreError: any = null;
+  // 3. Persist individual items to menu_items collection using concurrent batches
+  try {
+    const batchPromises = sanitizedItems.map(item => {
+      if (!item.id) return Promise.resolve();
+      const itemDocRef = doc(db, 'menu_items', item.id);
+      return setDoc(itemDocRef, {
+        ...item,
+        updatedAt: new Date().toISOString(),
+        _serverTimestamp: serverTimestamp()
+      }, { merge: true });
+    });
+    await Promise.all(batchPromises);
+    console.log(`[Firestore] ${sanitizedItems.length} menu items synced to "menu_items" collection.`);
+  } catch (indivErr: any) {
+    console.warn('[Firestore] Notice syncing individual menu item docs:', indivErr?.message || indivErr);
+  }
 
+  // 4. Also attempt to persist unified document in settings/menu if within 1MB limit
   try {
     const menuDocRef = doc(db, 'settings', 'menu');
     await setDoc(menuDocRef, {
@@ -505,73 +555,85 @@ export async function saveMenuItemsToFirestore(items: MenuItem[]): Promise<void>
       type: 'menu_items',
       _serverTimestamp: serverTimestamp()
     }, { merge: true });
-    firestoreSuccess = true;
-    console.log(`[Firestore] Menu items (${sanitizedItems.length}) saved successfully to Cloud Firestore settings/menu.`);
   } catch (error: any) {
-    firestoreError = error;
-    console.error('[Firestore] Error saving menu items to settings/menu in Cloud Firestore:', error);
-  }
-
-  // 4. Also persist individual items to menu_items collection for high resilience
-  try {
-    for (const item of sanitizedItems) {
-      if (item.id) {
-        const itemDocRef = doc(db, 'menu_items', item.id);
-        await setDoc(itemDocRef, {
-          ...item,
-          updatedAt: new Date().toISOString(),
-          _serverTimestamp: serverTimestamp()
-        }, { merge: true });
-      }
-    }
-    firestoreSuccess = true;
-  } catch (indivErr: any) {
-    console.warn('[Firestore] Notice syncing individual menu item docs:', indivErr?.message || indivErr);
-  }
-
-  // If both failed and we had an error, throw so the UI can notify the user
-  if (!firestoreSuccess && firestoreError) {
-    throw firestoreError;
+    // If settings/menu exceeds 1MB due to photos, that is fine because menu_items collection is the primary source of truth
+    console.warn('[Firestore] Notice: settings/menu document skipped full array (menu_items collection is authoritative):', error?.message || error);
   }
 }
 
 /**
- * Subscribes to real-time menu items updates from Cloud Firestore
+ * Subscribes to real-time menu items updates from Cloud Firestore.
+ * Listens to the `menu_items` collection so that adding, editing, or deleting any item
+ * instantly broadcasts to all users and devices without document size restrictions.
  */
 export function subscribeToMenuItems(
   onUpdate: (items: MenuItem[]) => void
 ): () => void {
   try {
-    const menuDocRef = doc(db, 'settings', 'menu');
-    const unsubscribe = onSnapshot(menuDocRef, (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        if (data && Array.isArray(data.items) && data.items.length > 0) {
-          const loadedItems: MenuItem[] = data.items.map((it: any) => ({
-            id: String(it.id || `item-${Date.now()}`),
-            name: String(it.name || ''),
-            italianName: it.italianName ? String(it.italianName) : undefined,
-            category: (it.category || 'tradizionali') as any,
-            price: Number(it.price || 0),
-            description: String(it.description || ''),
-            ingredients: Array.isArray(it.ingredients) ? it.ingredients : [],
-            pairing: it.pairing ? String(it.pairing) : undefined,
-            image: String(it.image || 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=800&q=80'),
-            tags: Array.isArray(it.tags) ? it.tags : [],
-            isAvailable: it.isAvailable !== false,
-            isPopular: Boolean(it.isPopular),
-            pointsEarned: typeof it.pointsEarned === 'number' ? it.pointsEarned : undefined,
-            pointsToRedeem: typeof it.pointsToRedeem === 'number' ? it.pointsToRedeem : undefined,
-            pointsBonusTag: it.pointsBonusTag ? String(it.pointsBonusTag) : undefined
-          }));
-          onUpdate(loadedItems);
-          try {
-            localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(loadedItems));
-          } catch {}
-        }
+    const menuColRef = collection(db, 'menu_items');
+    
+    // Sort priority order for standard pizzeria categories
+    const categoryOrder: Record<string, number> = {
+      'tradizionali': 1,
+      'speciali': 2,
+      'antipasti': 3,
+      'dolci': 4,
+      'bevande': 5
+    };
+
+    const processSnapshot = (snapshot: any) => {
+      if (!snapshot.empty) {
+        const loadedItems: MenuItem[] = [];
+        snapshot.forEach((docSnap: any) => {
+          const it = docSnap.data();
+          if (it && it.name) {
+            loadedItems.push({
+              id: String(docSnap.id || it.id || `item-${Date.now()}`),
+              name: String(it.name || ''),
+              italianName: it.italianName ? String(it.italianName) : undefined,
+              category: (it.category || 'tradizionali') as any,
+              price: Number(it.price || 0),
+              description: String(it.description || ''),
+              ingredients: Array.isArray(it.ingredients) ? it.ingredients : [],
+              pairing: it.pairing ? String(it.pairing) : undefined,
+              image: String(it.image || 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=800&q=80'),
+              tags: Array.isArray(it.tags) ? it.tags : [],
+              isAvailable: it.isAvailable !== false,
+              isPopular: Boolean(it.isPopular),
+              pointsEarned: typeof it.pointsEarned === 'number' ? it.pointsEarned : undefined,
+              pointsToRedeem: typeof it.pointsToRedeem === 'number' ? it.pointsToRedeem : undefined,
+              pointsBonusTag: it.pointsBonusTag ? String(it.pointsBonusTag) : undefined
+            });
+          }
+        });
+
+        // Sort items by category order, then maintain clean order
+        loadedItems.sort((a, b) => {
+          const orderA = categoryOrder[a.category] ?? 99;
+          const orderB = categoryOrder[b.category] ?? 99;
+          if (orderA !== orderB) return orderA - orderB;
+          return a.name.localeCompare(b.name, 'pt-BR');
+        });
+
+        onUpdate(loadedItems);
+        try {
+          localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(loadedItems));
+        } catch {}
+      } else {
+        // Fallback: check settings/menu if collection is unexpectedly empty
+        getDoc(doc(db, 'settings', 'menu')).then((snap) => {
+          if (snap.exists()) {
+            const data = snap.data();
+            if (data && Array.isArray(data.items) && data.items.length > 0) {
+              onUpdate(data.items);
+            }
+          }
+        }).catch(() => {});
       }
-    }, (err) => {
-      console.warn('[Firestore] Menu subscription notice:', err?.message || err);
+    };
+
+    const unsubscribe = onSnapshot(menuColRef, processSnapshot, (err) => {
+      console.warn('[Firestore] Menu collection subscription notice:', err?.message || err);
     });
 
     return unsubscribe;

@@ -56,6 +56,8 @@ import {
   saveEmblemToFirestore, 
   saveLogoToFirestore, 
   saveMenuItemsToFirestore,
+  saveSingleMenuItemToFirestore,
+  deleteSingleMenuItemFromFirestore,
   saveGalleryPostsToFirestore,
   saveSiteInfoToFirestore,
   saveMenuCategoriesToFirestore,
@@ -426,7 +428,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setItemFormData({
       name: '',
       italianName: '',
-      category: 'tradizionali',
+      category: (selectedCategoryFilter !== 'all' ? selectedCategoryFilter : 'tradizionali') as CategoryType,
       price: 'R$ 0,00',
       description: '',
       ingredientsStr: '',
@@ -506,7 +508,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       if (onMenuItemsUpdated) {
         onMenuItemsUpdated(updatedList);
       }
-      await saveMenuItemsToFirestore(updatedList);
+
+      // 1. Immediately persist individual item directly to Firestore menu_items collection
+      await saveSingleMenuItemToFirestore(savedItem);
+
+      // 2. Concurrently backup full list to localStorage, backend, and Firestore
+      saveMenuItemsToFirestore(updatedList).catch(err => {
+        console.warn('[Firestore] Background batch sync:', err);
+      });
+
       setIsItemModalOpen(false);
       setEditingItem(null);
       setTimeout(() => setMenuNotice(null), 5000);
@@ -526,7 +536,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       if (onMenuItemsUpdated) {
         onMenuItemsUpdated(updatedList);
       }
-      await saveMenuItemsToFirestore(updatedList);
+
+      // 1. Permanently delete from Firestore menu_items collection
+      await deleteSingleMenuItemFromFirestore(id);
+
+      // 2. Also sync updated list to localStorage and backend
+      saveMenuItemsToFirestore(updatedList).catch(err => {
+        console.warn('[Firestore] Background batch sync on delete:', err);
+      });
+
       setItemToDelete(null);
       setConfirmDeleteMenuId(null);
       setMenuNotice({ type: 'success', text: `Item "${name}" foi excluído com sucesso do cardápio!` });
@@ -540,10 +558,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const handleToggleItemAvailability = async (id: string) => {
+    let targetItem: MenuItem | undefined;
     const updatedList = currentMenuItems.map(it => {
       if (it.id === id) {
         const nextState = it.isAvailable === false ? true : false;
-        return { ...it, isAvailable: nextState };
+        targetItem = { ...it, isAvailable: nextState };
+        return targetItem;
       }
       return it;
     });
@@ -551,12 +571,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (onMenuItemsUpdated) {
       onMenuItemsUpdated(updatedList);
     }
-    await saveMenuItemsToFirestore(updatedList);
+    if (targetItem) {
+      await saveSingleMenuItemToFirestore(targetItem);
+    }
+    saveMenuItemsToFirestore(updatedList).catch(e => console.warn('[Menu Batch Notice]', e));
   };
 
   // Filtered menu items for admin view
   const filteredAdminItems = currentMenuItems.filter((item) => {
-    const matchCategory = selectedCategoryFilter === 'all' || item.category === selectedCategoryFilter;
+    const itemCat = String(item.category || '').trim().toLowerCase();
+    const filterCat = String(selectedCategoryFilter).trim().toLowerCase();
+    const matchCategory = selectedCategoryFilter === 'all' || itemCat === filterCat;
     const matchQuery = 
       item.name.toLowerCase().includes(menuSearch.toLowerCase()) ||
       (item.italianName && item.italianName.toLowerCase().includes(menuSearch.toLowerCase())) ||
@@ -4021,7 +4046,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     if (e.target.files && e.target.files[0]) {
                       const file = e.target.files[0];
                       try {
-                        const compressed = await compressImageFile(file, 800, 800, 0.75);
+                        const compressed = await compressImageFile(file, 640, 640, 0.70);
                         setItemFormData(prev => ({ ...prev, image: compressed }));
                       } catch (err) {
                         console.warn('Fallback to standard file reading:', err);

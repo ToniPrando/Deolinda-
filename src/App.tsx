@@ -339,13 +339,20 @@ export default function App() {
       })
       .catch(() => {});
 
-    // 2. Fetch menu items from backend API
+    // 2. Fetch menu items from backend API (with safety check against overwriting newer Firestore items)
     fetch('/api/settings/menu')
       .then(res => res.json())
       .then(data => {
         if (data && Array.isArray(data.items) && data.items.length > 0) {
-          setMenuItems(data.items);
-          localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(data.items));
+          setMenuItems(prev => {
+            if (prev.length > data.items.length && prev !== MENU_ITEMS) {
+              return prev;
+            }
+            return data.items;
+          });
+          try {
+            localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(data.items));
+          } catch {}
         }
       })
       .catch(() => {});

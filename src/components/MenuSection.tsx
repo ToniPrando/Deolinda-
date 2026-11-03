@@ -109,7 +109,9 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
 
   const filteredItems = useMemo(() => {
     return currentItems.filter((item) => {
-      const matchCategory = selectedCategory === 'all' || item.category === selectedCategory;
+      const itemCat = String(item.category || '').trim().toLowerCase();
+      const filterCat = String(selectedCategory).trim().toLowerCase();
+      const matchCategory = selectedCategory === 'all' || itemCat === filterCat;
       const matchQuery = 
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
