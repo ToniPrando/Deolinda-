@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import nodemailer from "nodemailer";
 
 dotenv.config();
 
