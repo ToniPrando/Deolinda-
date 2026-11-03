@@ -412,7 +412,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       await saveMenuItemsToFirestore(MENU_ITEMS);
       setIsConfirmingRestoreDefaultMenu(false);
       setEditingItem(null);
-      setMenuNotice({ type: 'success', text: 'Cardápio restaurado com sucesso para as 13 receitas clássicas autênticas!' });
+      setMenuNotice({ type: 'success', text: 'Cardápio restaurado com sucesso para os pratos cadastrados da casa!' });
       setTimeout(() => setMenuNotice(null), 5000);
     } catch (err) {
       console.error('Erro ao restaurar cardápio padrão:', err);
@@ -1225,7 +1225,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {/* Botão Restaurar Cardápio Original */}
                 {isConfirmingRestoreDefaultMenu ? (
                   <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-amber-50 border border-amber-300 animate-in fade-in">
-                    <span className="text-[11px] font-bold text-amber-900 px-2">Restaurar 13 receitas originais?</span>
+                    <span className="text-[11px] font-bold text-amber-900 px-2">Restaurar cardápio base?</span>
                     <button
                       type="button"
                       onClick={handleRestoreDefaultMenu}

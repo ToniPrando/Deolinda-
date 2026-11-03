@@ -579,6 +579,46 @@ app.post("/api/settings/menu", (req, res) => {
   }
 });
 
+// Single Menu Item Upsert (Add/Edit individual item)
+app.post("/api/settings/menu-item", (req, res) => {
+  try {
+    const { item } = req.body;
+    if (item && item.id) {
+      if (!Array.isArray((db as any).menuItems)) {
+        (db as any).menuItems = [];
+      }
+      const existingIdx = (db as any).menuItems.findIndex((it: any) => it.id === item.id);
+      if (existingIdx !== -1) {
+        (db as any).menuItems[existingIdx] = item;
+      } else {
+        (db as any).menuItems = [item, ...(db as any).menuItems];
+      }
+      saveDatabase();
+      return res.json({ success: true, item, totalCount: (db as any).menuItems.length });
+    }
+    return res.status(400).json({ error: "Invalid item" });
+  } catch (error: any) {
+    console.error("Error saving single menu item:", error);
+    res.status(500).json({ error: error.message || "Failed to save menu item" });
+  }
+});
+
+// Single Menu Item Delete
+app.delete("/api/settings/menu-item/:id", (req, res) => {
+  try {
+    const { id } = req.params;
+    if (id && Array.isArray((db as any).menuItems)) {
+      (db as any).menuItems = (db as any).menuItems.filter((it: any) => it.id !== id);
+      saveDatabase();
+      return res.json({ success: true, deletedId: id, totalCount: (db as any).menuItems.length });
+    }
+    return res.json({ success: true });
+  } catch (error: any) {
+    console.error("Error deleting menu item:", error);
+    res.status(500).json({ error: error.message || "Failed to delete menu item" });
+  }
+});
+
 // Custom Gallery / Fotos & Momentos API
 app.get("/api/settings/gallery", (_req, res) => {
   try {

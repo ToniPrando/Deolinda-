@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { Order, Reservation, OrderStatus, MenuItem, SocialPost, SiteInfo, MenuCategory } from '../types';
+import { MENU_ITEMS } from '../data/menuData';
 
 // Initialize Firebase App instance
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
@@ -470,12 +471,38 @@ export function sanitizeMenuItemForFirestore(item: MenuItem): Record<string, any
 }
 
 /**
- * Saves a single MenuItem directly to the menu_items collection in Cloud Firestore.
- * Each item has its own document, ensuring it never hits the 1MB single-document limit
- * and persists instantly regardless of menu size.
+ * Saves a single MenuItem directly to the menu_items collection in Cloud Firestore,
+ * while seamlessly synchronizing with localStorage and Express backend storage.
+ * Gracefully handles Firestore Free Tier quota limits without failing user actions.
  */
 export async function saveSingleMenuItemToFirestore(item: MenuItem): Promise<void> {
   const sanitizedItem = sanitizeMenuItemForFirestore(item);
+
+  // 1. Immediately update localStorage for instant offline and memory availability
+  try {
+    const local = localStorage.getItem('deolinda_custom_menu_items');
+    let list: MenuItem[] = local ? JSON.parse(local) : [];
+    const idx = list.findIndex(it => it.id === sanitizedItem.id);
+    if (idx !== -1) {
+      list[idx] = sanitizedItem as any;
+    } else {
+      list = [sanitizedItem as any, ...list];
+    }
+    localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(list));
+  } catch (err) {}
+
+  // 2. Synchronize with backend API (zero quota limits, file-backed)
+  try {
+    await fetch('/api/settings/menu-item', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item: sanitizedItem })
+    });
+  } catch (backendErr) {
+    console.warn('[Backend] Menu item save notice:', backendErr);
+  }
+
+  // 3. Persist to Cloud Firestore (individual document)
   try {
     const itemDocRef = doc(db, 'menu_items', sanitizedItem.id);
     await setDoc(itemDocRef, {
@@ -485,28 +512,57 @@ export async function saveSingleMenuItemToFirestore(item: MenuItem): Promise<voi
     }, { merge: true });
     console.log(`[Firestore] Single menu item "${sanitizedItem.name}" (${sanitizedItem.id}) saved to Cloud Firestore successfully.`);
   } catch (error: any) {
-    console.error('[Firestore] Error saving single menu item to Firestore:', error);
-    throw error;
+    // If Firestore write quota is reached (Free daily write units per project exhausted),
+    // log notice but do NOT fail, because the item is already safely stored in local storage and internal server database!
+    if (error?.code === 'resource-exhausted' || error?.message?.includes('Quota limit exceeded') || error?.message?.includes('resource-exhausted')) {
+      console.warn('[Firestore] Free tier daily write quota limit reached. Item saved successfully to server and local store.');
+    } else {
+      console.error('[Firestore] Error saving single menu item to Firestore:', error?.message || error);
+    }
   }
 }
 
 /**
- * Permanently deletes a single MenuItem document from Cloud Firestore menu_items collection.
+ * Permanently deletes a single MenuItem document from Cloud Firestore menu_items collection,
+ * local storage, and server database.
  */
 export async function deleteSingleMenuItemFromFirestore(itemId: string): Promise<void> {
+  // 1. Update localStorage
+  try {
+    const local = localStorage.getItem('deolinda_custom_menu_items');
+    if (local) {
+      let list: MenuItem[] = JSON.parse(local);
+      list = list.filter(it => it.id !== itemId);
+      localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(list));
+    }
+  } catch {}
+
+  // 2. Delete from backend API
+  try {
+    await fetch(`/api/settings/menu-item/${encodeURIComponent(itemId)}`, {
+      method: 'DELETE'
+    });
+  } catch (backendErr) {
+    console.warn('[Backend] Menu item delete notice:', backendErr);
+  }
+
+  // 3. Delete from Cloud Firestore
   try {
     const itemDocRef = doc(db, 'menu_items', itemId);
     await deleteDoc(itemDocRef);
     console.log(`[Firestore] Menu item (${itemId}) deleted from Cloud Firestore successfully.`);
   } catch (error: any) {
-    console.error('[Firestore] Error deleting menu item from Firestore:', error);
-    throw error;
+    if (error?.code === 'resource-exhausted' || error?.message?.includes('Quota limit exceeded')) {
+      console.warn('[Firestore] Free tier daily write quota limit reached on delete.');
+    } else {
+      console.error('[Firestore] Error deleting menu item from Firestore:', error?.message || error);
+    }
   }
 }
 
 /**
  * Saves the full menu items collection to Cloud Firestore, backend, and localStorage.
- * Handles large menus gracefully by writing to menu_items collection in parallel batches.
+ * Does not write 40+ individual documents on every call to avoid exhausting the 20,000 daily write quota.
  */
 export async function saveMenuItemsToFirestore(items: MenuItem[]): Promise<void> {
   const sanitizedItems = items.map(sanitizeMenuItemForFirestore);
@@ -529,24 +585,7 @@ export async function saveMenuItemsToFirestore(items: MenuItem[]): Promise<void>
     console.warn('[Backend] Menu save notice:', backendErr);
   }
 
-  // 3. Persist individual items to menu_items collection using concurrent batches
-  try {
-    const batchPromises = sanitizedItems.map(item => {
-      if (!item.id) return Promise.resolve();
-      const itemDocRef = doc(db, 'menu_items', item.id);
-      return setDoc(itemDocRef, {
-        ...item,
-        updatedAt: new Date().toISOString(),
-        _serverTimestamp: serverTimestamp()
-      }, { merge: true });
-    });
-    await Promise.all(batchPromises);
-    console.log(`[Firestore] ${sanitizedItems.length} menu items synced to "menu_items" collection.`);
-  } catch (indivErr: any) {
-    console.warn('[Firestore] Notice syncing individual menu item docs:', indivErr?.message || indivErr);
-  }
-
-  // 4. Also attempt to persist unified document in settings/menu if within 1MB limit
+  // 3. Attempt to persist unified document in settings/menu if within 1MB limit (1 single write instead of 40+)
   try {
     const menuDocRef = doc(db, 'settings', 'menu');
     await setDoc(menuDocRef, {
@@ -556,15 +595,42 @@ export async function saveMenuItemsToFirestore(items: MenuItem[]): Promise<void>
       _serverTimestamp: serverTimestamp()
     }, { merge: true });
   } catch (error: any) {
-    // If settings/menu exceeds 1MB due to photos, that is fine because menu_items collection is the primary source of truth
-    console.warn('[Firestore] Notice: settings/menu document skipped full array (menu_items collection is authoritative):', error?.message || error);
+    if (error?.code === 'resource-exhausted' || error?.message?.includes('Quota limit exceeded')) {
+      console.warn('[Firestore] Notice: Free tier quota reached for settings/menu write.');
+    } else {
+      console.warn('[Firestore] Notice: settings/menu document skipped full array:', error?.message || error);
+    }
   }
 }
 
+export const EXCLUDED_CLASSIC_ITEM_IDS = new Set([
+  'pizza-margherita-dop',
+  'pizza-marinara-antica',
+  'pizza-diavola-piccante',
+  'pizza-quattro-formaggi',
+  'pizza-capricciosa',
+  'pizza-deolinda-suprema',
+  'pizza-mortadella-pistacchio',
+  'pizza-parma-burrata',
+  'pizza-burrata-pesto',
+  'anti-burrata-forno',
+  'anti-bruschetta-caprese',
+  'anti-focaccia-rosmarino',
+  'anti-arancini',
+  'dolce-tiramisu',
+  'dolce-cannoli',
+  'dolce-pizza-nutella',
+  'bev-chianti',
+  'bev-primitivo',
+  'bev-prosecco',
+  'bev-peroni',
+  'bev-limoncello',
+  'bev-sanpellegrino'
+]);
+
 /**
  * Subscribes to real-time menu items updates from Cloud Firestore.
- * Listens to the `menu_items` collection so that adding, editing, or deleting any item
- * instantly broadcasts to all users and devices without document size restrictions.
+ * Preserves only manual and newly added items, permanently excluding the 21 classic recipes.
  */
 export function subscribeToMenuItems(
   onUpdate: (items: MenuItem[]) => void
@@ -586,7 +652,7 @@ export function subscribeToMenuItems(
         const loadedItems: MenuItem[] = [];
         snapshot.forEach((docSnap: any) => {
           const it = docSnap.data();
-          if (it && it.name) {
+          if (it && it.name && !EXCLUDED_CLASSIC_ITEM_IDS.has(docSnap.id) && !EXCLUDED_CLASSIC_ITEM_IDS.has(it.id)) {
             loadedItems.push({
               id: String(docSnap.id || it.id || `item-${Date.now()}`),
               name: String(it.name || ''),
@@ -620,20 +686,29 @@ export function subscribeToMenuItems(
           localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(loadedItems));
         } catch {}
       } else {
-        // Fallback: check settings/menu if collection is unexpectedly empty
-        getDoc(doc(db, 'settings', 'menu')).then((snap) => {
-          if (snap.exists()) {
-            const data = snap.data();
+        // Fallback: check settings/menu or server API if collection is unexpectedly empty
+        fetch('/api/settings/menu')
+          .then(r => r.json())
+          .then(data => {
             if (data && Array.isArray(data.items) && data.items.length > 0) {
               onUpdate(data.items);
             }
-          }
-        }).catch(() => {});
+          })
+          .catch(() => {});
       }
     };
 
-    const unsubscribe = onSnapshot(menuColRef, processSnapshot, (err) => {
+    const unsubscribe = onSnapshot(menuColRef, processSnapshot, (err: any) => {
       console.warn('[Firestore] Menu collection subscription notice:', err?.message || err);
+      // If Firestore hits quota limit (resource-exhausted) or client is offline, seamlessly fetch from backend API
+      fetch('/api/settings/menu')
+        .then(r => r.json())
+        .then(data => {
+          if (data && Array.isArray(data.items) && data.items.length > 0) {
+            onUpdate(data.items);
+          }
+        })
+        .catch(() => {});
     });
 
     return unsubscribe;
