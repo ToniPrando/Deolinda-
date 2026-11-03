@@ -289,6 +289,162 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
+// ==========================================
+// CONTACT FORM API - ENVIO DE E-MAIL
+// ==========================================
+app.post("/api/contact", async (req, res) => {
+  try {
+    const { name, email, phone, subject, message, website } = req.body || {};
+
+    // Campo invisível anti-spam (honeypot)
+    if (website) {
+      return res.status(400).json({
+        success: false,
+        message: "Não foi possível enviar a mensagem."
+      });
+    }
+
+    // Validar campos obrigatórios
+    if (
+      typeof name !== "string" ||
+      typeof email !== "string" ||
+      typeof message !== "string" ||
+      !name.trim() ||
+      !email.trim() ||
+      !message.trim()
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Preencha seu nome, e-mail e mensagem."
+      });
+    }
+
+    const cleanName = name.trim();
+    const cleanEmail = email.trim();
+    const cleanPhone = typeof phone === "string" ? phone.trim() : "";
+    const cleanSubject = typeof subject === "string" ? subject.trim() : "Contato pelo site";
+    const cleanMessage = message.trim();
+
+    // Limites de segurança
+    if (
+      cleanName.length > 100 ||
+      cleanEmail.length > 254 ||
+      cleanPhone.length > 30 ||
+      cleanSubject.length > 120 ||
+      cleanMessage.length > 5000
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Algum campo ultrapassou o tamanho permitido."
+      });
+    }
+
+    // Validar formato do e-mail
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (
+      !emailRegex.test(cleanEmail) ||
+      /[\r\n]/.test(cleanEmail)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Informe um endereço de e-mail válido."
+      });
+    }
+
+    // Verificar configurações SMTP
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpPort = Number(process.env.SMTP_PORT || 465);
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    const contactTo = process.env.CONTACT_TO;
+
+    if (!smtpHost || !smtpUser || !smtpPass || !contactTo) {
+      console.error("[CONTACT] Configurações SMTP incompletas.");
+
+      return res.status(500).json({
+        success: false,
+        message: "O serviço de contato está temporariamente indisponível."
+      });
+    }
+
+    if (![465, 587].includes(smtpPort)) {
+      return res.status(500).json({
+        success: false,
+        message: "Configuração de e-mail inválida."
+      });
+    }
+
+    // Criar conexão SMTP
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: {
+        user: smtpUser,
+        pass: smtpPass
+      }
+    });
+
+    // Escapar conteúdo para o HTML
+    const escapeHtml = (value: string) =>
+      value.replace(/[&<>"']/g, (char) => {
+        const entities: Record<string, string> = {
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;"
+        };
+        return entities[char];
+      });
+
+    // Enviar mensagem
+    await transporter.sendMail({
+      from: `"Site Deolinda Pizzaria" <${smtpUser}>`,
+      to: contactTo,
+      replyTo: cleanEmail,
+      subject: `Contato pelo site: ${cleanSubject.replace(/[\r\n]/g, " ")}`,
+      text: [
+        "Nova mensagem recebida pelo site da Deolinda Pizzaria.",
+        "",
+        `Nome: ${cleanName}`,
+        `E-mail: ${cleanEmail}`,
+        `Telefone: ${cleanPhone || "Não informado"}`,
+        `Assunto: ${cleanSubject}`,
+        "",
+        "Mensagem:",
+        cleanMessage
+      ].join("\n"),
+      html: `
+        <h2>Nova mensagem pelo site da Deolinda Pizzaria</h2>
+        <p><strong>Nome:</strong> ${escapeHtml(cleanName)}</p>
+        <p><strong>E-mail:</strong> ${escapeHtml(cleanEmail)}</p>
+        <p><strong>Telefone:</strong> ${escapeHtml(cleanPhone || "Não informado")}</p>
+        <p><strong>Assunto:</strong> ${escapeHtml(cleanSubject)}</p>
+        <hr />
+        <p><strong>Mensagem:</strong></p>
+        <p>${escapeHtml(cleanMessage).replace(/\n/g, "<br>")}</p>
+      `
+    });
+
+    console.log("[CONTACT] Mensagem enviada com sucesso.");
+
+    return res.status(200).json({
+      success: true,
+      message: "Mensagem enviada com sucesso!"
+    });
+
+  } catch (error) {
+    console.error("[CONTACT] Erro ao enviar mensagem:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Não foi possível enviar sua mensagem. Tente novamente mais tarde."
+    });
+  }
+});
+
 // Database stats & export
 app.get("/api/db/stats", (_req, res) => {
   res.json({
