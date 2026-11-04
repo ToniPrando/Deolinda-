@@ -493,3 +493,52 @@ export const MENU_ITEMS: MenuItem[] = [
     }
   }
 ];
+
+export const CRUST_OPTIONS = [
+  { id: 'tradizionale', name: 'Massa Tradizionale Napoletana (72h)', price: 0 },
+  { id: 'integrale', name: 'Massa Integral com Grãos Antigos', price: 6 },
+  { id: 'borda-recheada', name: 'Borda Vulcânica com Stracciatella', price: 14 }
+];
+
+export const EXTRA_TOPPINGS = [
+  { id: 'bufala', name: 'Mozzarella di Bufala D.O.P. extra', price: 12 },
+  { id: 'tartufo', name: 'Azeite Trufado Italiano', price: 10 },
+  { id: 'basilico', name: 'Manjericão Fresco da Horta', price: 0 },
+  { id: 'pomodoro', name: 'Pomodoro San Marzano Extra', price: 8 }
+];
+
+export const LOYALTY_REWARDS: LoyaltyReward[] = [
+  {
+    id: 'rew-bruschetta',
+    title: 'Bruschetta Tradizionale',
+    description: 'Pão sourdough da casa com tomates confitados e manjericão fresco.',
+    pointsRequired: 180,
+    category: 'Entrada',
+    iconName: 'utensils'
+  },
+  {
+    id: 'rew-tiramisu',
+    title: 'Tiramisù della Nonna',
+    description: 'Receita artesanal centenária com mascarpone e café expresso.',
+    pointsRequired: 260,
+    category: 'Sobremesa',
+    iconName: 'cake'
+  },
+  {
+    id: 'rew-margherita',
+    title: 'Pizza Margherita D.O.P.',
+    description: 'A clássica rainha de Nápoles com Pomodoro San Marzano e Mozzarella di Bufala.',
+    pointsRequired: 400,
+    category: 'Pizza Clássica',
+    iconName: 'pizza'
+  },
+  {
+    id: 'rew-chianti',
+    title: 'Garrafa Vinho Chianti',
+    description: 'Vinho tinto italiano selecionado da Toscana para acompanhar seu momento.',
+    pointsRequired: 550,
+    category: 'Bebidas & Vinhos',
+    iconName: 'wine'
+  }
+];
+

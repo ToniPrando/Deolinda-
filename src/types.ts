@@ -23,6 +23,8 @@ export interface MenuItem {
   pointsEarned?: number; // Pontos de fidelidade que o cliente ganha ao comprar este item
   pointsToRedeem?: number; // Pontos necessários para resgatar este item de graça
   pointsBonusTag?: string; // Tag de bônus (ex: '+20 pts Bônus', '2x Pontos')
+  updatedAt?: string;
+  _serverTimestamp?: any;
 }
 
 export interface CartItem {

@@ -27,7 +27,12 @@ import {
   subscribeToGalleryPosts,
   subscribeToSiteInfo,
   subscribeToMenuCategories,
-  subscribeToAdminPassword
+  subscribeToAdminPassword,
+  enqueueMenuItemsBatchSave,
+  enqueueMenuCategoriesSave,
+  enqueueSiteInfoSave,
+  enqueueLogoSave,
+  enqueueEmblemSave
 } from './services/firebaseService';
 import { navigateToSection, getRouteByPath, getRouteById } from './utils/navigationRouter';
 
@@ -451,28 +456,39 @@ export default function App() {
     };
   }, []);
 
+  const handleOptimisticMenuItemsUpdated = (updatedItems: MenuItem[]) => {
+    setMenuItems(updatedItems);
+    try {
+      localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(updatedItems));
+    } catch {}
+    enqueueMenuItemsBatchSave(updatedItems);
+  };
+
+  const handleOptimisticMenuCategoriesUpdated = (updatedCategories: MenuCategory[]) => {
+    setMenuCategories(updatedCategories);
+    try {
+      localStorage.setItem('deolinda_custom_menu_categories', JSON.stringify(updatedCategories));
+    } catch {}
+    enqueueMenuCategoriesSave(updatedCategories);
+  };
+
+  const handleOptimisticSiteInfoUpdated = (updatedInfo: SiteInfo) => {
+    setSiteInfo(updatedInfo);
+    try {
+      localStorage.setItem('deolinda_custom_site_info', JSON.stringify(updatedInfo));
+    } catch {}
+    enqueueSiteInfoSave(updatedInfo);
+  };
+
   const handleLogoUpdated = (newUrl: string | null) => {
     setCustomLogoUrl(newUrl);
-    try {
-      if (newUrl) {
-        localStorage.setItem('deolinda_custom_logo', newUrl);
-      } else {
-        localStorage.removeItem('deolinda_custom_logo');
-      }
-    } catch {}
+    enqueueLogoSave(newUrl);
   };
 
   const handleEmblemUpdated = (newUrl: string | null, enabled: boolean = true) => {
     setCustomEmblemUrl(newUrl);
     setIsEmblemEnabled(enabled);
-    try {
-      if (newUrl) {
-        localStorage.setItem('deolinda_custom_emblem', newUrl);
-      } else {
-        localStorage.removeItem('deolinda_custom_emblem');
-      }
-      localStorage.setItem('deolinda_custom_emblem_enabled', String(enabled));
-    } catch {}
+    enqueueEmblemSave(newUrl, enabled);
   };
 
   // Sync cart to localStorage
@@ -935,13 +951,13 @@ export default function App() {
         isOpen={isAdminOpen}
         onClose={handleCloseAdmin}
         menuItems={menuItems}
-        onMenuItemsUpdated={setMenuItems}
+        onMenuItemsUpdated={handleOptimisticMenuItemsUpdated}
         menuCategories={menuCategories}
-        onMenuCategoriesUpdated={setMenuCategories}
+        onMenuCategoriesUpdated={handleOptimisticMenuCategoriesUpdated}
         socialPosts={socialPosts}
         onSocialPostsUpdated={setSocialPosts}
         siteInfo={siteInfo}
-        onSiteInfoUpdated={setSiteInfo}
+        onSiteInfoUpdated={handleOptimisticSiteInfoUpdated}
         orders={orders}
         reservations={reservations}
         onUpdateOrderStatus={handleUpdateOrderStatus}

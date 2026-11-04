@@ -20,16 +20,16 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo, customLogoUrl }) => {
   return (
-    <footer className="site-footer bg-[#120F0D] text-[#FAF7F2] border-t border-[#C24D2C]/30 pt-10 pb-8">
+    <footer className="site-footer bg-white text-[#181513] border-t border-[#EADFCF] pt-10 pb-8">
       <div className="footer-content w-full max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Main Center Block: Logo e Nome ao lado do Endereço, e Botões Sociais */}
         <div className="flex flex-col items-center justify-center text-center space-y-4 mb-8">
           {/* Logo e Nome ao lado do Endereço */}
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 text-center">
-            {/* Brand Logo & Name */}
+            {/* Brand Logo & Name (Sem borda amarela) */}
             <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-full bg-[#181513] flex items-center justify-center shadow-lg border border-[#E5A93C]/50 overflow-hidden p-0.5 shrink-0">
+              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-xs overflow-hidden p-0.5 shrink-0">
                 <img
                   src={customLogoUrl || "/deolinda_logo.png"}
                   alt={siteInfo?.restaurantName || "Deolinda Logo"}
@@ -39,24 +39,24 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo, customLog
                 />
               </div>
               <div className="text-left">
-                <span className="font-serif-italian text-lg sm:text-xl font-bold text-[#FAF7F2] leading-tight block">
+                <span className="font-serif-italian text-lg sm:text-xl font-bold text-[#181513] leading-tight block">
                   {siteInfo?.restaurantName || 'Deolinda Pizzaria Napoletana'}
                 </span>
               </div>
             </div>
 
-            <span className="hidden sm:inline text-white/20">•</span>
+            <span className="hidden sm:inline text-[#D5C9B8]">•</span>
 
             {/* Endereço ao lado */}
-            <div className="text-center sm:text-left text-xs text-white/80 space-y-0.5">
-              <p className="font-medium text-white/90 flex items-center justify-center sm:justify-start gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-[#E5A93C] shrink-0" />
+            <div className="text-center sm:text-left text-xs text-[#5C554E] space-y-0.5">
+              <p className="font-medium text-[#181513] flex items-center justify-center sm:justify-start gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-[#C24D2C] shrink-0" />
                 <span>
                   {siteInfo?.address || 'Rua Santa Cruz, 232'}, {siteInfo?.addressNeighborhood || 'Centro'} — {siteInfo?.addressCityState || 'Itu - SP'}
                 </span>
               </p>
               {siteInfo?.openingHoursSummary && (
-                <p className="text-white/60 text-[11px] sm:pl-5">
+                <p className="text-[#7A7067] text-[11px] sm:pl-5">
                   {siteInfo.openingHoursSummary}
                 </p>
               )}
@@ -70,9 +70,9 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo, customLog
               target="_blank"
               rel="noopener noreferrer"
               title={`Siga no Instagram (${siteInfo?.instagramHandle || '@deolindapizzaria'})`}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-[#E5A93C] text-xs font-medium transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#FAF7F2] hover:bg-[#F2ECE1] text-[#181513] border border-[#E0D5C3] text-xs font-medium transition-colors shadow-2xs"
             >
-              <Instagram className="w-3.5 h-3.5 text-[#E5A93C]" />
+              <Instagram className="w-3.5 h-3.5 text-[#E1306C]" />
               <span>Instagram</span>
             </a>
             <a
@@ -80,7 +80,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo, customLog
               target="_blank"
               rel="noopener noreferrer"
               title="WhatsApp"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-[#25D366] text-xs font-medium transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#FAF7F2] hover:bg-[#F2ECE1] text-[#181513] border border-[#E0D5C3] text-xs font-medium transition-colors shadow-2xs"
             >
               <Send className="w-3.5 h-3.5 text-[#25D366]" />
               <span>WhatsApp</span>
@@ -90,7 +90,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo, customLog
               target="_blank"
               rel="noopener noreferrer"
               title="Siga no Facebook"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-[#1877F2] text-xs font-medium transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#FAF7F2] hover:bg-[#F2ECE1] text-[#181513] border border-[#E0D5C3] text-xs font-medium transition-colors shadow-2xs"
             >
               <Facebook className="w-3.5 h-3.5 text-[#1877F2]" />
               <span>Facebook</span>
@@ -98,20 +98,20 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo, customLog
           </div>
         </div>
 
-        {/* Bottom Section: Copyright à esquerda, Cadeado Admin centralizado, Criado por à direita */}
-        <div className="pt-6 border-t border-white/10 grid grid-cols-1 sm:grid-cols-3 items-center justify-between gap-3 text-xs text-white/60">
+        {/* Bottom Section: Copyright, Cadeado Admin e Seção com Fundo Escuro Elegante Criado por ToniAep */}
+        <div className="pt-6 border-t border-[#EADFCF] flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-[#7A7067]">
           {/* Lado Esquerdo: Copyright */}
-          <div className="text-center sm:text-left">
+          <div className="text-center md:text-left order-2 md:order-1">
             <span>
               © {new Date().getFullYear()} Deolinda Pizzaria Napoletana. Fatta con amore
             </span>
           </div>
 
           {/* Centro: Cadeado Admin */}
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center order-3 md:order-2">
             <button
               onClick={onOpenAdmin}
-              className="text-white/30 hover:text-[#E5A93C] transition-colors p-1.5 rounded-md hover:bg-white/5 cursor-pointer flex items-center justify-center"
+              className="text-[#A89F95] hover:text-[#C24D2C] transition-colors p-1.5 rounded-md hover:bg-[#FAF7F2] cursor-pointer flex items-center justify-center"
               title="Área Restrita (Administrador)"
               aria-label="Área Restrita"
             >
@@ -119,33 +119,35 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo, customLog
             </button>
           </div>
 
-          {/* Lado Direito: Criado por ToniAep */}
-          <div className="flex items-center justify-center sm:justify-end gap-2">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-[#E5A93C]/90 font-cinzel">
-              Criado por
-            </span>
-            <a
-              href="https://toniaepprojetos.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Visitar ToniAep Projetos (Criando Inovação)"
-              className="footer-logo relative group inline-flex items-center justify-center p-0.5 rounded-lg bg-white/[0.02] hover:bg-white/[0.08] transition-all cursor-pointer max-w-[140px]"
-            >
-              <img 
-                src={toniaepLogo || TONIAEP_CREATOR_LOGO_BASE64} 
-                onError={(e) => {
-                  const target = e.currentTarget as HTMLImageElement;
-                  if (target.src !== TONIAEP_CREATOR_LOGO_BASE64) {
-                    target.src = TONIAEP_CREATOR_LOGO_BASE64;
-                  }
-                }}
-                alt="ToniAep - Criando Inovação" 
-                referrerPolicy="no-referrer"
-                loading="eager"
-                decoding="sync"
-                className="w-full max-w-[140px] h-auto object-contain drop-shadow-[0_2px_8px_rgba(0,180,255,0.25)] transition-transform duration-300 group-hover:scale-105"
-              />
-            </a>
+          {/* Lado Direito: Criado por ToniAep (Card com fundo transparente) */}
+          <div className="order-1 md:order-3 w-full sm:w-auto flex justify-center">
+            <div className="bg-transparent rounded-xl px-2 py-1 flex items-center justify-center gap-2.5">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-[#7A7067] font-cinzel">
+                Criado por
+              </span>
+              <a
+                href="https://toniaepprojetos.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Visitar ToniAep Projetos (Criando Inovação)"
+                className="footer-logo relative group inline-flex items-center justify-center p-1 rounded-lg bg-transparent hover:bg-black/[0.04] transition-all cursor-pointer max-w-[105px]"
+              >
+                <img 
+                  src={toniaepLogo || TONIAEP_CREATOR_LOGO_BASE64} 
+                  onError={(e) => {
+                    const target = e.currentTarget as HTMLImageElement;
+                    if (target.src !== TONIAEP_CREATOR_LOGO_BASE64) {
+                      target.src = TONIAEP_CREATOR_LOGO_BASE64;
+                    }
+                  }}
+                  alt="ToniAep - Criando Inovação" 
+                  referrerPolicy="no-referrer"
+                  loading="eager"
+                  decoding="sync"
+                  className="w-full max-w-[105px] h-auto object-contain drop-shadow-[0_2px_8px_rgba(0,180,255,0.3)] transition-transform duration-300 group-hover:scale-105"
+                />
+              </a>
+            </div>
           </div>
         </div>
 

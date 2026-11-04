@@ -703,12 +703,12 @@ export const LogoUploadModal: React.FC<LogoUploadModalProps> = ({
                   {/* Interactive Dual Preview Simulator */}
                   <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
                     {/* 1. Header simulator (ao lado do logo) */}
-                    <div className="p-3 rounded-xl bg-[#120F0D] border border-white/15">
-                      <span className="text-[10px] font-bold text-[#E5A93C] uppercase tracking-wider block mb-2">
+                    <div className="p-3 rounded-xl bg-white border border-[#EADFCF]">
+                      <span className="text-[10px] font-bold text-[#C24D2C] uppercase tracking-wider block mb-2">
                         1. Ao lado no Cabeçalho:
                       </span>
                       <div className="flex items-center gap-2">
-                        <div className="w-9 h-9 rounded-full bg-[#181513] border border-[#E5A93C] p-0.5 shrink-0 overflow-hidden">
+                        <div className="w-9 h-9 rounded-full bg-white shadow-xs p-0.5 shrink-0 overflow-hidden">
                           <img
                             src={logoPreviewUrl || currentLogoUrl || "/deolinda_logo.png"}
                             alt="Logo"
@@ -718,21 +718,21 @@ export const LogoUploadModal: React.FC<LogoUploadModalProps> = ({
                         <img
                           src={emblemPreviewUrl}
                           alt="Imagem anexa ao lado"
-                          className="h-8 w-auto max-w-[120px] object-contain drop-shadow-md"
+                          className="h-8 w-auto max-w-[120px] object-contain drop-shadow-xs"
                         />
-                        <span className="text-[8px] uppercase font-extrabold text-[#E5A93C] bg-[#C24D2C]/30 px-1 py-0.5 rounded border border-[#E5A93C]/30">
+                        <span className="text-[8px] uppercase font-extrabold text-white bg-[#C24D2C] px-1.5 py-0.5 rounded border border-[#C24D2C]">
                           D.O.P.
                         </span>
                       </div>
                     </div>
 
                     {/* 2. Hero simulator (embaixo do logo) */}
-                    <div className="p-3 rounded-xl bg-[#14110F] border border-white/15 text-center">
-                      <span className="text-[10px] font-bold text-[#E5A93C] uppercase tracking-wider block mb-1">
+                    <div className="p-3 rounded-xl bg-white border border-[#EADFCF] text-center">
+                      <span className="text-[10px] font-bold text-[#C24D2C] uppercase tracking-wider block mb-1">
                         2. Embaixo na Página Principal:
                       </span>
                       <div className="flex flex-col items-center justify-center gap-1.5 py-1">
-                        <div className="w-10 h-10 rounded-full bg-[#181513] border border-[#E5A93C] p-0.5 shrink-0 overflow-hidden">
+                        <div className="w-10 h-10 rounded-full bg-white shadow-xs p-0.5 shrink-0 overflow-hidden">
                           <img
                             src={logoPreviewUrl || currentLogoUrl || "/deolinda_logo.png"}
                             alt="Logo"
@@ -742,7 +742,7 @@ export const LogoUploadModal: React.FC<LogoUploadModalProps> = ({
                         <img
                           src={emblemPreviewUrl}
                           alt="Imagem anexa embaixo"
-                          className="h-9 w-auto max-w-[130px] object-contain drop-shadow-md"
+                          className="h-9 w-auto max-w-[130px] object-contain drop-shadow-xs"
                         />
                       </div>
                     </div>

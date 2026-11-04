@@ -544,7 +544,7 @@ export async function saveSingleMenuItemToFirestore(item: MenuItem): Promise<Men
     }
   }
 
-  return sanitizedItem;
+  return sanitizedItem as MenuItem;
 }
 
 /**
@@ -1055,5 +1055,272 @@ export function subscribeToAdminPassword(
     return () => {};
   }
 }
+
+// ==========================================
+// BACKGROUND SAVE QUEUE & OPTIMISTIC UPDATES
+// ==========================================
+
+export type SaveQueueTaskType = 
+  | 'menu_item_save' 
+  | 'menu_item_delete' 
+  | 'menu_batch' 
+  | 'categories' 
+  | 'site_info' 
+  | 'emblem' 
+  | 'logo' 
+  | 'admin_password';
+
+export interface SaveQueueTask {
+  id: string;
+  type: SaveQueueTaskType;
+  execute: () => Promise<void>;
+  retries: number;
+  timestamp: number;
+}
+
+class SaveQueueManager {
+  private queue: SaveQueueTask[] = [];
+  private isProcessing = false;
+  private listeners: Array<(status: { pendingCount: number; isProcessing: boolean }) => void> = [];
+
+  public getStatus() {
+    return {
+      pendingCount: this.queue.length,
+      isProcessing: this.isProcessing
+    };
+  }
+
+  public subscribe(listener: (status: { pendingCount: number; isProcessing: boolean }) => void): () => void {
+    this.listeners.push(listener);
+    listener(this.getStatus());
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== listener);
+    };
+  }
+
+  private notify() {
+    const status = this.getStatus();
+    this.listeners.forEach(l => {
+      try { l(status); } catch {}
+    });
+  }
+
+  public enqueue(task: Omit<SaveQueueTask, 'retries' | 'timestamp'>) {
+    // Deduplicate: If an identical task is already waiting, replace it
+    const existingIdx = this.queue.findIndex(t => t.id === task.id && t.type === task.type);
+    const fullTask: SaveQueueTask = {
+      ...task,
+      retries: 0,
+      timestamp: Date.now()
+    };
+
+    if (existingIdx !== -1) {
+      this.queue[existingIdx] = fullTask;
+    } else {
+      this.queue.push(fullTask);
+    }
+
+    this.notify();
+    this.processNext();
+  }
+
+  private async processNext() {
+    if (this.isProcessing || this.queue.length === 0) {
+      return;
+    }
+
+    this.isProcessing = true;
+    this.notify();
+
+    const currentTask = this.queue.shift();
+    if (!currentTask) {
+      this.isProcessing = false;
+      this.notify();
+      return;
+    }
+
+    try {
+      await currentTask.execute();
+      console.log(`[SaveQueue] Task ${currentTask.type} (${currentTask.id}) confirmed by server.`);
+    } catch (err: any) {
+      console.warn(`[SaveQueue] Task ${currentTask.type} notice:`, err?.message || err);
+      if (currentTask.retries < 2) {
+        currentTask.retries++;
+        this.queue.push(currentTask);
+      }
+    } finally {
+      // Small spacing between background sync tasks to preserve free quota
+      await new Promise(r => setTimeout(r, 100));
+      this.isProcessing = false;
+      this.notify();
+      if (this.queue.length > 0) {
+        this.processNext();
+      }
+    }
+  }
+}
+
+export const saveQueue = new SaveQueueManager();
+
+/**
+ * Optimistically saves a single MenuItem immediately to local state and localStorage,
+ * and enqueues background persistence to the server database and Cloud Firestore.
+ */
+export function enqueueMenuItemSave(item: MenuItem): MenuItem {
+  const sanitized = sanitizeMenuItemForFirestore(item) as MenuItem;
+
+  // 1. Optimistic Local Update (< 1ms)
+  try {
+    const local = localStorage.getItem('deolinda_custom_menu_items');
+    let list: MenuItem[] = local ? JSON.parse(local) : [];
+    const idx = list.findIndex(it => it.id === sanitized.id);
+    if (idx !== -1) {
+      list[idx] = sanitized;
+    } else {
+      list = [sanitized, ...list];
+    }
+    localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(list));
+  } catch {}
+
+  // 2. Enqueue background persistence
+  saveQueue.enqueue({
+    id: `menu-item-${sanitized.id}`,
+    type: 'menu_item_save',
+    execute: async () => {
+      // If base64 image, convert to static file on server
+      if (sanitized.image && sanitized.image.startsWith('data:image/')) {
+        try {
+          const staticUrl = await uploadMenuImageToServer(sanitized.image, sanitized.id);
+          if (staticUrl && staticUrl.startsWith('/menu_images/')) {
+            sanitized.image = staticUrl;
+          }
+        } catch {}
+      }
+      await saveSingleMenuItemToFirestore(sanitized);
+    }
+  });
+
+  return sanitized;
+}
+
+/**
+ * Optimistically deletes a MenuItem immediately from local state and localStorage,
+ * and enqueues background deletion to the server database and Cloud Firestore.
+ */
+export function enqueueMenuItemDelete(itemId: string): void {
+  // 1. Optimistic Local Delete (< 1ms)
+  try {
+    const local = localStorage.getItem('deolinda_custom_menu_items');
+    if (local) {
+      let list: MenuItem[] = JSON.parse(local);
+      list = list.filter(it => it.id !== itemId);
+      localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(list));
+    }
+  } catch {}
+
+  // 2. Enqueue background deletion
+  saveQueue.enqueue({
+    id: `menu-delete-${itemId}`,
+    type: 'menu_item_delete',
+    execute: async () => {
+      await deleteSingleMenuItemFromFirestore(itemId);
+    }
+  });
+}
+
+/**
+ * Optimistically saves the full menu batch to localStorage and enqueues background sync.
+ */
+export function enqueueMenuItemsBatchSave(items: MenuItem[]): void {
+  try {
+    localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(items));
+  } catch {}
+
+  saveQueue.enqueue({
+    id: 'menu_batch_sync',
+    type: 'menu_batch',
+    execute: async () => {
+      await saveMenuItemsToFirestore(items);
+    }
+  });
+}
+
+/**
+ * Optimistically saves categories to localStorage and enqueues background sync.
+ */
+export function enqueueMenuCategoriesSave(categories: MenuCategory[]): void {
+  try {
+    localStorage.setItem('deolinda_custom_menu_categories', JSON.stringify(categories));
+  } catch {}
+
+  saveQueue.enqueue({
+    id: 'categories_sync',
+    type: 'categories',
+    execute: async () => {
+      await saveMenuCategoriesToFirestore(categories);
+    }
+  });
+}
+
+/**
+ * Optimistically saves site info to localStorage and enqueues background sync.
+ */
+export function enqueueSiteInfoSave(info: SiteInfo): void {
+  try {
+    localStorage.setItem('deolinda_custom_site_info', JSON.stringify(info));
+  } catch {}
+
+  saveQueue.enqueue({
+    id: 'site_info_sync',
+    type: 'site_info',
+    execute: async () => {
+      await saveSiteInfoToFirestore(info);
+    }
+  });
+}
+
+/**
+ * Optimistically saves logo and enqueues background sync.
+ */
+export function enqueueLogoSave(logoUrl: string | null): void {
+  try {
+    if (logoUrl) {
+      localStorage.setItem('deolinda_custom_logo', logoUrl);
+    } else {
+      localStorage.removeItem('deolinda_custom_logo');
+    }
+  } catch {}
+
+  saveQueue.enqueue({
+    id: 'logo_sync',
+    type: 'logo',
+    execute: async () => {
+      await saveLogoToFirestore(logoUrl);
+    }
+  });
+}
+
+/**
+ * Optimistically saves emblem and enqueues background sync.
+ */
+export function enqueueEmblemSave(emblemUrl: string | null, enabled: boolean): void {
+  try {
+    if (emblemUrl) {
+      localStorage.setItem('deolinda_custom_emblem', emblemUrl);
+    } else {
+      localStorage.removeItem('deolinda_custom_emblem');
+    }
+    localStorage.setItem('deolinda_custom_emblem_enabled', String(enabled));
+  } catch {}
+
+  saveQueue.enqueue({
+    id: 'emblem_sync',
+    type: 'emblem',
+    execute: async () => {
+      await saveEmblemToFirestore(emblemUrl, enabled);
+    }
+  });
+}
+
 
 

@@ -59,6 +59,9 @@ import {
   saveSingleMenuItemToFirestore,
   deleteSingleMenuItemFromFirestore,
   uploadMenuImageToServer,
+  enqueueMenuItemSave,
+  enqueueMenuItemDelete,
+  saveQueue,
   saveGalleryPostsToFirestore,
   saveSiteInfoToFirestore,
   saveMenuCategoriesToFirestore,
@@ -513,36 +516,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setIsSavingItem(false);
     setTimeout(() => setMenuNotice(null), 5000);
 
-    // 2. Background non-blocking persistence
-    (async () => {
-      try {
-        // If image is a heavy base64 string, upload and turn it into a static URL
-        if (savedItem.image.startsWith('data:image/')) {
-          try {
-            const staticUrl = await uploadMenuImageToServer(savedItem.image, savedItem.id);
-            if (staticUrl && staticUrl.startsWith('/menu_images/')) {
-              savedItem.image = staticUrl;
-              const cleanList = updatedList.map(it => it.id === savedItem.id ? { ...it, image: staticUrl } : it);
-              setCurrentMenuItems(cleanList);
-              if (onMenuItemsUpdated) onMenuItemsUpdated(cleanList);
-              updatedList = cleanList;
-            }
-          } catch (imgErr) {
-            console.warn('[Image Upload] Background image optimization notice:', imgErr);
-          }
-        }
-
-        // Save single item to local server database and Firestore
-        await saveSingleMenuItemToFirestore(savedItem);
-
-        // Save menu list to backend & Firestore
-        saveMenuItemsToFirestore(updatedList).catch(err => {
-          console.warn('[Firestore] Background batch sync:', err);
-        });
-      } catch (err: any) {
-        console.warn('Erro ao sincronizar item em segundo plano:', err);
-      }
-    })();
+    // 2. Background non-blocking persistence via Save Queue
+    enqueueMenuItemSave(savedItem);
   };
 
   const executeDeleteItem = async (id: string, name: string) => {
@@ -559,17 +534,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setMenuNotice({ type: 'success', text: `Item "${name}" foi excluído com sucesso do cardápio!` });
     setTimeout(() => setMenuNotice(null), 5000);
 
-    // 2. Background persistence
-    (async () => {
-      try {
-        await deleteSingleMenuItemFromFirestore(id);
-        saveMenuItemsToFirestore(updatedList).catch(err => {
-          console.warn('[Firestore] Background batch sync on delete:', err);
-        });
-      } catch (err: any) {
-        console.warn('Erro ao excluir item em segundo plano:', err);
-      }
-    })();
+    // 2. Background persistence via Save Queue
+    enqueueMenuItemDelete(id);
   };
 
   const handleToggleItemAvailability = async (id: string) => {
@@ -1096,33 +1062,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           : 'rounded-3xl w-full max-w-6xl h-[92vh]'
       }`}>
         
-        {/* Dashboard Top Header */}
-        <div className="bg-[#181513] text-white p-4 sm:p-6 flex flex-wrap items-center justify-between gap-4 border-b border-[#C24D2C]/40">
+        {/* Dashboard Top Header (Formato Claro) */}
+        <div className="bg-white text-[#181513] p-4 sm:p-6 flex flex-wrap items-center justify-between gap-4 border-b border-[#EADFCF] shadow-2xs">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-[#C24D2C] flex items-center justify-center text-white shadow-lg shrink-0">
               <Flame className="w-6 h-6 text-[#E5A93C]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-serif-italian font-bold text-lg sm:text-xl text-white">
+                <h3 className="font-serif-italian font-bold text-lg sm:text-xl text-[#181513]">
                   Controle de Cardápio e Identidade Visual
                 </h3>
-                <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <span className="bg-emerald-50 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1.5 shadow-2xs">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
                   Sincronizado ao Vivo
                 </span>
               </div>
-              <p className="text-xs text-white/70">
-                Gerenciamento de pratos, preços, fotos e identidade visual
+              <p className="text-xs text-[#5C554E]">
+                Gerenciamento de pratos, preços, horários e identidade visual
               </p>
             </div>
           </div>
 
           <div className="flex items-center flex-wrap gap-2.5">
             {/* Sync Status and Manual Refresh */}
-            <div className="flex items-center gap-1.5 bg-white/10 p-1 rounded-2xl border border-white/10">
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/20 text-emerald-300 rounded-xl text-[10px] font-bold border border-emerald-500/30">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <div className="flex items-center gap-1.5 bg-[#FAF7F2] p-1 rounded-2xl border border-[#E0D5C3]">
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-100/80 text-emerald-800 rounded-xl text-[10px] font-bold border border-emerald-300">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span>Nuvem Firebase</span>
               </div>
               <button
@@ -1130,9 +1096,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 onClick={handleManualSync}
                 disabled={isManualSyncing}
                 title="Sincronizar com a nuvem agora"
-                className="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-neutral-100 text-[#181513] text-[11px] font-bold flex items-center gap-1.5 border border-[#E0D5C3] shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
               >
-                <RefreshCw className={`w-3.5 h-3.5 text-[#E5A93C] ${isManualSyncing ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-3.5 h-3.5 text-[#C24D2C] ${isManualSyncing ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">Sincronizar</span>
               </button>
             </div>
@@ -1153,9 +1119,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   type="button"
                   onClick={() => onOpenLogoModal('emblem')}
                   title="Ferramenta para colocar imagem ao lado e embaixo do logo"
-                  className="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-[#FAF7F2] text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer border border-white/20"
+                  className="px-2.5 py-1.5 rounded-xl bg-[#FAF7F2] hover:bg-[#EAE4D9] text-[#181513] text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs active:scale-95 cursor-pointer border border-[#E0D5C3]"
                 >
-                  <Layers className="w-3.5 h-3.5 text-[#E5A93C]" />
+                  <Layers className="w-3.5 h-3.5 text-[#C24D2C]" />
                   <span className="hidden md:inline">Imagem Anexa</span>
                 </button>
               </div>
@@ -1166,25 +1132,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               type="button"
               onClick={() => setIsMaximized(prev => !prev)}
               title={isMaximized ? "Restaurar tamanho da janela" : "Maximizar tela"}
-              className="p-2 rounded-full bg-white/10 text-white/80 hover:text-white hover:bg-white/20 transition-colors cursor-pointer ml-1"
+              className="p-2 rounded-full bg-[#FAF7F2] text-[#5C554E] hover:text-[#181513] hover:bg-[#EAE4D9] border border-[#E0D5C3] transition-colors cursor-pointer ml-1 shadow-2xs"
             >
-              {isMaximized ? <Minimize2 className="w-5 h-5 text-[#E5A93C]" /> : <Maximize2 className="w-5 h-5" />}
+              {isMaximized ? <Minimize2 className="w-5 h-5 text-[#C24D2C]" /> : <Maximize2 className="w-5 h-5" />}
             </button>
 
             <button
               onClick={onClose}
-              className="p-2 rounded-full bg-white/10 text-white/80 hover:text-white hover:bg-white/20 transition-colors cursor-pointer ml-1"
+              className="p-2 rounded-full bg-[#FAF7F2] text-[#5C554E] hover:text-[#181513] hover:bg-[#EAE4D9] border border-[#E0D5C3] transition-colors cursor-pointer ml-1 shadow-2xs"
             >
               <X className="w-6 h-6" />
             </button>
           </div>
         </div>
 
-        {/* Dashboard Tabs Bar */}
+        {/* Dashboard Tabs Bar (Sem Fotos & Momentos) */}
         <div className="bg-white border-b border-[#E0D5C3] px-6 flex items-center gap-2 overflow-x-auto shrink-0">
           {[
             { id: 'menu', label: `📝 Controle de Cardápio (${currentMenuItems.length})` },
-            { id: 'gallery', label: `📸 Fotos & Momentos (${currentSocialPosts.length})` },
             { id: 'siteInfo', label: '🌐 Informações do Site' },
             { id: 'branding', label: '🎨 Identidade & Logotipo' },
             { id: 'security', label: '🔒 Senha de Acesso ADM' }
@@ -1523,224 +1488,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         )}
 
-        {/* ========================================== */}
-        {/* Tab 2: Gestão de Fotos & Momentos          */}
-        {/* ========================================== */}
-        {activeTab === 'gallery' && (
-          <div className="flex-1 p-4 sm:p-6 overflow-y-auto bg-[#F4EFE6] space-y-4">
-            
-            {/* Gallery Notice Alert */}
-            {galleryNotice && (
-              <div className={`p-4 rounded-2xl text-xs sm:text-sm font-semibold flex items-center gap-2.5 animate-in fade-in ${
-                galleryNotice.type === 'success' 
-                  ? 'bg-emerald-100 border border-emerald-300 text-emerald-900' 
-                  : 'bg-rose-100 border border-rose-300 text-rose-900'
-              }`}>
-                {galleryNotice.type === 'success' ? (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                ) : (
-                  <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
-                )}
-                <span>{galleryNotice.text}</span>
-              </div>
-            )}
 
-            {/* Header Action Bar */}
-            <div className="bg-white rounded-3xl p-5 border border-[#E0D5C3] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-8 h-8 rounded-xl bg-[#C24D2C]/10 flex items-center justify-center text-[#C24D2C]">
-                    <Camera className="w-4 h-4" />
-                  </div>
-                  <h4 className="font-serif-italian text-xl font-bold text-[#181513]">
-                    Gestão de Fotos & Momentos
-                  </h4>
-                </div>
-                <p className="text-xs text-[#5C554E]">
-                  Altere fotos, legendas, autores e hashtags exibidas na galeria oficial da pizzaria.
-                </p>
-              </div>
-
-              <div className="flex items-center flex-wrap gap-2.5">
-                <button
-                  type="button"
-                  onClick={handleRestoreDefaultPosts}
-                  className="px-4 py-2.5 rounded-xl border border-[#E0D5C3] bg-white hover:bg-neutral-100 text-[#5C554E] hover:text-[#181513] font-bold text-xs flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
-                  title="Restaurar as 6 fotos oficiais originais da galeria"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 text-[#C24D2C]" />
-                  <span>Restaurar Padrão</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={openAddPostModal}
-                  className="px-5 py-2.5 rounded-2xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-[#C24D2C]/25 hover:scale-102 active:scale-98 transition-all cursor-pointer"
-                >
-                  <Plus className="w-4 h-4 text-[#E5A93C]" />
-                  <span>Adicionar Nova Foto</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Search Bar */}
-            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-[#E0D5C3] shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="relative w-full sm:w-80">
-                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8C827A]" />
-                <input
-                  type="text"
-                  placeholder="Buscar legenda, autor ou tag..."
-                  value={gallerySearch}
-                  onChange={(e) => setGallerySearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
-                />
-                {gallerySearch && (
-                  <button
-                    onClick={() => setGallerySearch('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-
-              <div className="text-xs text-[#5C554E] font-medium flex items-center gap-2 self-start sm:self-center">
-                <span>Total de fotos ativas:</span>
-                <span className="px-2.5 py-0.5 rounded-full bg-[#181513] text-white font-bold text-xs">
-                  {filteredGalleryPosts.length}
-                </span>
-              </div>
-            </div>
-
-            {/* Gallery Posts Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filteredGalleryPosts.map((post) => (
-                <div
-                  key={post.id}
-                  className="bg-white rounded-3xl border border-[#E0D5C3] overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
-                >
-                  <div>
-                    {/* Image Header with Info Badges */}
-                    <div className="relative h-56 bg-[#181513] overflow-hidden">
-                      <img
-                        src={post.imageUrl}
-                        alt={post.caption}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-
-                      {/* Author badge */}
-                      <div className="absolute top-3 left-3">
-                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-black/70 text-white backdrop-blur-md">
-                          {post.author}
-                        </span>
-                      </div>
-
-                      {/* Timestamp badge */}
-                      <div className="absolute bottom-3 left-3">
-                        <span className="px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-black/60 text-white/90 backdrop-blur-md">
-                          {post.timestamp}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Content */}
-                    <div className="p-4 space-y-2.5">
-                      <p className="text-xs text-[#181513] leading-relaxed line-clamp-3">
-                        {post.caption}
-                      </p>
-
-                      {/* Tags */}
-                      {post.tags && post.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 pt-1">
-                          {post.tags.map((tag, tIdx) => (
-                            <span
-                              key={tIdx}
-                              className="px-2 py-0.5 rounded-md bg-[#FAF7F2] text-[#1B382B] text-[11px] font-semibold border border-[#EADFCF]"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Actions Toolbar */}
-                  <div className="p-3 bg-[#FAF7F2] border-t border-[#EADFCF] flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openEditPostModal(post)}
-                      className="px-3 py-1.5 rounded-xl bg-white hover:bg-amber-50 text-[#181513] hover:text-[#C24D2C] border border-[#E0D5C3] font-bold text-xs flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
-                      title="Editar foto e informações"
-                    >
-                      <Edit3 className="w-3.5 h-3.5 text-[#E5A93C]" />
-                      <span>Editar</span>
-                    </button>
-
-                    {confirmDeletePostId === post.id ? (
-                      <div className="flex items-center gap-1 animate-in fade-in duration-150">
-                        <button
-                          type="button"
-                          onClick={() => executeDeletePost(post.id)}
-                          disabled={isDeletingPost}
-                          className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-                          title="Confirmar exclusão definitiva desta foto"
-                        >
-                          {isDeletingPost ? (
-                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <Trash2 className="w-3.5 h-3.5" />
-                          )}
-                          <span>Sim, Excluir</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDeletePostId(null)}
-                          disabled={isDeletingPost}
-                          className="px-2.5 py-1.5 rounded-xl bg-neutral-200 hover:bg-neutral-300 text-neutral-700 font-bold text-xs transition-colors cursor-pointer"
-                          title="Cancelar"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setConfirmDeletePostId(post.id)}
-                        className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-900 border border-rose-200 font-bold text-xs flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer active:scale-95"
-                        title="Excluir foto da galeria"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                        <span>Excluir</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {filteredGalleryPosts.length === 0 && (
-              <div className="bg-white rounded-3xl p-12 text-center border border-[#E0D5C3] max-w-md mx-auto my-8">
-                <Camera className="w-12 h-12 text-[#C24D2C] mx-auto mb-3 opacity-60" />
-                <h4 className="font-serif-italian text-lg font-bold text-[#181513] mb-1">
-                  Nenhuma foto encontrada
-                </h4>
-                <p className="text-xs text-[#5C554E] mb-4">
-                  Nenhuma publicação corresponde à busca ou a galeria está vazia.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => { setGallerySearch(''); handleRestoreDefaultPosts(); }}
-                  className="px-4 py-2 rounded-xl bg-[#C24D2C] text-white text-xs font-bold uppercase"
-                >
-                  Restaurar Fotos Padrão
-                </button>
-              </div>
-            )}
-
-          </div>
-        )}
 
         {/* ========================================== */}
         {/* Tab 3: Informações do Site (Completo)      */}
@@ -2203,9 +1951,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                 <div className="pt-4 border-t border-[#F0EAE1]">
                   <h6 className="font-bold text-xs uppercase tracking-wider text-[#181513] mb-4">
-                    4 Cartões de Destaque Rápido no Hero
+                    Cartões de Destaque no Hero (2 Cartões)
                   </h6>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
                     
                     {/* Destaque 1 */}
                     <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E0D5C3] space-y-2">
@@ -2241,44 +1989,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         value={currentSiteInfo.heroOvenSubtext}
                         onChange={(e) => handleUpdateSiteInfoField('heroOvenSubtext', e.target.value)}
                         placeholder="Pedra vulcânica"
-                        className="w-full px-3 py-1.5 rounded-lg bg-white border border-[#E0D5C3] text-xs"
-                      />
-                    </div>
-
-                    {/* Destaque 3 */}
-                    <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E0D5C3] space-y-2">
-                      <span className="text-[11px] font-bold text-[#C24D2C] uppercase">3. Farinha & Massa</span>
-                      <input
-                        type="text"
-                        value={currentSiteInfo.heroFlourHighlight}
-                        onChange={(e) => handleUpdateSiteInfoField('heroFlourHighlight', e.target.value)}
-                        placeholder="Caputo Tipo 00"
-                        className="w-full px-3 py-1.5 rounded-lg bg-white border border-[#E0D5C3] text-xs font-bold"
-                      />
-                      <input
-                        type="text"
-                        value={currentSiteInfo.heroFlourSubtext}
-                        onChange={(e) => handleUpdateSiteInfoField('heroFlourSubtext', e.target.value)}
-                        placeholder="Importada de Nápoles"
-                        className="w-full px-3 py-1.5 rounded-lg bg-white border border-[#E0D5C3] text-xs"
-                      />
-                    </div>
-
-                    {/* Destaque 4 */}
-                    <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E0D5C3] space-y-2">
-                      <span className="text-[11px] font-bold text-[#C24D2C] uppercase">4. Ingredientes D.O.P.</span>
-                      <input
-                        type="text"
-                        value={currentSiteInfo.heroTomatoHighlight}
-                        onChange={(e) => handleUpdateSiteInfoField('heroTomatoHighlight', e.target.value)}
-                        placeholder="San Marzano D.O.P."
-                        className="w-full px-3 py-1.5 rounded-lg bg-white border border-[#E0D5C3] text-xs font-bold"
-                      />
-                      <input
-                        type="text"
-                        value={currentSiteInfo.heroTomatoSubtext}
-                        onChange={(e) => handleUpdateSiteInfoField('heroTomatoSubtext', e.target.value)}
-                        placeholder="Cultivado no Vesúvio"
                         className="w-full px-3 py-1.5 rounded-lg bg-white border border-[#E0D5C3] text-xs"
                       />
                     </div>
@@ -4210,236 +3920,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* ========================================== */}
       {/* Photo Post Editor / Creator Modal          */}
       {/* ========================================== */}
-      {isPostModalOpen && (
-        <div className="fixed inset-0 z-[9000] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
-          <div className="bg-[#FAF7F2] rounded-3xl w-full max-w-xl max-h-[92vh] shadow-2xl flex flex-col overflow-hidden border border-[#E0D5C3]">
-            
-            {/* Modal Header */}
-            <div className="p-4 sm:p-5 bg-[#181513] text-white flex items-center justify-between border-b border-[#C24D2C]/40">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-[#C24D2C] flex items-center justify-center text-white">
-                  <Camera className="w-4 h-4 text-[#E5A93C]" />
-                </div>
-                <div>
-                  <h4 className="font-serif-italian text-lg font-bold text-white">
-                    {editingPost ? 'Editar Foto & Informações' : 'Nova Foto & Momento'}
-                  </h4>
-                  <p className="text-[11px] text-white/70">
-                    Personalize a imagem, legenda, autor e hashtags da publicação.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsPostModalOpen(false)}
-                className="p-1.5 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
-            {/* Modal Form */}
-            <form onSubmit={handleSavePost} className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs sm:text-sm">
-              {postFormError && (
-                <div className="p-3 rounded-xl bg-rose-50 border border-rose-300 text-rose-800 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
-                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                  <span>{postFormError}</span>
-                </div>
-              )}
-
-              {/* Photo Preview & Upload Controls */}
-              <div>
-                <label className="block font-bold text-[#181513] mb-1.5">
-                  Foto / Imagem da Publicação *
-                </label>
-
-                {/* Preview Box */}
-                <div className="relative h-48 w-full rounded-2xl bg-[#181513] overflow-hidden border border-[#E0D5C3] shadow-inner mb-3 flex items-center justify-center group">
-                  {postFormData.imageUrl ? (
-                    <img
-                      src={postFormData.imageUrl}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.target as any).src = 'https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=800&q=80';
-                      }}
-                    />
-                  ) : (
-                    <div className="text-center text-white/60 p-4">
-                      <Camera className="w-8 h-8 mx-auto mb-1 text-white/40" />
-                      <span className="text-xs">Nenhuma imagem selecionada</span>
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <button
-                      type="button"
-                      onClick={() => postImageInputRef.current?.click()}
-                      className="px-3.5 py-1.5 rounded-xl bg-white text-[#181513] font-bold text-xs shadow-md cursor-pointer flex items-center gap-1.5"
-                    >
-                      <Upload className="w-3.5 h-3.5 text-[#C24D2C]" />
-                      <span>Trocar Arquivo</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Hidden file input */}
-                <input
-                  ref={postImageInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleUploadPostImage}
-                />
-
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <button
-                    type="button"
-                    onClick={() => postImageInputRef.current?.click()}
-                    className="px-3.5 py-2.5 rounded-xl bg-[#FAF7F2] hover:bg-[#F0EAE1] text-[#181513] border border-[#E0D5C3] font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0"
-                  >
-                    <Upload className="w-4 h-4 text-[#C24D2C]" />
-                    <span>Upload do Aparelho / PC</span>
-                  </button>
-
-                  <input
-                    type="url"
-                    value={postFormData.imageUrl}
-                    onChange={(e) => setPostFormData({ ...postFormData, imageUrl: e.target.value })}
-                    placeholder="Ou cole o link direto da imagem (URL https://...)"
-                    className="flex-1 px-3.5 py-2 rounded-xl bg-white border border-[#E0D5C3] text-xs focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
-                  />
-                </div>
-
-                {/* Presets suggestions */}
-                <div className="mt-2.5">
-                  <p className="text-[11px] font-semibold text-[#5C554E] mb-1">
-                    Sugestões Rápidas de Fotos:
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {galleryPresets.map((preset, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setPostFormData({ ...postFormData, imageUrl: preset.url })}
-                        className="px-2.5 py-1 rounded-lg bg-white hover:bg-amber-50 text-[11px] text-[#5C554E] border border-[#E0D5C3] transition-colors cursor-pointer"
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Caption field */}
-              <div>
-                <label className="block font-bold text-[#181513] mb-1">
-                  Legenda / Texto da Publicação *
-                </label>
-                <textarea
-                  rows={3}
-                  required
-                  value={postFormData.caption}
-                  onChange={(e) => setPostFormData({ ...postFormData, caption: e.target.value })}
-                  placeholder="Ex: Saindo agora do forno a lenha a 450°C! Nossa Deolinda Suprema com stracciatella e perfume de trufas negras..."
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E0D5C3] text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C] leading-relaxed resize-none"
-                />
-              </div>
-
-              {/* Row: Author and Timestamp */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-[#181513] mb-1">
-                    Autor / Perfil
-                  </label>
-                  <input
-                    type="text"
-                    value={postFormData.author}
-                    onChange={(e) => setPostFormData({ ...postFormData, author: e.target.value })}
-                    placeholder="@deolindapizzaria ou @cliente"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E0D5C3] text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-bold text-[#181513] mb-1">
-                    Data / Momento
-                  </label>
-                  <input
-                    type="text"
-                    value={postFormData.timestamp}
-                    onChange={(e) => setPostFormData({ ...postFormData, timestamp: e.target.value })}
-                    placeholder="Ex: Há 15 minutos, Hoje às 20h"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E0D5C3] text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
-                  />
-                </div>
-              </div>
-
-              {/* Tags field */}
-              <div>
-                <label className="block font-bold text-[#181513] mb-1">
-                  Hashtags / Tags (separadas por vírgula)
-                </label>
-                <input
-                  type="text"
-                  value={postFormData.tagsStr}
-                  onChange={(e) => setPostFormData({ ...postFormData, tagsStr: e.target.value })}
-                  placeholder="#FornoALegna, #DeolindaNapoletana, #450Graus"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#E0D5C3] text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
-                />
-              </div>
-
-              {/* Modal Footer Toolbar */}
-              <div className="pt-4 border-t border-[#E0D5C3] flex items-center justify-between gap-3">
-                {editingPost ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const toDel = editingPost.id;
-                      setIsPostModalOpen(false);
-                      executeDeletePost(toDel);
-                    }}
-                    className="px-3.5 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-900 border border-rose-200 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4 text-rose-600" />
-                    <span>Excluir Foto</span>
-                  </button>
-                ) : (
-                  <div />
-                )}
-
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsPostModalOpen(false)}
-                    className="px-4 py-2.5 rounded-xl border border-[#E0D5C3] bg-white text-[#5C554E] hover:bg-neutral-100 font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
-                  >
-                    Cancelar
-                  </button>
-
-                  <button
-                    type="submit"
-                    disabled={isSavingPost}
-                    className="px-6 py-2.5 rounded-xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white font-bold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    {isSavingPost ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Salvando...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-4 h-4 text-[#E5A93C]" />
-                        <span>{editingPost ? 'Salvar Alterações' : 'Cadastrar Foto'}</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Item Delete Confirmation Dialog (Sem bloqueio de window.confirm) */}
       {itemToDelete && (
