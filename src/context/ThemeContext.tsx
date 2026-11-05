@@ -17,12 +17,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [theme, setThemeState] = useState<ThemeMode>(() => {
     try {
       const saved = localStorage.getItem(THEME_STORAGE_KEY) as ThemeMode | null;
-      if (saved === 'light' || saved === 'dark') {
-        return saved;
+      if (saved === 'light') {
+        return 'light';
       }
-      if (typeof window !== 'undefined' && window.matchMedia) {
-        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      }
+      // Reset any dark setting to light so the site stays white across all devices
+      localStorage.setItem(THEME_STORAGE_KEY, 'light');
     } catch {
       // fallback
     }
@@ -31,40 +30,17 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-      root.style.colorScheme = 'dark';
-    } else {
-      root.classList.remove('dark');
-      root.style.colorScheme = 'light';
-    }
+    // Always enforce light theme across all devices
+    root.classList.remove('dark');
+    root.classList.add('light');
+    root.style.colorScheme = 'light';
 
     try {
-      localStorage.setItem(THEME_STORAGE_KEY, theme);
+      localStorage.setItem(THEME_STORAGE_KEY, 'light');
     } catch {
       // ignore
     }
   }, [theme]);
-
-  // Listen for system theme changes if user hasn't explicitly set a preference
-  useEffect(() => {
-    try {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const handleChange = (e: MediaQueryListEvent) => {
-        const saved = localStorage.getItem(THEME_STORAGE_KEY);
-        if (!saved) {
-          setThemeState(e.matches ? 'dark' : 'light');
-        }
-      };
-
-      if (mediaQuery.addEventListener) {
-        mediaQuery.addEventListener('change', handleChange);
-        return () => mediaQuery.removeEventListener('change', handleChange);
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
 
   const toggleTheme = () => {
     setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'));

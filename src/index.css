@@ -21,42 +21,14 @@
   }
 }
 
-/* Base Dark Mode Root Styling */
-html.dark {
-  color-scheme: dark;
-  background-color: #12100E;
-  color: #FAF7F2;
+html, body {
+  background-color: #ffffff;
+  color: #181513;
 }
 
-html.dark body {
-  background-color: #12100E;
-  color: #FAF7F2;
-}
-
-/* Dark mode ambient overrides for maximum readability and energy efficiency */
-.dark .bg-\[\#FAF7F2\] {
-  background-color: #12100E !important;
-}
-
-.dark .bg-\[\#F4EFE6\] {
-  background-color: #181513 !important;
-}
-
-.dark .bg-\[\#F4EFE6\]\/60 {
-  background-color: rgba(24, 21, 19, 0.75) !important;
-}
-
-.dark .bg-\[\#F9F5EF\] {
-  background-color: #161311 !important;
-}
-
-.dark .bg-white {
-  background-color: #1A1614 !important;
-  color: #FAF7F2;
-}
-
-.dark .text-\[\#181513\] {
-  color: #FAF7F2 !important;
+/* Light Theme as Primary */
+html {
+  color-scheme: light;
 }
 
 .dark .text-\[\#1E1B18\] {

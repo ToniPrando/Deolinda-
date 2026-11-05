@@ -167,7 +167,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
   };
 
   return (
-    <section id="cardapio" className="pt-3 sm:pt-4 pb-12 bg-[#F4EFE6] text-[#1E1B18] scroll-mt-16 sm:scroll-mt-18">
+    <section id="cardapio" className="pt-3 sm:pt-4 pb-12 bg-white text-[#181513] scroll-mt-16 sm:scroll-mt-18">
       <div className="w-full max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Title - Compacto para priorizar visualização da grade */}
         <motion.div

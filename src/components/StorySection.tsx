@@ -13,7 +13,7 @@ interface StorySectionProps {
 export const StorySection: React.FC<StorySectionProps> = ({ siteInfo }) => {
 
   return (
-    <section id="historia" className="pt-3 sm:pt-4 pb-12 bg-[#FAF7F2] text-[#1E1B18] border-b border-[#EADFCF] scroll-mt-16 sm:scroll-mt-18">
+    <section id="historia" className="pt-3 sm:pt-4 pb-12 bg-white text-[#181513] border-b border-[#EADFCF] scroll-mt-16 sm:scroll-mt-18">
       <div className="w-full max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}

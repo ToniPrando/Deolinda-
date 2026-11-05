@@ -839,7 +839,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAF7F2] text-[#1E1B18] dark:bg-[#12100E] dark:text-[#FAF7F2] font-sans selection:bg-[#C24D2C] selection:text-white transition-colors duration-200">
+    <div className="min-h-screen flex flex-col bg-white text-[#181513] font-sans selection:bg-[#C24D2C] selection:text-white transition-colors duration-200">
       
       {/* Navigation */}
       <Navbar

@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import deolindaLogo from '../assets/images/deolinda_logo.png';
-import { 
-  Menu as MenuIcon, 
-  X,
-  Home
-} from 'lucide-react';
+import { Home } from 'lucide-react';
 import { CustomerUser, SiteInfo } from '../types';
 import { TricolorBands } from './TricolorBands';
 
@@ -28,7 +24,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNavigate
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -39,8 +34,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, []);
 
   const handleNavClick = (id: string, path: string) => {
-    setMobileMenuOpen(false);
-
     if (onNavigate) {
       onNavigate(id, path);
     } else {
@@ -51,44 +44,95 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header
-      className={`sticky top-0 z-40 transition-all duration-300 ${
-        isScrolled
-          ? 'bg-white/95 backdrop-blur-md text-[#181513] shadow-md border-b border-[#EADFCF] py-2'
-          : 'bg-white text-[#181513] border-b border-[#EADFCF] py-2.5 sm:py-3'
+      className={`sticky top-0 z-40 transition-all duration-300 bg-white text-[#181513] border-b border-[#EADFCF] ${
+        isScrolled ? 'shadow-md py-1.5' : 'py-2 sm:py-3'
       }`}
     >
-      <div className="w-full max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
-        {/* Mobile Header: Logo e Hamburger */}
-        <div className="flex items-center justify-between w-full lg:hidden">
-          <a
-            href="/"
-            onClick={(e) => {
-              e.preventDefault();
-              handleNavClick('hero', '/');
-            }}
-            className="flex items-center gap-2.5 group"
-          >
-            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-xs overflow-hidden p-0.5 shrink-0">
-              <img
-                src={customLogoUrl || deolindaLogo || "/deolinda_logo.png"}
-                alt="Logo Pizzaria Deolinda"
-                className="w-full h-full object-contain"
-                loading="eager"
-                referrerPolicy="no-referrer"
-              />
-            </div>
-            <span className="font-serif-italian text-xl font-bold text-[#181513]">
-              Deolinda
-            </span>
-          </a>
+      <div className="w-full max-w-[1550px] mx-auto px-2 sm:px-6 lg:px-8">
+        
+        {/* Mobile Header: Logo Centralizado no topo + Todo o menu visível e centralizado logo abaixo (Sem menu hambúrguer) */}
+        <div className="flex flex-col items-center justify-center w-full lg:hidden py-0.5 space-y-1.5">
+          {/* Logo Deolinda Centralizado com Faixas Italianas */}
+          <div className="flex items-center justify-center gap-2">
+            <TricolorBands direction="left" theme="light" className="w-7 sm:w-10 shrink-0" size="sm" />
+            
+            <a
+              href="/"
+              onClick={(e) => {
+                e.preventDefault();
+                handleNavClick('hero', '/');
+              }}
+              title="Deolinda Pizzaria Napoletana - Ir para a Página Inicial"
+              className="flex items-center justify-center gap-2 group cursor-pointer"
+            >
+              <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-xs overflow-hidden p-0.5 shrink-0 group-hover:scale-105 transition-transform">
+                <img
+                  src={customLogoUrl || deolindaLogo || "/deolinda_logo.png"}
+                  alt="Logo Pizzaria Deolinda"
+                  className="w-full h-full object-contain filter drop-shadow-xs"
+                  loading="eager"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+              <span className="font-serif-italian text-lg sm:text-xl font-bold text-[#181513]">
+                Deolinda
+              </span>
+            </a>
 
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-xl text-[#181513] hover:bg-[#FAF7F2] border border-[#E0D5C3] transition-colors cursor-pointer"
-            aria-label="Abrir menu"
-          >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <MenuIcon className="w-6 h-6" />}
-          </button>
+            <TricolorBands direction="right" theme="light" className="w-7 sm:w-10 shrink-0" size="sm" />
+          </div>
+
+          {/* Todo o menu visível e centralizado no celular */}
+          <nav className="flex items-center justify-center flex-wrap gap-1 sm:gap-2 w-full pt-0.5">
+            {/* 1. Início */}
+            <button
+              onClick={() => handleNavClick('hero', '/')}
+              className={`px-2.5 py-1.5 rounded-full whitespace-nowrap transition-all cursor-pointer flex items-center gap-1 font-cinzel uppercase text-[11px] sm:text-xs tracking-wider shrink-0 ${
+                activeSection === 'hero'
+                  ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold shadow-2xs border border-[#E0D5C3]'
+                  : 'text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold'
+              }`}
+            >
+              <Home className="w-3.5 h-3.5 text-[#C24D2C]" />
+              <span>Início</span>
+            </button>
+
+            {/* 2. Cardápio */}
+            <button
+              onClick={() => handleNavClick('cardapio', '/cardapio')}
+              className={`px-2.5 py-1.5 rounded-full whitespace-nowrap transition-all cursor-pointer font-cinzel uppercase text-[11px] sm:text-xs tracking-wider shrink-0 ${
+                activeSection === 'cardapio'
+                  ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold shadow-2xs border border-[#E0D5C3]'
+                  : 'text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold'
+              }`}
+            >
+              Cardápio
+            </button>
+
+            {/* 3. Nossa Tradição */}
+            <button
+              onClick={() => handleNavClick('historia', '/historia')}
+              className={`px-2.5 py-1.5 rounded-full whitespace-nowrap transition-all cursor-pointer font-cinzel uppercase text-[11px] sm:text-xs tracking-wider shrink-0 ${
+                activeSection === 'historia'
+                  ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold shadow-2xs border border-[#E0D5C3]'
+                  : 'text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold'
+              }`}
+            >
+              Nossa Tradição
+            </button>
+
+            {/* 4. Localização & Horários */}
+            <button
+              onClick={() => handleNavClick('localizacao', '/localizacao')}
+              className={`px-2.5 py-1.5 rounded-full whitespace-nowrap transition-all cursor-pointer font-cinzel uppercase text-[11px] sm:text-xs tracking-wider shrink-0 ${
+                activeSection === 'localizacao'
+                  ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold shadow-2xs border border-[#E0D5C3]'
+                  : 'text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold'
+              }`}
+            >
+              Localização & Horários
+            </button>
+          </nav>
         </div>
 
         {/* Desktop Navigation: Distribuído ocupando todo o espaço com o Logo Centralizado entre Cardápio e Nossa Tradição */}
@@ -185,52 +229,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </nav>
       </div>
-
-      {/* Mobile Dropdown Menu (Tema Branco) */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden bg-white border-t border-[#EADFCF] px-4 pt-3 pb-6 space-y-3 animate-in fade-in slide-in-from-top-4 duration-200 shadow-xl">
-          <div className="flex items-center justify-center gap-3 py-1">
-            <TricolorBands direction="left" theme="light" className="w-12 shrink-0" size="sm" />
-            <span className="text-[10px] tracking-widest uppercase font-semibold text-[#C24D2C] font-cinzel">Menu Deolinda</span>
-            <TricolorBands direction="right" theme="light" className="w-12 shrink-0" size="sm" />
-          </div>
-          <div className="flex flex-col space-y-1 text-base font-medium pt-1">
-            <button
-              onClick={() => handleNavClick('hero', '/')}
-              className={`text-left py-2 px-3 rounded-xl transition-colors flex items-center gap-2.5 ${
-                activeSection === 'hero' ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold border border-[#E0D5C3]' : 'hover:bg-[#FAF7F2] text-[#181513]'
-              }`}
-            >
-              <Home className="w-4 h-4 text-[#C24D2C]" />
-              <span>Página Inicial</span>
-            </button>
-            <button
-              onClick={() => handleNavClick('cardapio', '/cardapio')}
-              className={`text-left py-2 px-3 rounded-xl transition-colors ${
-                activeSection === 'cardapio' ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold border border-[#E0D5C3]' : 'hover:bg-[#FAF7F2] text-[#181513]'
-              }`}
-            >
-              Cardápio Autêntico
-            </button>
-            <button
-              onClick={() => handleNavClick('historia', '/historia')}
-              className={`text-left py-2 px-3 rounded-xl transition-colors ${
-                activeSection === 'historia' ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold border border-[#E0D5C3]' : 'hover:bg-[#FAF7F2] text-[#181513]'
-              }`}
-            >
-              Nossa História & Tradição
-            </button>
-            <button
-              onClick={() => handleNavClick('localizacao', '/localizacao')}
-              className={`text-left py-2 px-3 rounded-xl transition-colors ${
-                activeSection === 'localizacao' ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold border border-[#E0D5C3]' : 'hover:bg-[#FAF7F2] text-[#181513]'
-              }`}
-            >
-              Localização & Horários
-            </button>
-          </div>
-        </div>
-      )}
     </header>
   );
 };
