@@ -277,7 +277,7 @@ export const LoyaltySection: React.FC = () => {
               <div className="col-span-2 sm:col-span-1">
                 <span className="text-[10px] uppercase font-bold text-[#5C554E]">Próximo Resgate</span>
                 <p className="text-xs font-bold text-[#C24D2C] mt-1">
-                  {simulationValue >= 400 ? '🍕 Pizza Margherita D.O.P.' : simulationValue >= 220 ? '🍰 Tiramisù della Nonna' : '🫒 Bruschetta Caprese'}
+                  {simulationValue >= 400 ? '🍕 Pizza Margherita Especial' : simulationValue >= 220 ? '🍰 Tiramisù della Nonna' : '🫒 Bruschetta Caprese'}
                 </p>
               </div>
             </div>

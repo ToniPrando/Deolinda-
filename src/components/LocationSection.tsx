@@ -113,7 +113,7 @@ export const LocationSection: React.FC<LocationSectionProps> = ({ siteInfo }) =>
 
                 <div className="pt-2.5 text-[11px] text-[#8C5E0A] flex items-center gap-1.5 font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                  <span>{siteInfo?.environmentInfo || 'Forno a Lenha aquecido a 450°C durante todo o serviço'}</span>
+                  <span>{siteInfo?.environmentInfo || 'Forno a Lenha aquecido a 430°C durante todo o serviço'}</span>
                 </div>
 
                 {/* Endereço Oficial */}

@@ -501,7 +501,7 @@ export const CRUST_OPTIONS = [
 ];
 
 export const EXTRA_TOPPINGS = [
-  { id: 'bufala', name: 'Mozzarella di Bufala D.O.P. extra', price: 12 },
+  { id: 'bufala', name: 'Mozzarella di Bufala extra', price: 12 },
   { id: 'tartufo', name: 'Azeite Trufado Italiano', price: 10 },
   { id: 'basilico', name: 'Manjericão Fresco da Horta', price: 0 },
   { id: 'pomodoro', name: 'Pomodoro San Marzano Extra', price: 8 }
@@ -526,7 +526,7 @@ export const LOYALTY_REWARDS: LoyaltyReward[] = [
   },
   {
     id: 'rew-margherita',
-    title: 'Pizza Margherita D.O.P.',
+    title: 'Pizza Margherita Especial',
     description: 'A clássica rainha de Nápoles com Pomodoro San Marzano e Mozzarella di Bufala.',
     pointsRequired: 400,
     category: 'Pizza Clássica',

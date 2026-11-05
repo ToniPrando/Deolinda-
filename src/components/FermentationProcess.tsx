@@ -38,7 +38,7 @@ export const FermentationProcess: React.FC<FermentationProcessProps> = ({ siteIn
       detail: '90% dos açúcares são pré-digeridos naturalmente antes de ir ao forno.'
     },
     {
-      title: siteInfo?.fermentationStep4Title || '3. Cocção a 450°C em 90 Segundos',
+      title: siteInfo?.fermentationStep4Title || '3. Cocção a 430°C em 90 Segundos',
       time: siteInfo?.fermentationStep4Time || '60 a 90 Segundos',
       tag: 'Choque Térmico',
       desc: siteInfo?.fermentationStep4Desc || 'Assada diretamente na pedra vulcânica do Vesúvio. O calor intenso e rápido expande as bolhas de ar internas instantaneamente, criando a borda inflada, aerada e com as autênticas marcas de leopardo.',
@@ -48,14 +48,14 @@ export const FermentationProcess: React.FC<FermentationProcessProps> = ({ siteIn
 
   const dopIngredients = [
     {
-      name: 'Pomodoro San Marzano D.O.P.',
+      name: 'Pomodoro San Marzano',
       origin: 'Agro Sarnese-Nocerino, Campânia',
-      badge: 'D.O.P. Certificado',
+      badge: 'Origem Italiana',
       desc: 'Cultivado no solo vulcânico do Monte Vesúvio. Menos acidez, doçura natural equilibrada e polpa densa que não solta água excessiva.',
       image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=600&q=80'
     },
     {
-      name: 'Mozzarella di Bufala Campana D.O.P.',
+      name: 'Mozzarella di Bufala Campana',
       origin: 'Caserta & Salerno, Itália',
       badge: 'Leite 100% Búfala',
       desc: 'Fresca e cremosa, feita exclusivamente com leite de búfala pasteurizado na hora. Derrete formando fios sedosos e aroma amanteigado.',
@@ -153,7 +153,7 @@ export const FermentationProcess: React.FC<FermentationProcessProps> = ({ siteIn
                 </span>
                 <span className="text-[#E5A93C] text-[11px] font-semibold flex items-center gap-1">
                   <Flame className="w-3 h-3" />
-                  450°C no Forno
+                  430°C no Forno
                 </span>
               </div>
 
@@ -199,7 +199,7 @@ export const FermentationProcess: React.FC<FermentationProcessProps> = ({ siteIn
           </div>
         </div>
 
-        {/* D.O.P. Ingredients Section */}
+        {/* Selected Ingredients Section */}
         <div className="mt-8 sm:mt-10">
           <div className="text-center max-w-2xl mx-auto mb-4 sm:mb-6">
             <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#1B382B] uppercase tracking-wider mb-1">
@@ -207,7 +207,7 @@ export const FermentationProcess: React.FC<FermentationProcessProps> = ({ siteIn
               <span>Autenticidade Garantida</span>
             </div>
             <h3 className="font-serif-italian text-xl sm:text-2xl font-bold text-[#181513]">
-              Ingredientes Importados de Origem Protegida (D.O.P.)
+              Ingredientes Importados e Artesanais
             </h3>
           </div>
 

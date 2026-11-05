@@ -81,7 +81,7 @@ export const ReservationSection: React.FC<ReservationSectionProps> = ({
     },
     {
       name: 'Balcão do Mestre Pizzaiolo',
-      desc: 'Assista de perto à abertura da massa e à queima no forno a 450°C.',
+      desc: 'Assista de perto à abertura da massa e à queima no forno a 430°C.',
       icon: '🔥',
       badge: 'Experiência VIP'
     }

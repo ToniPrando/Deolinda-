@@ -720,9 +720,6 @@ export const LogoUploadModal: React.FC<LogoUploadModalProps> = ({
                           alt="Imagem anexa ao lado"
                           className="h-8 w-auto max-w-[120px] object-contain drop-shadow-xs"
                         />
-                        <span className="text-[8px] uppercase font-extrabold text-white bg-[#C24D2C] px-1.5 py-0.5 rounded border border-[#C24D2C]">
-                          D.O.P.
-                        </span>
                       </div>
                     </div>
 

@@ -3,7 +3,7 @@ import { SiteInfo } from '../types';
 export const DEFAULT_SITE_INFO: SiteInfo = {
   // Identidade & Contatos
   restaurantName: 'Deolinda Pizzaria Napoletana',
-  slogan: 'Pizzaria Napoletana D.O.P. • Tradição Centenária',
+  slogan: 'Pizzaria Napoletana • Tradição Centenária',
   phone: '(11) 91533-1853',
   whatsappNumber: '5511915331853',
   whatsappMessage: 'Olá Deolinda Pizzaria! Gostaria de informações.',
@@ -20,20 +20,20 @@ export const DEFAULT_SITE_INFO: SiteInfo = {
   // Hero (Cabeçalho)
   heroBadge: 'Tradição Napoletana Desde 1924',
   heroSubBadge: 'Pizzaria Napoletana',
-  heroSubtitle: 'Fermentação natural lenta de 72 horas, farinha italiana Tipo 00, ingredientes certificados D.O.P. e o fogo vivo da pedra vulcânica a 450°C.',
+  heroSubtitle: 'Fermentação natural lenta de 72 horas, farinha italiana Tipo 00, ingredientes artesanais selecionados e o fogo vivo da pedra vulcânica a 430°C.',
   heroCtaMenuText: 'Explorar Cardápio',
   heroCtaWhatsappText: 'WhatsApp (11) 91533-1853',
   heroFermentationHighlight: '72 Horas Lenta',
   heroFermentationSubtext: 'Leve e digestiva',
-  heroOvenHighlight: '450°C em 90s',
+  heroOvenHighlight: '430°C em 90s',
   heroOvenSubtext: 'Pedra vulcânica',
   heroFlourHighlight: 'Caputo Tipo 00',
   heroFlourSubtext: 'Importada de Nápoles',
-  heroTomatoHighlight: 'San Marzano D.O.P.',
+  heroTomatoHighlight: 'San Marzano',
   heroTomatoSubtext: 'Cultivado no Vesúvio',
 
   // Fermentação
-  fermentationBadge: 'Processo & Ingredientes D.O.P.',
+  fermentationBadge: 'Processo & Tradição Napolitana',
   fermentationTitle: 'O Segredo das 72 Horas de Fermentação Lenta',
   fermentationSubtitle: 'Nossa massa não é apenas feita; ela é maturada pacientemente. Esse repouso prolongado a frio quebra os amidos complexos e as proteínas do glúten, resultando em uma borda aerada (cornicione), massa levíssima e digestão impecável.',
   fermentationStep1Title: '1. Farinha Italiana Tipo 00 Caputo & Água Mineral',
@@ -45,7 +45,7 @@ export const DEFAULT_SITE_INFO: SiteInfo = {
   fermentationStep3Title: '2. Maturação Lenta a Frio (72 Horas)',
   fermentationStep3Time: 'Hora 24 a 72',
   fermentationStep3Desc: 'O segredo da leveza! Em temperatura controlada a 4°C, as enzimas transformam os açúcares complexos e quebram a rede de glúten.',
-  fermentationStep4Title: '3. Cocção a 450°C em 90 Segundos',
+  fermentationStep4Title: '3. Cocção a 430°C em 90 Segundos',
   fermentationStep4Time: 'Momento Mágico',
   fermentationStep4Desc: 'O choque térmico do forno a lenha napolitano sela a massa instantaneamente, criando os alvéolos gigantes no cornicione e preservando a suculência do molho.',
 

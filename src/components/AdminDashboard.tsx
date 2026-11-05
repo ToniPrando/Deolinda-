@@ -612,7 +612,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const postImageInputRef = useRef<HTMLInputElement>(null);
 
   const galleryPresets = [
-    { label: '🍕 Pizza Margherita D.O.P.', url: 'https://images.unsplash.com/photo-1604382355076-af4b0eb60143?auto=format&fit=crop&w=800&q=80' },
+    { label: '🍕 Pizza Margherita Especial', url: 'https://images.unsplash.com/photo-1604382355076-af4b0eb60143?auto=format&fit=crop&w=800&q=80' },
     { label: '🔥 Pizza no Forno a Lenha', url: 'https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=800&q=80' },
     { label: '✨ Mortadella & Burrata', url: 'https://images.unsplash.com/photo-1579751626657-72bc17010498?auto=format&fit=crop&w=800&q=80' },
     { label: '🧀 Burrata ao Forno Borbulhante', url: 'https://images.unsplash.com/photo-1592417817098-8f3d6eb22521?auto=format&fit=crop&w=800&q=80' },
@@ -627,7 +627,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       imageUrl: 'https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=800&q=80',
       caption: '',
       author: '@deolindapizzaria',
-      tagsStr: '#FornoALegna, #DeolindaNapoletana, #450Graus',
+      tagsStr: '#FornoALegna, #DeolindaNapoletana, #430Graus',
       timestamp: 'Recente'
     });
     setIsPostModalOpen(true);
@@ -1146,10 +1146,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </div>
 
-        {/* Dashboard Tabs Bar (Sem Fotos & Momentos) */}
+        {/* Dashboard Tabs Bar */}
         <div className="bg-white border-b border-[#E0D5C3] px-6 flex items-center gap-2 overflow-x-auto shrink-0">
           {[
             { id: 'menu', label: `📝 Controle de Cardápio (${currentMenuItems.length})` },
+            { id: 'gallery', label: `📸 Fotos dos Momentos (${currentSocialPosts.length})` },
             { id: 'siteInfo', label: '🌐 Informações do Site' },
             { id: 'branding', label: '🎨 Identidade & Logotipo' },
             { id: 'security', label: '🔒 Senha de Acesso ADM' }
@@ -1488,7 +1489,192 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         )}
 
+        {/* ========================================== */}
+        {/* Tab 2: Fotos dos Momentos (Galeria)        */}
+        {/* ========================================== */}
+        {activeTab === 'gallery' && (
+          <div className="flex-1 p-4 sm:p-6 overflow-y-auto bg-[#FAF7F2] space-y-4">
+            
+            {/* Notice Alert */}
+            {galleryNotice && (
+              <div className={`p-4 rounded-2xl text-xs sm:text-sm font-semibold flex items-center gap-2.5 animate-in fade-in ${
+                galleryNotice.type === 'success' 
+                  ? 'bg-emerald-100 border border-emerald-300 text-emerald-900' 
+                  : 'bg-rose-100 border border-rose-300 text-rose-900'
+              }`}>
+                {galleryNotice.type === 'success' ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                )}
+                <span>{galleryNotice.text}</span>
+              </div>
+            )}
 
+            {/* Top Bar: Pesquisa, Contagem e Botão Adicionar */}
+            <div className="bg-white p-4 sm:p-5 rounded-3xl border border-[#E0D5C3] shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+              <div>
+                <h4 className="font-serif-italian text-xl font-bold text-[#181513] flex items-center gap-2">
+                  <Camera className="w-5 h-5 text-[#C24D2C]" />
+                  <span>Fotos dos Momentos ({currentSocialPosts.length})</span>
+                </h4>
+                <p className="text-xs text-[#5C554E] mt-0.5">
+                  Gerencie as fotos, legendas e momentos exibidos na galeria da página inicial.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                {/* Search */}
+                <div className="relative flex-1 sm:w-64">
+                  <Search className="w-4 h-4 text-[#8C827A] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={gallerySearch}
+                    onChange={(e) => setGallerySearch(e.target.value)}
+                    placeholder="Buscar por legenda, tag ou autor..."
+                    className="w-full pl-9 pr-4 py-2 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-xs text-[#181513] placeholder:text-[#8C827A] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
+                  />
+                  {gallerySearch && (
+                    <button
+                      type="button"
+                      onClick={() => setGallerySearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Reset to Default Button */}
+                <button
+                  type="button"
+                  onClick={handleRestoreDefaultPosts}
+                  title="Restaurar fotos padrão originais"
+                  className="px-3.5 py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#F2ECE1] text-[#5C554E] hover:text-[#181513] border border-[#E0D5C3] text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Restaurar</span>
+                </button>
+
+                {/* Add New Photo Button */}
+                <button
+                  type="button"
+                  onClick={openAddPostModal}
+                  className="px-4 py-2 rounded-xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-md flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Nova Foto</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Gallery Cards Grid */}
+            {filteredGalleryPosts.length === 0 ? (
+              <div className="bg-white rounded-3xl p-12 text-center border border-[#E0D5C3] shadow-xs">
+                <Camera className="w-12 h-12 text-[#C24D2C]/40 mx-auto mb-3" />
+                <h5 className="font-bold text-base text-[#181513] mb-1">Nenhuma foto encontrada</h5>
+                <p className="text-xs text-[#5C554E] max-w-md mx-auto mb-4">
+                  {gallerySearch ? 'Nenhum momento corresponde ao termo de busca.' : 'Sua galeria de momentos está vazia.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={openAddPostModal}
+                  className="px-5 py-2.5 rounded-xl bg-[#C24D2C] text-white font-bold text-xs uppercase tracking-wider inline-flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Adicionar Primeira Foto</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredGalleryPosts.map((post) => (
+                  <div
+                    key={post.id}
+                    className="bg-white rounded-2xl overflow-hidden border border-[#E0D5C3] shadow-xs hover:shadow-md transition-all flex flex-col group"
+                  >
+                    {/* Thumbnail Image */}
+                    <div className="relative h-44 bg-[#181513] overflow-hidden">
+                      <img
+                        src={post.imageUrl}
+                        alt={post.caption}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=800&q=80';
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      
+                      {/* Author badge */}
+                      <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-semibold">
+                        {post.author}
+                      </span>
+
+                      {/* Hot badge */}
+                      {post.isHotOutOfOven && (
+                        <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-[#C24D2C] text-white text-[10px] font-bold flex items-center gap-1 shadow-xs">
+                          <Flame className="w-3 h-3 text-amber-300" />
+                          <span>No Forno</span>
+                        </span>
+                      )}
+
+                      <span className="absolute bottom-2 left-2 text-white/80 text-[10px] bg-black/40 px-2 py-0.5 rounded-full">
+                        {post.timestamp}
+                      </span>
+                    </div>
+
+                    {/* Content Details */}
+                    <div className="p-3.5 flex flex-col flex-1 justify-between space-y-2.5">
+                      <p className="text-xs text-[#181513] leading-relaxed line-clamp-3">
+                        {post.caption}
+                      </p>
+
+                      <div className="space-y-2 pt-2 border-t border-[#F0EAE1]">
+                        {post.tags && post.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {post.tags.slice(0, 3).map((tag, tIdx) => (
+                              <span key={tIdx} className="text-[10px] font-semibold text-[#C24D2C]">
+                                {tag}
+                              </span>
+                            ))}
+                            {post.tags.length > 3 && (
+                              <span className="text-[10px] text-[#8C827A]">
+                                +{post.tags.length - 3}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Action buttons: Edit & Delete */}
+                        <div className="flex items-center justify-end gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => openEditPostModal(post)}
+                            title="Editar foto e informações"
+                            className="px-3 py-1.5 rounded-lg bg-[#FAF7F2] hover:bg-[#F2ECE1] text-[#181513] border border-[#E0D5C3] text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                          >
+                            <Edit3 className="w-3.5 h-3.5 text-[#C24D2C]" />
+                            <span>Editar</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setPostToDelete({ id: post.id, caption: post.caption })}
+                            title="Excluir foto"
+                            className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+          </div>
+        )}
 
         {/* ========================================== */}
         {/* Tab 3: Informações do Site (Completo)      */}
@@ -1640,7 +1826,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       type="text"
                       value={currentSiteInfo.slogan}
                       onChange={(e) => handleUpdateSiteInfoField('slogan', e.target.value)}
-                      placeholder="Ex: Pizzaria Napoletana D.O.P. • Tradição Centenária"
+                      placeholder="Ex: Pizzaria Napoletana • Tradição Centenária"
                       className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
                     />
                   </div>
@@ -1917,7 +2103,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       rows={3}
                       value={currentSiteInfo.heroSubtitle}
                       onChange={(e) => handleUpdateSiteInfoField('heroSubtitle', e.target.value)}
-                      placeholder="Fermentação natural lenta de 72 horas, farinha italiana Tipo 00, ingredientes certificados D.O.P. e o fogo vivo da pedra vulcânica a 450°C."
+                      placeholder="Fermentação natural lenta de 72 horas, farinha italiana Tipo 00, ingredientes artesanais selecionados e o fogo vivo da pedra vulcânica a 430°C."
                       className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
                     />
                   </div>
@@ -1981,7 +2167,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         type="text"
                         value={currentSiteInfo.heroOvenHighlight}
                         onChange={(e) => handleUpdateSiteInfoField('heroOvenHighlight', e.target.value)}
-                        placeholder="450°C em 90s"
+                        placeholder="430°C em 90s"
                         className="w-full px-3 py-1.5 rounded-lg bg-white border border-[#E0D5C3] text-xs font-bold"
                       />
                       <input
@@ -2015,7 +2201,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="bg-white rounded-3xl p-6 border border-[#E0D5C3] shadow-xs space-y-6">
                 <div>
                   <h5 className="font-serif-italian text-lg font-bold text-[#181513] mb-1">
-                    Processo de Fermentação & Ingredientes D.O.P.
+                    Processo de Fermentação & Ingredientes Tradicionais
                   </h5>
                   <p className="text-xs text-[#5C554E]">
                     Altere o badge, títulos e o detalhamento das 4 etapas de preparo da massa napolitana.
@@ -2031,7 +2217,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       type="text"
                       value={currentSiteInfo.fermentationBadge}
                       onChange={(e) => handleUpdateSiteInfoField('fermentationBadge', e.target.value)}
-                      placeholder="Processo & Ingredientes D.O.P."
+                      placeholder="Processo & Tradição Napolitana"
                       className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513]"
                     />
                   </div>
@@ -2141,12 +2327,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E0D5C3] space-y-3">
                     <div className="flex flex-col sm:flex-row gap-3">
                       <div className="flex-1">
-                        <label className="block text-[11px] font-bold text-[#181513] uppercase mb-1">Título da Etapa 3 (Cocção a 450°C)</label>
+                        <label className="block text-[11px] font-bold text-[#181513] uppercase mb-1">Título da Etapa 3 (Cocção a 430°C)</label>
                         <input
                           type="text"
                           value={currentSiteInfo.fermentationStep4Title}
                           onChange={(e) => handleUpdateSiteInfoField('fermentationStep4Title', e.target.value)}
-                          placeholder="3. Cocção a 450°C em 90 Segundos"
+                          placeholder="3. Cocção a 430°C em 90 Segundos"
                           className="w-full px-3 py-1.5 rounded-lg bg-white border border-[#E0D5C3] text-xs font-bold"
                         />
                       </div>
@@ -2639,7 +2825,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </div>
                     </div>
                     <span className="font-serif-italian text-lg font-bold text-[#FAF7F2] mb-0.5">Deolinda</span>
-                    <span className="text-[10px] tracking-widest uppercase font-semibold text-[#E5A93C]/90 font-cinzel">Pizzaria Napoletana D.O.P.</span>
+                    <span className="text-[10px] tracking-widest uppercase font-semibold text-[#E5A93C]/90 font-cinzel">Pizzaria Napoletana</span>
                   </div>
 
                   {/* Light Theme Document Preview */}
@@ -2660,7 +2846,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </div>
                     </div>
                     <span className="font-serif-italian text-lg font-bold text-[#181513] mb-0.5">Deolinda</span>
-                    <span className="text-[10px] tracking-widest uppercase font-semibold text-[#C24D2C] font-cinzel">Pizzaria Napoletana D.O.P.</span>
+                    <span className="text-[10px] tracking-widest uppercase font-semibold text-[#C24D2C] font-cinzel">Pizzaria Napoletana</span>
                   </div>
                 </div>
 
@@ -3972,6 +4158,230 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </div>
       )}
+
+        {/* ========================================== */}
+        {/* MODAL: Adicionar / Editar Foto de Momentos */}
+        {/* ========================================== */}
+        {isPostModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div 
+              className="bg-white rounded-3xl max-w-xl w-full p-6 border border-[#E0D5C3] shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto animate-in zoom-in-95"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-[#F0EAE1]">
+                <h4 className="font-serif-italian text-xl font-bold text-[#181513] flex items-center gap-2">
+                  <Camera className="w-5 h-5 text-[#C24D2C]" />
+                  <span>{editingPost ? 'Editar Foto dos Momentos' : 'Adicionar Nova Foto'}</span>
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setIsPostModalOpen(false)}
+                  className="p-1.5 rounded-full hover:bg-[#FAF7F2] text-[#8C827A] hover:text-[#181513] cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {postFormError && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-800 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                  <span>{postFormError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSavePost} className="space-y-4">
+                {/* Image URL & File Picker */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider">
+                    Imagem da Foto *
+                  </label>
+                  
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={postFormData.imageUrl}
+                      onChange={(e) => setPostFormData(prev => ({ ...prev, imageUrl: e.target.value }))}
+                      placeholder="https://... ou escolha um arquivo do computador"
+                      className="flex-1 px-3.5 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-xs text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
+                    />
+                    <input
+                      ref={postImageInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleUploadPostImage}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => postImageInputRef.current?.click()}
+                      className="px-3.5 py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#F2ECE1] text-[#181513] border border-[#E0D5C3] text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0"
+                    >
+                      <Upload className="w-3.5 h-3.5 text-[#C24D2C]" />
+                      <span>Arquivo</span>
+                    </button>
+                  </div>
+
+                  {/* Presets */}
+                  <div className="space-y-1 pt-1">
+                    <span className="text-[10px] font-semibold text-[#8C827A] uppercase tracking-wider">
+                      Sugestões Rápidas:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {galleryPresets.map((preset, pIdx) => (
+                        <button
+                          key={pIdx}
+                          type="button"
+                          onClick={() => setPostFormData(prev => ({ ...prev, imageUrl: preset.url }))}
+                          className="px-2 py-1 rounded-lg bg-[#FAF7F2] hover:bg-[#F0EAE1] text-[10px] font-medium text-[#5C554E] border border-[#E0D5C3] cursor-pointer"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Live Image Preview */}
+                  {postFormData.imageUrl && (
+                    <div className="mt-2 relative h-44 rounded-xl overflow-hidden border border-[#E0D5C3] bg-black/5">
+                      <img
+                        src={postFormData.imageUrl}
+                        alt="Pré-visualização"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=800&q=80';
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Caption */}
+                <div>
+                  <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1">
+                    Legenda / Descrição do Momento *
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={postFormData.caption}
+                    onChange={(e) => setPostFormData(prev => ({ ...prev, caption: e.target.value }))}
+                    placeholder="Conte sobre este momento especial, a pizza, o forno ou a atmosfera..."
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-xs text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
+                  />
+                </div>
+
+                {/* Author & Timestamp */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1">
+                      Autor (@perfil ou nome)
+                    </label>
+                    <input
+                      type="text"
+                      value={postFormData.author}
+                      onChange={(e) => setPostFormData(prev => ({ ...prev, author: e.target.value }))}
+                      placeholder="@deolindapizzaria"
+                      className="w-full px-3.5 py-2 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-xs text-[#181513]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1">
+                      Momento / Horário
+                    </label>
+                    <input
+                      type="text"
+                      value={postFormData.timestamp}
+                      onChange={(e) => setPostFormData(prev => ({ ...prev, timestamp: e.target.value }))}
+                      placeholder="Recente, Há 1 hora, Ontem..."
+                      className="w-full px-3.5 py-2 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-xs text-[#181513]"
+                    />
+                  </div>
+                </div>
+
+                {/* Tags */}
+                <div>
+                  <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1">
+                    Tags (separadas por vírgula)
+                  </label>
+                  <input
+                    type="text"
+                    value={postFormData.tagsStr}
+                    onChange={(e) => setPostFormData(prev => ({ ...prev, tagsStr: e.target.value }))}
+                    placeholder="#DeolindaNapoletana, #FornoALegna, #430Graus"
+                    className="w-full px-3.5 py-2 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-xs text-[#181513]"
+                  />
+                </div>
+
+                {/* Buttons */}
+                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#F0EAE1]">
+                  <button
+                    type="button"
+                    onClick={() => setIsPostModalOpen(false)}
+                    className="px-4 py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#F2ECE1] text-[#5C554E] text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingPost}
+                    className="px-5 py-2 rounded-xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md cursor-pointer disabled:opacity-50"
+                  >
+                    <Save className="w-4 h-4 text-[#E5A93C]" />
+                    <span>{isSavingPost ? 'Salvando...' : 'Salvar Foto'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================== */}
+        {/* MODAL: Confirmação de Exclusão de Foto     */}
+        {/* ========================================== */}
+        {postToDelete && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div 
+              className="bg-white rounded-3xl max-w-md w-full p-6 border border-[#E0D5C3] shadow-2xl space-y-4 animate-in zoom-in-95"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              
+              <div className="text-center space-y-1">
+                <h4 className="font-serif-italian text-lg font-bold text-[#181513]">
+                  Excluir Foto dos Momentos?
+                </h4>
+                <p className="text-xs text-[#5C554E]">
+                  Tem certeza que deseja remover esta foto da galeria? Esta ação não pode ser desfeita.
+                </p>
+                <p className="text-xs italic text-[#181513] bg-[#FAF7F2] p-2.5 rounded-xl border border-[#E0D5C3] line-clamp-2 mt-2">
+                  "{postToDelete.caption}"
+                </p>
+              </div>
+
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setPostToDelete(null)}
+                  disabled={isDeletingPost}
+                  className="px-4 py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#F2ECE1] text-[#5C554E] text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => executeDeletePost(postToDelete.id)}
+                  disabled={isDeletingPost}
+                  className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>{isDeletingPost ? 'Excluindo...' : 'Sim, Excluir'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
     </div>
   );

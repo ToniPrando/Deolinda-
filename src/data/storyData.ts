@@ -23,16 +23,16 @@ export const STORY_MILESTONES: StoryMilestone[] = [
   },
   {
     year: '2016',
-    title: 'O Forno em Pedra Vulcânica & Tradição AVPN',
+    title: 'O Forno em Pedra Vulcânica & Tradição Napolitana',
     location: 'Fundação da Deolinda',
-    description: 'Construímos nosso forno napolitano tijolo a tijolo com pedras vulcânicas importadas do Vesúvio para manter a cúpula a 450°C constantes, assando cada pizza em exatos 60 a 90 segundos com o autêntico aspecto leopardado.',
+    description: 'Construímos nosso forno napolitano tijolo a tijolo com pedras vulcânicas importadas do Vesúvio para manter a cúpula a 430°C constantes, assando cada pizza em exatos 60 a 90 segundos com o autêntico aspecto leopardado.',
     image: 'https://images.unsplash.com/photo-1541745537411-b8046dc6d66c?auto=format&fit=crop&w=800&q=80'
   },
   {
     year: 'Hoje',
     title: 'A Terceira Geração de Mestres Pizzaiolos',
     location: 'Deolinda Pizzaria Napoletana',
-    description: 'Hoje, netos e mestres pizzaiolos continuam o ritual sagrado: massa aberta apenas com as mãos (sem rolo), tomates San Marzano D.O.P. esmagados manualmente e a certeza de que a melhor pizza é a que une as famílias.',
+    description: 'Hoje, netos e mestres pizzaiolos continuam o ritual sagrado: massa aberta apenas com as mãos (sem rolo), tomates San Marzano esmagados manualmente e a certeza de que a melhor pizza é a que une as famílias.',
     image: 'https://images.unsplash.com/photo-1579684947550-22e945225d9a?auto=format&fit=crop&w=800&q=80'
   }
 ];
@@ -51,14 +51,14 @@ export const ARTISAN_PILLARS = [
     icon: 'Wheat'
   },
   {
-    title: 'Forno a Lenha a 450°C',
+    title: 'Forno a Lenha a 430°C',
     subtitle: 'Pedra Vulcânica do Vesúvio',
     description: 'O choque térmico fulminante em 90 segundos sela a umidade interna mantendo o centro macio e a borda crocante com as famosas manchas de leopardo.',
     icon: 'Flame'
   },
   {
-    title: 'Ingredientes Certificados D.O.P.',
-    subtitle: 'Denominação de Origem Protegida',
+    title: 'Ingredientes Italianos Selecionados',
+    subtitle: 'Origem e Tradição Artesanal',
     description: 'Mozzarella de búfala fresca da Campânia e tomates San Marzano colhidos aos pés do Vesúvio em solo vulcânico rico em minerais.',
     icon: 'Award'
   }

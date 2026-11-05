@@ -64,7 +64,7 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
               const statusTitles: Record<OrderStatus, string> = {
                 received: 'Pedido Confirmado',
                 preparing: 'Massa em Preparo',
-                baking: 'No Forno a Lenha a 450°C! 🔥',
+                baking: 'No Forno a Lenha a 430°C! 🔥',
                 out_for_delivery: updated.type === 'delivery' ? 'Saiu para Entrega!' : updated.type === 'table' ? 'Pronto para Servir na Mesa!' : 'Pronto para Retirada no Balcão!',
                 completed: 'Pedido Concluído! Buon Appetito!',
                 cancelled: 'Pedido Cancelado'
@@ -137,7 +137,7 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
     },
     {
       key: 'baking',
-      title: 'No Forno a Lenha (450°C) 🔥',
+      title: 'No Forno a Lenha (430°C) 🔥',
       subtitle: 'Assando em pedra vulcânica em 90s para cornicione perfeito',
       icon: Flame,
       color: '#ea580c'
@@ -195,7 +195,7 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
               <span className="text-[10px] bg-white/20 text-white px-2 py-0.5 rounded-full font-bold uppercase">
                 {currentOrder.status === 'received' && 'Recebido'}
                 {currentOrder.status === 'preparing' && 'Em Massa'}
-                {currentOrder.status === 'baking' && 'No Forno 450°C 🔥'}
+                {currentOrder.status === 'baking' && 'No Forno 430°C 🔥'}
                 {currentOrder.status === 'out_for_delivery' && 'Pronto / Rota'}
                 {currentOrder.status === 'completed' && 'Concluído ✓'}
               </span>
@@ -298,15 +298,15 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                 <h4 className="font-serif-italian text-2xl sm:text-3xl font-bold flex items-center gap-2.5">
                   {currentOrder.status === 'received' && '1. Pedido Confirmado!'}
                   {currentOrder.status === 'preparing' && '2. Abrindo a Massa Napolitana...'}
-                  {currentOrder.status === 'baking' && '3. No Forno a Lenha (450°C) 🔥'}
+                  {currentOrder.status === 'baking' && '3. No Forno a Lenha (430°C) 🔥'}
                   {currentOrder.status === 'out_for_delivery' && (currentOrder.type === 'delivery' ? '4. Saiu para Entrega! 🛵' : currentOrder.type === 'table' ? '4. Pronto para a Mesa! 🍽️' : '4. Pronto para Retirada! 🛍️')}
                   {currentOrder.status === 'completed' && '5. Entregue! Buon Appetito! 🍕'}
                   {currentOrder.status === 'cancelled' && 'Pedido Cancelado'}
                 </h4>
                 <p className="text-xs sm:text-sm text-white/90 max-w-md">
                   {currentOrder.status === 'received' && 'Seu pedido foi registrado em nosso banco de dados interno e já está na bancada do pizzaiolo.'}
-                  {currentOrder.status === 'preparing' && 'Massa de fermentação 72h sendo aberta manualmente e recheada com ingredientes D.O.P.'}
-                  {currentOrder.status === 'baking' && 'A pizza está dentro da cúpula de pedra vulcânica a 450°C, assando em menos de 90 segundos!'}
+                  {currentOrder.status === 'preparing' && 'Massa de fermentação 72h sendo aberta manualmente e recheada com ingredientes artesanais selecionados.'}
+                  {currentOrder.status === 'baking' && 'A pizza está dentro da cúpula de pedra vulcânica a 430°C, assando em menos de 90 segundos!'}
                   {currentOrder.status === 'out_for_delivery' && (currentOrder.type === 'delivery' ? 'O entregador já está com a caixa térmica lacrada a caminho do seu endereço.' : currentOrder.type === 'table' ? 'O garçom está levando sua pizza fumegante para a sua mesa.' : 'Seu pedido está quentinho te esperando no balcão.')}
                   {currentOrder.status === 'completed' && 'Esperamos que você tenha uma autêntica experiência gastronômica de Nápoles!'}
                   {currentOrder.status === 'cancelled' && 'Este pedido foi cancelado no sistema da pizzaria.'}

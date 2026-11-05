@@ -14,7 +14,7 @@ export interface MenuItem {
   description: string;
   price: number;
   image: string;
-  tags: ('D.O.P.' | 'Vegetariana' | 'Picante' | 'Chef Choice' | 'Sem Lactose Adaptável')[];
+  tags: ('Tradicional' | 'Vegetariana' | 'Picante' | 'Chef Choice' | 'Sem Lactose Adaptável')[];
   ingredients: string[];
   pairing?: string; // Wine or beer pairing
   isPopular?: boolean;

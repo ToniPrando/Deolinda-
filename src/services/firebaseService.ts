@@ -666,6 +666,8 @@ export async function saveMenuItemsToFirestore(items: MenuItem[]): Promise<void>
 
 export const EXCLUDED_CLASSIC_ITEM_IDS = new Set([
   'pizza-margherita-dop',
+  'pizza-margherita-especial',
+  'pizza-margherita-verace',
   'pizza-marinara-antica',
   'pizza-diavola-piccante',
   'pizza-quattro-formaggi',
@@ -1068,7 +1070,8 @@ export type SaveQueueTaskType =
   | 'site_info' 
   | 'emblem' 
   | 'logo' 
-  | 'admin_password';
+  | 'admin_password'
+  | 'gallery_posts';
 
 export interface SaveQueueTask {
   id: string;
@@ -1318,6 +1321,23 @@ export function enqueueEmblemSave(emblemUrl: string | null, enabled: boolean): v
     type: 'emblem',
     execute: async () => {
       await saveEmblemToFirestore(emblemUrl, enabled);
+    }
+  });
+}
+
+/**
+ * Optimistically saves gallery / Fotos & Momentos posts to localStorage and enqueues background sync.
+ */
+export function enqueueGalleryPostsSave(posts: SocialPost[]): void {
+  try {
+    localStorage.setItem('deolinda_custom_gallery_posts', JSON.stringify(posts));
+  } catch {}
+
+  saveQueue.enqueue({
+    id: 'gallery_posts_sync',
+    type: 'gallery_posts',
+    execute: async () => {
+      await saveGalleryPostsToFirestore(posts);
     }
   });
 }

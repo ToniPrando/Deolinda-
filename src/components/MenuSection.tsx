@@ -185,7 +185,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
             A Tradição Napolitana no seu Paladar
           </h2>
           <p className="text-[#5C554E] text-xs sm:text-sm max-w-xl mx-auto line-clamp-1 sm:line-clamp-none">
-            Pizzas individuais (30cm) com fermentação lenta de 72h, ingredientes D.O.P. e assadas a 450°C.
+            Pizzas individuais (30cm) com fermentação lenta de 72h, ingredientes artesanais selecionados e assadas a 430°C.
           </p>
         </motion.div>
 

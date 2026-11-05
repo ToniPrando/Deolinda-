@@ -133,10 +133,6 @@ export const Hero: React.FC<HeroProps> = ({
               {siteInfo?.heroSubBadge || 'Pizzaria Napoletana'}
             </span>
 
-            <span className="text-[10px] sm:text-xs uppercase font-extrabold tracking-widest text-white bg-[#C24D2C] px-3 py-0.5 rounded-full border border-[#C24D2C] shadow-xs whitespace-nowrap">
-              D.O.P.
-            </span>
-
             <TricolorBands direction="right" theme="light" className="w-10 sm:w-20 md:w-28" />
           </div>
         </div>
@@ -145,7 +141,7 @@ export const Hero: React.FC<HeroProps> = ({
         <p className="max-w-2xl text-base sm:text-xl text-[#4A423B] font-light leading-relaxed mb-8">
           {siteInfo?.heroSubtitle || (
             <>
-              Fermentação natural lenta de <strong className="text-[#C24D2C] font-semibold">72 horas</strong>, farinha italiana Tipo 00, ingredientes certificados <strong className="text-[#C24D2C] font-semibold">D.O.P.</strong> e o fogo vivo da pedra vulcânica a <strong className="text-[#C24D2C] font-semibold">450°C</strong>.
+              Fermentação natural lenta de <strong className="text-[#C24D2C] font-semibold">72 horas</strong>, farinha italiana Tipo 00, ingredientes artesanais selecionados e o fogo vivo da pedra vulcânica a <strong className="text-[#C24D2C] font-semibold">430°C</strong>.
             </>
           )}
         </p>
@@ -177,7 +173,7 @@ export const Hero: React.FC<HeroProps> = ({
             <div className="flex flex-col items-center sm:items-start">
               <p className="text-xs uppercase font-bold text-[#C24D2C] tracking-wider">Forno a Lenha</p>
               <p className="text-sm font-bold text-[#181513]">
-                {siteInfo?.heroOvenHighlight || '450°C em 90s'}
+                {siteInfo?.heroOvenHighlight || '430°C em 90s'}
               </p>
               <p className="text-[11px] text-[#6B6158]">
                 {siteInfo?.heroOvenSubtext || 'Pedra vulcânica'}

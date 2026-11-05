@@ -899,9 +899,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 <div>
                   <h3 className="font-serif-italian text-lg font-bold text-white flex items-center gap-2">
                     <span>Meu Pedido Deolinda</span>
-                    <span className="text-[10px] bg-[#C24D2C] text-[#FAF7F2] px-2 py-0.5 rounded-full font-sans uppercase font-bold tracking-wider">
-                      D.O.P.
-                    </span>
                   </h3>
                   <p className="text-[11px] text-[#FAF7F2]/70 flex items-center gap-1.5">
                     {currentUser ? (
@@ -910,7 +907,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                         Cliente: {currentUser.name.split(' ')[0]}
                       </span>
                     ) : (
-                      <span className="text-[#E5A93C]">Autêntica Tradição Napolitana D.O.P.</span>
+                      <span className="text-[#E5A93C]">Autêntica Tradição Napolitana</span>
                     )}
                   </p>
                 </div>
@@ -1061,7 +1058,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                           className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#C24D2C] to-[#8C2710] hover:from-[#d15430] hover:to-[#9c2b12] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg border border-[#E5A93C]/40 transition-all cursor-pointer animate-pulse"
                         >
                           <Flame className="w-4 h-4 text-[#E5A93C]" />
-                          <span>Acompanhar Pedido ao Vivo (Forno 450°C)</span>
+                          <span>Acompanhar Pedido ao Vivo (Forno 430°C)</span>
                         </button>
                       )}
 
@@ -1666,7 +1663,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                                       }`}>
                                         {ord.status === 'received' && 'Recebido'}
                                         {ord.status === 'preparing' && 'Em Preparo'}
-                                        {ord.status === 'baking' && '🔥 No Forno 450°C'}
+                                        {ord.status === 'baking' && '🔥 No Forno 430°C'}
                                         {ord.status === 'out_for_delivery' && '🛵 Em Rota de Entrega'}
                                         {ord.status === 'completed' && '✓ Concluído'}
                                         {ord.status === 'cancelled' && '✕ Cancelado'}

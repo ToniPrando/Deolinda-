@@ -32,7 +32,8 @@ import {
   enqueueMenuCategoriesSave,
   enqueueSiteInfoSave,
   enqueueLogoSave,
-  enqueueEmblemSave
+  enqueueEmblemSave,
+  enqueueGalleryPostsSave
 } from './services/firebaseService';
 import { navigateToSection, getRouteByPath, getRouteById } from './utils/navigationRouter';
 
@@ -151,7 +152,7 @@ export default function App() {
         customerName: 'Matheus Silveira',
         phone: '(11) 98765-4321',
         items: [
-          { name: 'Margherita Verace D.O.P.', quantity: 2, price: 136.0, crust: 'Borda Clássica Napoletana', notes: 'Bastante manjericão fresco' },
+          { name: 'Margherita Verace', quantity: 2, price: 136.0, crust: 'Borda Clássica Napoletana', notes: 'Bastante manjericão fresco' },
           { name: 'Cannoli Siciliani Tradizionali', quantity: 2, price: 56.0 }
         ],
         total: 192.0,
@@ -478,6 +479,14 @@ export default function App() {
       localStorage.setItem('deolinda_custom_site_info', JSON.stringify(updatedInfo));
     } catch {}
     enqueueSiteInfoSave(updatedInfo);
+  };
+
+  const handleOptimisticSocialPostsUpdated = (updatedPosts: SocialPost[]) => {
+    setSocialPosts(updatedPosts);
+    try {
+      localStorage.setItem('deolinda_custom_gallery_posts', JSON.stringify(updatedPosts));
+    } catch {}
+    enqueueGalleryPostsSave(updatedPosts);
   };
 
   const handleLogoUpdated = (newUrl: string | null) => {
@@ -899,6 +908,8 @@ export default function App() {
               isEmblemEnabled={isEmblemEnabled}
               siteInfo={siteInfo}
             />
+            {/* Galeria de Fotos e Momentos da Pizzaria na Página Inicial */}
+            <SocialFeedSection posts={socialPosts} />
           </div>
         )}
       </main>
@@ -955,7 +966,7 @@ export default function App() {
         menuCategories={menuCategories}
         onMenuCategoriesUpdated={handleOptimisticMenuCategoriesUpdated}
         socialPosts={socialPosts}
-        onSocialPostsUpdated={setSocialPosts}
+        onSocialPostsUpdated={handleOptimisticSocialPostsUpdated}
         siteInfo={siteInfo}
         onSiteInfoUpdated={handleOptimisticSiteInfoUpdated}
         orders={orders}
