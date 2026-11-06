@@ -12,6 +12,11 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // Messages collection: Contact form / Fale Conosco customer messages
+    match /messages/{messageId} {
+      allow read, write: if true;
+    }
+
     // Settings collection: Global branding, logo and emblem synchronized in real-time
     match /settings/{settingId} {
       allow read, write: if true;

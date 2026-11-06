@@ -48,6 +48,7 @@ import confetti from 'canvas-confetti';
 import { CartItem, Order, CustomerUser } from '../types';
 import { GoogleLoginModal } from './GoogleLoginModal';
 import { saveOrderToFirestore } from '../services/firebaseService';
+import { safeFetchJson } from '../utils/safeFetch';
 import { fetchViaCep, validateCepAndAddress, CepValidationResult } from '../utils/cepValidation';
 import { calculateCustomerLoyaltyFromOrders, saveCustomerLoyaltyPoints, CustomerLoyaltyDetails } from '../utils/loyaltyHelper';
 
@@ -145,17 +146,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       }
     } catch {}
 
-    // 2. Fetch server / database orders
+    // 2. Fetch server / database orders (safe on static hosting)
     try {
-      const res = await fetch('/api/orders');
-      if (res.ok) {
-        const serverList: Order[] = await res.json();
-        if (Array.isArray(serverList) && serverList.length > 0) {
-          const map = new Map<string, Order>();
-          combinedOrders.forEach(o => map.set(o.id, o));
-          serverList.forEach(o => map.set(o.id, o));
-          combinedOrders = Array.from(map.values());
-        }
+      const serverList = await safeFetchJson<Order[]>('/api/orders');
+      if (Array.isArray(serverList) && serverList.length > 0) {
+        const map = new Map<string, Order>();
+        combinedOrders.forEach(o => map.set(o.id, o));
+        serverList.forEach(o => map.set(o.id, o));
+        combinedOrders = Array.from(map.values());
       }
     } catch {}
 
@@ -671,15 +669,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     // 2. If not found locally, check backend API
     if (!matchedCustomer) {
       try {
-        const res = await fetch('/api/customers');
-        if (res.ok) {
-          const data = await res.json();
-          if (data && Array.isArray(data.customers)) {
-            matchedCustomer = data.customers.find((c: CustomerUser) => 
-              (c.email && c.email.toLowerCase() === cleanIdent) ||
-              (c.phone && cleanPhone.length >= 8 && c.phone.replace(/\D/g, '') === cleanPhone)
-            ) || null;
-          }
+        const data = await safeFetchJson<{ customers?: CustomerUser[] }>('/api/customers');
+        if (data && Array.isArray(data.customers)) {
+          matchedCustomer = data.customers.find((c: CustomerUser) => 
+            (c.email && c.email.toLowerCase() === cleanIdent) ||
+            (c.phone && cleanPhone.length >= 8 && c.phone.replace(/\D/g, '') === cleanPhone)
+          ) || null;
         }
       } catch (err) {
         console.warn('Backend customer lookup error:', err);
@@ -805,9 +800,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       console.warn('Firestore direct write fallback:', fsErr);
     }
 
-    // 2. Also send to Express backend
+    // 2. Also send to Express backend (safe on static hosting)
     try {
-      const response = await fetch('/api/orders', {
+      const resData = await safeFetchJson<{ order?: Order }>('/api/orders', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -815,11 +810,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         },
         body: JSON.stringify(newOrder)
       });
-      if (response.ok) {
-        const resData = await response.json();
-        if (resData && resData.order) {
-          confirmedServerOrder = resData.order;
-        }
+      if (resData && resData.order) {
+        confirmedServerOrder = resData.order;
       }
     } catch (err) {
       console.warn('Backend order sync fallback to local store:', err);

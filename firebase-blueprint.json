@@ -59,6 +59,10 @@
       "schema": "Reservation",
       "description": "Real-time table reservations"
     },
+    "/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Real-time customer contact form messages"
+    },
     "/settings/{settingId}": {
       "schema": "Setting",
       "description": "Real-time restaurant branding and logo settings synchronized across all devices"

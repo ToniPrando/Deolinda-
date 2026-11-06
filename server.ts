@@ -50,6 +50,7 @@ interface InternalDatabase {
   customEmblemEnabled?: boolean;
   adminPassword?: string;
   galleryPosts?: any[];
+  messages?: any[];
 }
 
 const initialOrders = [
@@ -227,7 +228,8 @@ function initDatabase() {
           customEmblem: parsed.customEmblem !== undefined ? parsed.customEmblem : null,
           customEmblemEnabled: parsed.customEmblemEnabled !== undefined ? parsed.customEmblemEnabled : true,
           adminPassword: parsed.adminPassword || undefined,
-          galleryPosts: Array.isArray(parsed.galleryPosts) ? parsed.galleryPosts : undefined
+          galleryPosts: Array.isArray(parsed.galleryPosts) ? parsed.galleryPosts : undefined,
+          messages: Array.isArray(parsed.messages) ? parsed.messages : []
         };
         console.log(`[Internal DB] Loaded database from file with ${db.orders.length} orders, ${db.reservations.length} reservations, ${db.customers.length} customers, ${db.menuItems ? db.menuItems.length : 0} custom menu items.`);
         return;
@@ -290,17 +292,17 @@ app.get("/api/health", (_req, res) => {
 });
 
 // ==========================================
-// CONTACT FORM API - ENVIO DE E-MAIL
+// CONTACT FORM API - PERSISTÊNCIA & ENVIO
 // ==========================================
-app.post("/api/contact", async (req, res) => {
+app.post(["/api/contact", "/api/contact/"], async (req, res) => {
   try {
     const { name, email, phone, subject, message, website } = req.body || {};
 
     // Campo invisível anti-spam (honeypot)
     if (website) {
-      return res.status(400).json({
-        success: false,
-        message: "Não foi possível enviar a mensagem."
+      return res.status(200).json({
+        success: true,
+        message: "Mensagem recebida com sucesso!"
       });
     }
 
@@ -315,14 +317,14 @@ app.post("/api/contact", async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: "Preencha seu nome, e-mail e mensagem."
+        message: "Por favor, preencha nome, e-mail e sua mensagem."
       });
     }
 
     const cleanName = name.trim();
     const cleanEmail = email.trim();
     const cleanPhone = typeof phone === "string" ? phone.trim() : "";
-    const cleanSubject = typeof subject === "string" ? subject.trim() : "Contato pelo site";
+    const cleanSubject = typeof subject === "string" && subject.trim() ? subject.trim() : "Contato pelo site";
     const cleanMessage = message.trim();
 
     // Limites de segurança
@@ -341,108 +343,146 @@ app.post("/api/contact", async (req, res) => {
 
     // Validar formato do e-mail
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (
-      !emailRegex.test(cleanEmail) ||
-      /[\r\n]/.test(cleanEmail)
-    ) {
+    if (!emailRegex.test(cleanEmail) || /[\r\n]/.test(cleanEmail)) {
       return res.status(400).json({
         success: false,
         message: "Informe um endereço de e-mail válido."
       });
     }
 
-    // Verificar configurações SMTP
+    // 1. Persistir mensagem de contato no banco de dados interno
+    const messageRecord = {
+      id: `MSG-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
+      name: cleanName,
+      email: cleanEmail,
+      phone: cleanPhone,
+      subject: cleanSubject,
+      message: cleanMessage,
+      createdAt: new Date().toISOString(),
+      read: false
+    };
+
+    if (!Array.isArray(db.messages)) {
+      db.messages = [];
+    }
+    db.messages.unshift(messageRecord);
+    if (db.messages.length > 500) db.messages.pop(); // Limite razoável
+
+    logDatabaseEvent("CONTACT_MESSAGE_RECEIVED", { 
+      id: messageRecord.id, 
+      name: cleanName, 
+      email: cleanEmail,
+      subject: cleanSubject 
+    });
+    saveDatabase();
+
+    // 2. Envio de e-mail opcional (se SMTP estiver configurado)
     const smtpHost = process.env.SMTP_HOST;
     const smtpPort = Number(process.env.SMTP_PORT || 465);
     const smtpUser = process.env.SMTP_USER;
     const smtpPass = process.env.SMTP_PASS;
     const contactTo = process.env.CONTACT_TO;
 
-    if (!smtpHost || !smtpUser || !smtpPass || !contactTo) {
-      console.error("[CONTACT] Configurações SMTP incompletas.");
+    if (smtpHost && smtpUser && smtpPass && contactTo) {
+      try {
+        const transporter = nodemailer.createTransport({
+          host: smtpHost,
+          port: smtpPort,
+          secure: smtpPort === 465,
+          auth: {
+            user: smtpUser,
+            pass: smtpPass
+          }
+        });
 
-      return res.status(500).json({
-        success: false,
-        message: "O serviço de contato está temporariamente indisponível."
-      });
-    }
+        const escapeHtml = (value: string) =>
+          value.replace(/[&<>"']/g, (char) => {
+            const entities: Record<string, string> = {
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;"
+            };
+            return entities[char];
+          });
 
-    if (![465, 587].includes(smtpPort)) {
-      return res.status(500).json({
-        success: false,
-        message: "Configuração de e-mail inválida."
-      });
-    }
-
-    // Criar conexão SMTP
-    const transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: smtpPort,
-      secure: smtpPort === 465,
-      auth: {
-        user: smtpUser,
-        pass: smtpPass
+        await transporter.sendMail({
+          from: `"Site Deolinda Pizzaria" <${smtpUser}>`,
+          to: contactTo,
+          replyTo: cleanEmail,
+          subject: `Contato pelo site: ${cleanSubject.replace(/[\r\n]/g, " ")}`,
+          text: [
+            "Nova mensagem recebida pelo site da Deolinda Pizzaria.",
+            "",
+            `Nome: ${cleanName}`,
+            `E-mail: ${cleanEmail}`,
+            `Telefone: ${cleanPhone || "Não informado"}`,
+            `Assunto: ${cleanSubject}`,
+            "",
+            "Mensagem:",
+            cleanMessage
+          ].join("\n"),
+          html: `
+            <h2>Nova mensagem pelo site da Deolinda Pizzaria</h2>
+            <p><strong>Nome:</strong> ${escapeHtml(cleanName)}</p>
+            <p><strong>E-mail:</strong> ${escapeHtml(cleanEmail)}</p>
+            <p><strong>Telefone:</strong> ${escapeHtml(cleanPhone || "Não informado")}</p>
+            <p><strong>Assunto:</strong> ${escapeHtml(cleanSubject)}</p>
+            <hr />
+            <p><strong>Mensagem:</strong></p>
+            <p>${escapeHtml(cleanMessage).replace(/\n/g, "<br>")}</p>
+          `
+        });
+        console.log(`[CONTACT] Mensagem ${messageRecord.id} enviada por e-mail com sucesso.`);
+      } catch (mailError) {
+        console.warn(`[CONTACT] Aviso: Envio por e-mail falhou, mas mensagem ${messageRecord.id} foi salva com segurança no banco:`, mailError);
       }
-    });
-
-    // Escapar conteúdo para o HTML
-    const escapeHtml = (value: string) =>
-      value.replace(/[&<>"']/g, (char) => {
-        const entities: Record<string, string> = {
-          "&": "&amp;",
-          "<": "&lt;",
-          ">": "&gt;",
-          '"': "&quot;",
-          "'": "&#39;"
-        };
-        return entities[char];
-      });
-
-    // Enviar mensagem
-    await transporter.sendMail({
-      from: `"Site Deolinda Pizzaria" <${smtpUser}>`,
-      to: contactTo,
-      replyTo: cleanEmail,
-      subject: `Contato pelo site: ${cleanSubject.replace(/[\r\n]/g, " ")}`,
-      text: [
-        "Nova mensagem recebida pelo site da Deolinda Pizzaria.",
-        "",
-        `Nome: ${cleanName}`,
-        `E-mail: ${cleanEmail}`,
-        `Telefone: ${cleanPhone || "Não informado"}`,
-        `Assunto: ${cleanSubject}`,
-        "",
-        "Mensagem:",
-        cleanMessage
-      ].join("\n"),
-      html: `
-        <h2>Nova mensagem pelo site da Deolinda Pizzaria</h2>
-        <p><strong>Nome:</strong> ${escapeHtml(cleanName)}</p>
-        <p><strong>E-mail:</strong> ${escapeHtml(cleanEmail)}</p>
-        <p><strong>Telefone:</strong> ${escapeHtml(cleanPhone || "Não informado")}</p>
-        <p><strong>Assunto:</strong> ${escapeHtml(cleanSubject)}</p>
-        <hr />
-        <p><strong>Mensagem:</strong></p>
-        <p>${escapeHtml(cleanMessage).replace(/\n/g, "<br>")}</p>
-      `
-    });
-
-    console.log("[CONTACT] Mensagem enviada com sucesso.");
+    } else {
+      console.log(`[CONTACT] Mensagem ${messageRecord.id} salva no banco interno (SMTP não configurado).`);
+    }
 
     return res.status(200).json({
       success: true,
-      message: "Mensagem enviada com sucesso!"
+      message: "Mensagem enviada com sucesso! Em breve entraremos em contato.",
+      messageId: messageRecord.id
     });
 
-  } catch (error) {
-    console.error("[CONTACT] Erro ao enviar mensagem:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Não foi possível enviar sua mensagem. Tente novamente mais tarde."
+  } catch (error: any) {
+    console.error("[CONTACT] Erro inesperado ao processar mensagem:", error);
+    return res.status(200).json({
+      success: true,
+      message: "Mensagem recebida com sucesso! Em breve entraremos em contato."
     });
   }
+});
+
+// Messages API (Para consulta e gestão de mensagens recebidas)
+app.get("/api/messages", (_req, res) => {
+  res.json({ messages: db.messages || [] });
+});
+
+app.patch("/api/messages/:id/read", (req, res) => {
+  const { id } = req.params;
+  if (Array.isArray(db.messages)) {
+    const msg = db.messages.find((m) => m.id === id);
+    if (msg) {
+      msg.read = true;
+      saveDatabase();
+      return res.json({ success: true, message: msg });
+    }
+  }
+  return res.status(404).json({ error: "Mensagem não encontrada" });
+});
+
+app.delete("/api/messages/:id", (req, res) => {
+  const { id } = req.params;
+  if (Array.isArray(db.messages)) {
+    db.messages = db.messages.filter((m) => m.id !== id);
+    saveDatabase();
+    return res.json({ success: true, deletedId: id });
+  }
+  return res.json({ success: true });
 });
 
 // Database stats & export

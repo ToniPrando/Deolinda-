@@ -175,7 +175,68 @@
       "totalOrdersCount": 2
     }
   ],
-  "logs": [],
+  "logs": [
+    {
+      "timestamp": "2026-11-06T23:41:28.731Z",
+      "event": "CONTACT_MESSAGE_RECEIVED",
+      "details": {
+        "id": "MSG-1794008488731-883",
+        "name": "Cliente Teste",
+        "email": "cliente@teste.com",
+        "subject": "Pergunta"
+      }
+    },
+    {
+      "timestamp": "2026-11-06T08:53:03.539Z",
+      "event": "CONTACT_MESSAGE_RECEIVED",
+      "details": {
+        "id": "MSG-1793955183539-705",
+        "name": "Cliente Teste",
+        "email": "cliente@teste.com",
+        "subject": "Dúvida"
+      }
+    },
+    {
+      "timestamp": "2026-11-06T08:52:57.044Z",
+      "event": "CONTACT_MESSAGE_RECEIVED",
+      "details": {
+        "id": "MSG-1793955177044-351",
+        "name": "Cliente Teste",
+        "email": "cliente@teste.com",
+        "subject": "Dúvida sobre reservas"
+      }
+    },
+    {
+      "timestamp": "2026-11-06T08:52:52.278Z",
+      "event": "CONTACT_MESSAGE_RECEIVED",
+      "details": {
+        "id": "MSG-1793955172278-906",
+        "name": "Cliente Teste",
+        "email": "cliente@teste.com",
+        "subject": "Dúvida sobre reservas"
+      }
+    },
+    {
+      "timestamp": "2026-11-06T08:52:10.904Z",
+      "event": "CONTACT_MESSAGE_RECEIVED",
+      "details": {
+        "id": "MSG-1793955130904-127",
+        "name": "Antonio",
+        "email": "antonio@exemplo.com",
+        "subject": "Contato pelo site"
+      }
+    },
+    {
+      "timestamp": "2026-11-06T08:52:04.391Z",
+      "event": "CONTACT_MESSAGE_RECEIVED",
+      "details": {
+        "id": "MSG-1793955124391-798",
+        "name": "Antonio",
+        "email": "antonio@exemplo.com",
+        "subject": "Contato pelo site"
+      }
+    }
+  ],
   "menuItems": [
     {
       "tags": [],
@@ -662,9 +723,6 @@
       }
     }
   ],
-  "customLogo": null,
-  "customEmblem": null,
-  "customEmblemEnabled": true,
   "menuCategories": [
     {
       "id": "tradizionali",
@@ -685,6 +743,71 @@
       "id": "bevande",
       "label": "Bebidas",
       "icon": "🍷"
+    }
+  ],
+  "customLogo": null,
+  "customEmblem": null,
+  "customEmblemEnabled": true,
+  "messages": [
+    {
+      "id": "MSG-1794008488731-883",
+      "name": "Cliente Teste",
+      "email": "cliente@teste.com",
+      "phone": "(11) 98888-7777",
+      "subject": "Pergunta",
+      "message": "Mensagem enviada com sucesso no deploy.",
+      "createdAt": "2026-11-06T23:41:28.731Z",
+      "read": false
+    },
+    {
+      "id": "MSG-1793955183539-705",
+      "name": "Cliente Teste",
+      "email": "cliente@teste.com",
+      "phone": "(11) 99999-8888",
+      "subject": "Dúvida",
+      "message": "Via porta 8080.",
+      "createdAt": "2026-11-06T08:53:03.539Z",
+      "read": false
+    },
+    {
+      "id": "MSG-1793955177044-351",
+      "name": "Cliente Teste",
+      "email": "cliente@teste.com",
+      "phone": "(11) 99999-8888",
+      "subject": "Dúvida sobre reservas",
+      "message": "Olá, com barra no final.",
+      "createdAt": "2026-11-06T08:52:57.044Z",
+      "read": false
+    },
+    {
+      "id": "MSG-1793955172278-906",
+      "name": "Cliente Teste",
+      "email": "cliente@teste.com",
+      "phone": "(11) 99999-8888",
+      "subject": "Dúvida sobre reservas",
+      "message": "Olá, gostaria de reservar uma mesa para 6 pessoas.",
+      "createdAt": "2026-11-06T08:52:52.278Z",
+      "read": false
+    },
+    {
+      "id": "MSG-1793955130904-127",
+      "name": "Antonio",
+      "email": "antonio@exemplo.com",
+      "phone": "",
+      "subject": "Contato pelo site",
+      "message": "Gostaria de saber mais sobre as pizzas.",
+      "createdAt": "2026-11-06T08:52:10.904Z",
+      "read": false
+    },
+    {
+      "id": "MSG-1793955124391-798",
+      "name": "Antonio",
+      "email": "antonio@exemplo.com",
+      "phone": "",
+      "subject": "Contato pelo site",
+      "message": "Gostaria de saber mais sobre as pizzas.",
+      "createdAt": "2026-11-06T08:52:04.391Z",
+      "read": false
     }
   ]
 }

@@ -13,6 +13,7 @@ import {
   ChevronRight,
   ExternalLink
 } from 'lucide-react';
+import { safeFetchJson } from '../utils/safeFetch';
 
 interface Message {
   id: string;
@@ -61,7 +62,7 @@ export const ChatAssistant: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/chat', {
+      const data = await safeFetchJson<{ reply?: string }>('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -70,8 +71,7 @@ export const ChatAssistant: React.FC = () => {
         })
       });
 
-      const data = await response.json();
-      const botReply = data.reply || 'Grazie! Como posso ajudar você a saborear a melhor pizza napolitana hoje?';
+      const botReply = data?.reply || 'Grazie! Como posso ajudar você a saborear a melhor pizza napolitana hoje?';
 
       setMessages(prev => [
         ...prev,

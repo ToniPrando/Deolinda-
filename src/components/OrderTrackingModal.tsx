@@ -16,6 +16,7 @@ import {
   Check 
 } from 'lucide-react';
 import { Order, OrderStatus } from '../types';
+import { safeFetchJson } from '../utils/safeFetch';
 
 interface OrderTrackingModalProps {
   isOpen: boolean;
@@ -52,11 +53,9 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
     const fetchLiveOrder = async () => {
       try {
         setIsLiveSyncing(true);
-        const res = await fetch(`/api/orders/${currentOrder.id}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.order) {
-            const updated: Order = data.order;
+        const data = await safeFetchJson<{ order?: Order }>(`/api/orders/${currentOrder.id}`);
+        if (data && data.order) {
+          const updated: Order = data.order;
             
             // Check if status changed by admin
             if (previousStatus && updated.status !== previousStatus) {
@@ -94,7 +93,6 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
             setCurrentOrder(updated);
             setLastUpdated(new Date().toLocaleTimeString('pt-BR'));
           }
-        }
       } catch {
         // Fallback to local
       } finally {

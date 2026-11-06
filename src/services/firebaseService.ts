@@ -16,6 +16,7 @@ import {
 import firebaseConfig from '../../firebase-applet-config.json';
 import { Order, Reservation, OrderStatus, MenuItem, SocialPost, SiteInfo, MenuCategory } from '../types';
 import { MENU_ITEMS } from '../data/menuData';
+import { safeFetchJson } from '../utils/safeFetch';
 
 // Initialize Firebase App instance
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
@@ -493,15 +494,13 @@ export async function saveSingleMenuItemToFirestore(item: MenuItem): Promise<Men
 
   // 2. Synchronize with backend API (zero quota limits, file-backed, instant)
   try {
-    const res = await fetch('/api/settings/menu-item', {
+    const data = await safeFetchJson<{ item?: MenuItem }>('/api/settings/menu-item', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ item: sanitizedItem })
     });
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.item) {
-        sanitizedItem = sanitizeMenuItemForFirestore(data.item);
+    if (data && data.item) {
+      sanitizedItem = sanitizeMenuItemForFirestore(data.item);
         try {
           const local = localStorage.getItem('deolinda_custom_menu_items');
           if (local) {
@@ -514,7 +513,6 @@ export async function saveSingleMenuItemToFirestore(item: MenuItem): Promise<Men
           }
         } catch {}
       }
-    }
   } catch (backendErr) {
     console.warn('[Backend] Menu item save notice:', backendErr);
   }
@@ -556,16 +554,13 @@ export async function uploadMenuImageToServer(imageBase64: string, itemId?: stri
     return imageBase64;
   }
   try {
-    const res = await fetch('/api/settings/upload-menu-image', {
+    const data = await safeFetchJson<{ imageUrl?: string }>('/api/settings/upload-menu-image', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ imageBase64, itemId })
     });
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.imageUrl) {
-        return data.imageUrl;
-      }
+    if (data && data.imageUrl) {
+      return data.imageUrl;
     }
   } catch (err) {
     console.warn('[Upload Image] Server image upload notice:', err);
@@ -748,29 +743,23 @@ export function subscribeToMenuItems(
           localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(loadedItems));
         } catch {}
       } else {
-        // Fallback: check settings/menu or server API if collection is unexpectedly empty
-        fetch('/api/settings/menu')
-          .then(r => r.json())
-          .then(data => {
-            if (data && Array.isArray(data.items) && data.items.length > 0) {
-              onUpdate(data.items);
-            }
-          })
-          .catch(() => {});
+        // Fallback: check settings/menu or server API if collection is unexpectedly empty (safe on static hosting)
+        safeFetchJson<{ items?: MenuItem[] }>('/api/settings/menu').then(data => {
+          if (data && Array.isArray(data.items) && data.items.length > 0) {
+            onUpdate(data.items);
+          }
+        });
       }
     };
 
     const unsubscribe = onSnapshot(menuColRef, processSnapshot, (err: any) => {
       console.warn('[Firestore] Menu collection subscription notice:', err?.message || err);
       // If Firestore hits quota limit (resource-exhausted) or client is offline, seamlessly fetch from backend API
-      fetch('/api/settings/menu')
-        .then(r => r.json())
-        .then(data => {
-          if (data && Array.isArray(data.items) && data.items.length > 0) {
-            onUpdate(data.items);
-          }
-        })
-        .catch(() => {});
+      safeFetchJson<{ items?: MenuItem[] }>('/api/settings/menu').then(data => {
+        if (data && Array.isArray(data.items) && data.items.length > 0) {
+          onUpdate(data.items);
+        }
+      });
     });
 
     return unsubscribe;
@@ -1340,6 +1329,32 @@ export function enqueueGalleryPostsSave(posts: SocialPost[]): void {
       await saveGalleryPostsToFirestore(posts);
     }
   });
+}
+
+/**
+ * Saves a customer contact / Fale Conosco message to Cloud Firestore.
+ */
+export async function saveContactMessageToFirestore(messageData: {
+  name: string;
+  email: string;
+  phone?: string;
+  subject?: string;
+  message: string;
+}): Promise<void> {
+  try {
+    const msgId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const msgDocRef = doc(db, 'messages', msgId);
+    await setDoc(msgDocRef, {
+      ...messageData,
+      id: msgId,
+      createdAt: new Date().toISOString(),
+      read: false,
+      _serverTimestamp: serverTimestamp()
+    });
+    console.log('[Firestore] Contact message saved to Cloud Firestore successfully:', msgId);
+  } catch (error: any) {
+    console.warn('[Firestore] Notice while saving contact message to Firestore:', error?.message || error);
+  }
 }
 
 

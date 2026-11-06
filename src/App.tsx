@@ -36,6 +36,7 @@ import {
   enqueueGalleryPostsSave
 } from './services/firebaseService';
 import { navigateToSection, getRouteByPath, getRouteById } from './utils/navigationRouter';
+import { safeFetchJson } from './utils/safeFetch';
 
 export default function App() {
   const [activeSection, setActiveSection] = useState<string>(() => {
@@ -323,50 +324,41 @@ export default function App() {
       } catch {}
     });
 
-    // 2. Fetch from backend API as initial quick fallback
-    fetch('/api/settings/logo')
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.logoUrl) {
-          setCustomLogoUrl(prev => prev || data.logoUrl);
-          try {
-            localStorage.setItem('deolinda_custom_logo', data.logoUrl);
-          } catch {}
-        }
-      })
-      .catch(() => {});
+    // 2. Fetch from backend API as initial quick fallback (safe on static hosting/deploy)
+    safeFetchJson<{ logoUrl?: string | null }>('/api/settings/logo').then(data => {
+      if (data && data.logoUrl) {
+        setCustomLogoUrl(prev => prev || data.logoUrl || null);
+        try {
+          localStorage.setItem('deolinda_custom_logo', data.logoUrl);
+        } catch {}
+      }
+    });
 
-    fetch('/api/settings/emblem')
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.emblemUrl) {
-          setCustomEmblemUrl(prev => prev || data.emblemUrl);
-          setIsEmblemEnabled(data.emblemEnabled !== false);
-          try {
-            localStorage.setItem('deolinda_custom_emblem', data.emblemUrl);
-            localStorage.setItem('deolinda_custom_emblem_enabled', String(data.emblemEnabled !== false));
-          } catch {}
-        }
-      })
-      .catch(() => {});
+    safeFetchJson<{ emblemUrl?: string | null; emblemEnabled?: boolean }>('/api/settings/emblem').then(data => {
+      if (data && data.emblemUrl) {
+        setCustomEmblemUrl(prev => prev || data.emblemUrl || null);
+        setIsEmblemEnabled(data.emblemEnabled !== false);
+        try {
+          localStorage.setItem('deolinda_custom_emblem', data.emblemUrl);
+          localStorage.setItem('deolinda_custom_emblem_enabled', String(data.emblemEnabled !== false));
+        } catch {}
+      }
+    });
 
-    // 2. Fetch menu items from backend API (with safety check against overwriting newer Firestore items)
-    fetch('/api/settings/menu')
-      .then(res => res.json())
-      .then(data => {
-        if (data && Array.isArray(data.items) && data.items.length > 0) {
-          setMenuItems(prev => {
-            if (prev.length > data.items.length && prev !== MENU_ITEMS) {
-              return prev;
-            }
-            return data.items;
-          });
-          try {
-            localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(data.items));
-          } catch {}
-        }
-      })
-      .catch(() => {});
+    // 2. Fetch menu items from backend API
+    safeFetchJson<{ items?: MenuItem[] }>('/api/settings/menu').then(data => {
+      if (data && Array.isArray(data.items) && data.items.length > 0) {
+        setMenuItems(prev => {
+          if (prev.length > (data.items?.length || 0) && prev !== MENU_ITEMS) {
+            return prev;
+          }
+          return data.items || prev;
+        });
+        try {
+          localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(data.items));
+        } catch {}
+      }
+    });
 
     // 3. Subscribe to Firestore menu items in real-time
     const unsubMenu = subscribeToMenuItems((items) => {
@@ -376,15 +368,12 @@ export default function App() {
     });
 
     // 4. Fetch gallery posts from backend API
-    fetch('/api/settings/gallery')
-      .then(res => res.json())
-      .then(data => {
-        if (data && Array.isArray(data.posts) && data.posts.length > 0) {
-          setSocialPosts(data.posts);
-          localStorage.setItem('deolinda_custom_social_posts', JSON.stringify(data.posts));
-        }
-      })
-      .catch(() => {});
+    safeFetchJson<{ posts?: SocialPost[] }>('/api/settings/gallery').then(data => {
+      if (data && Array.isArray(data.posts) && data.posts.length > 0) {
+        setSocialPosts(data.posts);
+        localStorage.setItem('deolinda_custom_social_posts', JSON.stringify(data.posts));
+      }
+    });
 
     // 5. Subscribe to Firestore gallery posts in real-time
     const unsubGallery = subscribeToGalleryPosts((posts) => {
@@ -394,15 +383,12 @@ export default function App() {
     });
 
     // 6. Fetch site info from backend API
-    fetch('/api/settings/site-info')
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.siteInfo && typeof data.siteInfo === 'object') {
-          setSiteInfo(prev => ({ ...prev, ...data.siteInfo }));
-          localStorage.setItem('deolinda_custom_site_info', JSON.stringify(data.siteInfo));
-        }
-      })
-      .catch(() => {});
+    safeFetchJson<{ siteInfo?: SiteInfo }>('/api/settings/site-info').then(data => {
+      if (data && data.siteInfo && typeof data.siteInfo === 'object') {
+        setSiteInfo(prev => ({ ...prev, ...data.siteInfo }));
+        localStorage.setItem('deolinda_custom_site_info', JSON.stringify(data.siteInfo));
+      }
+    });
 
     // 7. Subscribe to Firestore site info in real-time
     const unsubSiteInfo = subscribeToSiteInfo((info) => {
@@ -412,18 +398,15 @@ export default function App() {
     });
 
     // 8. Fetch menu categories from backend API
-    fetch('/api/settings/categories')
-      .then(res => res.json())
-      .then(data => {
-        if (data && Array.isArray(data.categories) && data.categories.length > 0) {
-          const cleaned = data.categories
-            .filter((c: any) => c && c.id !== 'antipasti' && c.label !== 'Entradas & Aperitivos')
-            .map((c: any) => c.id === 'bevande' ? { ...c, label: 'Bebidas' } : c);
-          setMenuCategories(cleaned);
-          localStorage.setItem('deolinda_custom_menu_categories', JSON.stringify(cleaned));
-        }
-      })
-      .catch(() => {});
+    safeFetchJson<{ categories?: MenuCategory[] }>('/api/settings/categories').then(data => {
+      if (data && Array.isArray(data.categories) && data.categories.length > 0) {
+        const cleaned = data.categories
+          .filter((c: any) => c && c.id !== 'antipasti' && c.label !== 'Entradas & Aperitivos')
+          .map((c: any) => c.id === 'bevande' ? { ...c, label: 'Bebidas' } : c);
+        setMenuCategories(cleaned);
+        localStorage.setItem('deolinda_custom_menu_categories', JSON.stringify(cleaned));
+      }
+    });
 
     // 9. Subscribe to Firestore menu categories in real-time
     const unsubCategories = subscribeToMenuCategories((cats) => {
@@ -572,26 +555,23 @@ export default function App() {
     };
   }, [activeTrackingOrder?.id, activeTrackingOrder?.status]);
 
-  // Fallback backend polling for server routes
+  // Fallback backend polling for server routes (safe on static hosting)
   const syncBackendData = async () => {
     try {
-      const ordersRes = await fetch('/api/orders', {
+      const data = await safeFetchJson<{ orders?: Order[] }>('/api/orders', {
         headers: {
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
         }
       });
-      if (ordersRes.ok) {
-        const data = await ordersRes.json();
-        if (data && Array.isArray(data.orders) && data.orders.length > 0) {
-          setOrders((prev) => {
-            if (prev.length === 0) return data.orders;
-            const map = new Map<string, Order>();
-            prev.forEach(o => map.set(o.id, o));
-            data.orders.forEach((o: Order) => map.set(o.id, o));
-            return Array.from(map.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-          });
-        }
+      if (data && Array.isArray(data.orders) && data.orders.length > 0) {
+        setOrders((prev) => {
+          if (prev.length === 0) return data.orders || [];
+          const map = new Map<string, Order>();
+          prev.forEach(o => map.set(o.id, o));
+          (data.orders || []).forEach((o: Order) => map.set(o.id, o));
+          return Array.from(map.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        });
       }
     } catch {
       // Handled by Firestore
