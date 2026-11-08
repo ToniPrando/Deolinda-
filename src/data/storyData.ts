@@ -45,21 +45,9 @@ export const ARTISAN_PILLARS = [
     icon: 'Clock'
   },
   {
-    title: 'Farinha Italiana Caputo 00',
-    subtitle: 'Grãos 100% Selecionados',
-    description: 'Moída finamente nos moinhos tradicionais de Nápoles com alto teor de proteína para proporcionar elasticidade única e um cornicione perfeitamente alveolado.',
-    icon: 'Wheat'
-  },
-  {
     title: 'Forno a Lenha a 430°C',
     subtitle: 'Pedra Vulcânica do Vesúvio',
     description: 'O choque térmico fulminante em 90 segundos sela a umidade interna mantendo o centro macio e a borda crocante com as famosas manchas de leopardo.',
     icon: 'Flame'
-  },
-  {
-    title: 'Ingredientes Italianos Selecionados',
-    subtitle: 'Origem e Tradição Artesanal',
-    description: 'Mozzarella de búfala fresca da Campânia e tomates San Marzano colhidos aos pés do Vesúvio em solo vulcânico rico em minerais.',
-    icon: 'Award'
   }
 ];

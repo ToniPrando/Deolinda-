@@ -92,7 +92,7 @@ export default function App() {
 
   const [socialPosts, setSocialPosts] = useState<SocialPost[]>(() => {
     try {
-      const saved = localStorage.getItem('deolinda_custom_social_posts');
+      const saved = localStorage.getItem('deolinda_custom_social_posts') || localStorage.getItem('deolinda_custom_gallery_posts');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -101,13 +101,30 @@ export default function App() {
     return SOCIAL_POSTS;
   });
 
+  const cleanSiteInfoSubtitle = (info: SiteInfo): SiteInfo => {
+    if (!info || typeof info !== 'object') return info;
+    if (
+      !info.heroSubtitle ||
+      info.heroSubtitle.includes('D.O.P') ||
+      info.heroSubtitle.includes('DOP') ||
+      info.heroSubtitle.includes('450') ||
+      info.heroSubtitle.includes('farinha italiana Tipo 00')
+    ) {
+      return {
+        ...info,
+        heroSubtitle: DEFAULT_SITE_INFO.heroSubtitle
+      };
+    }
+    return info;
+  };
+
   const [siteInfo, setSiteInfo] = useState<SiteInfo>(() => {
     try {
       const saved = localStorage.getItem('deolinda_custom_site_info');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object') {
-          return { ...DEFAULT_SITE_INFO, ...parsed };
+          return cleanSiteInfoSubtitle({ ...DEFAULT_SITE_INFO, ...parsed });
         }
       }
     } catch {}
@@ -385,15 +402,18 @@ export default function App() {
     // 6. Fetch site info from backend API
     safeFetchJson<{ siteInfo?: SiteInfo }>('/api/settings/site-info').then(data => {
       if (data && data.siteInfo && typeof data.siteInfo === 'object') {
-        setSiteInfo(prev => ({ ...prev, ...data.siteInfo }));
-        localStorage.setItem('deolinda_custom_site_info', JSON.stringify(data.siteInfo));
+        const cleaned = cleanSiteInfoSubtitle({ ...DEFAULT_SITE_INFO, ...data.siteInfo });
+        setSiteInfo(cleaned);
+        localStorage.setItem('deolinda_custom_site_info', JSON.stringify(cleaned));
       }
     });
 
     // 7. Subscribe to Firestore site info in real-time
     const unsubSiteInfo = subscribeToSiteInfo((info) => {
       if (info && typeof info === 'object') {
-        setSiteInfo(prev => ({ ...prev, ...info }));
+        const cleaned = cleanSiteInfoSubtitle({ ...DEFAULT_SITE_INFO, ...info });
+        setSiteInfo(cleaned);
+        localStorage.setItem('deolinda_custom_site_info', JSON.stringify(cleaned));
       }
     });
 
@@ -467,7 +487,9 @@ export default function App() {
   const handleOptimisticSocialPostsUpdated = (updatedPosts: SocialPost[]) => {
     setSocialPosts(updatedPosts);
     try {
-      localStorage.setItem('deolinda_custom_gallery_posts', JSON.stringify(updatedPosts));
+      const jsonStr = JSON.stringify(updatedPosts);
+      localStorage.setItem('deolinda_custom_gallery_posts', jsonStr);
+      localStorage.setItem('deolinda_custom_social_posts', jsonStr);
     } catch {}
     enqueueGalleryPostsSave(updatedPosts);
   };

@@ -3,6 +3,7 @@ import deolindaLogo from '../assets/images/deolinda_logo.png';
 import { Home } from 'lucide-react';
 import { CustomerUser, SiteInfo } from '../types';
 import { TricolorBands } from './TricolorBands';
+import { DeolindaLogotype } from './DeolindaLogotype';
 
 interface NavbarProps {
   onOpenAuth?: () => void;
@@ -42,6 +43,47 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
+  const renderHeaderLogotype = (isMobile = false) => {
+    if (customEmblemUrl && isEmblemEnabled !== false) {
+      return (
+        <img
+          src={customEmblemUrl}
+          alt="Logotipo Deolinda Pizzaria"
+          className={
+            isMobile
+              ? "h-7 sm:h-8 w-auto max-w-[150px] object-contain drop-shadow-xs group-hover:scale-105 transition-transform"
+              : "h-9 sm:h-11 w-auto max-w-[180px] sm:max-w-[220px] object-contain drop-shadow-xs group-hover:scale-105 transition-transform"
+          }
+          loading="eager"
+        />
+      );
+    }
+    if (customLogoUrl && customLogoUrl !== '/deolinda_logo.png' && !customLogoUrl.includes('deolinda_logo')) {
+      return (
+        <img
+          src={customLogoUrl}
+          alt="Logotipo Deolinda Pizzaria"
+          className={
+            isMobile
+              ? "h-7 sm:h-8 w-auto max-w-[150px] object-contain drop-shadow-xs group-hover:scale-105 transition-transform"
+              : "h-9 sm:h-11 w-auto max-w-[180px] sm:max-w-[220px] object-contain drop-shadow-xs group-hover:scale-105 transition-transform"
+          }
+          loading="eager"
+        />
+      );
+    }
+    return (
+      <DeolindaLogotype
+        variant="original"
+        className={
+          isMobile
+            ? "h-6 sm:h-7 w-auto max-w-[140px] sm:max-w-[160px] drop-shadow-xs group-hover:scale-105 transition-transform"
+            : "h-8 sm:h-10 w-auto max-w-[170px] sm:max-w-[220px] drop-shadow-xs group-hover:scale-105 transition-transform"
+        }
+      />
+    );
+  };
+
   return (
     <header
       className={`sticky top-0 z-40 transition-all duration-300 bg-white text-[#181513] border-b border-[#EADFCF] ${
@@ -50,9 +92,9 @@ export const Navbar: React.FC<NavbarProps> = ({
     >
       <div className="w-full max-w-[1550px] mx-auto px-2 sm:px-6 lg:px-8">
         
-        {/* Mobile Header: Logo Centralizado no topo + Todo o menu visível e centralizado logo abaixo (Sem menu hambúrguer) */}
+        {/* Mobile Header: Logotipo Centralizado no topo + Todo o menu visível e centralizado logo abaixo (Sem fundo branco extra) */}
         <div className="flex flex-col items-center justify-center w-full lg:hidden py-0.5 space-y-1.5">
-          {/* Logo Deolinda Centralizado com Faixas Italianas */}
+          {/* Logotipo Deolinda Centralizado com Faixas Italianas */}
           <div className="flex items-center justify-center gap-2">
             <TricolorBands direction="left" theme="light" className="w-7 sm:w-10 shrink-0" size="sm" />
             
@@ -63,20 +105,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 handleNavClick('hero', '/');
               }}
               title="Deolinda Pizzaria Napoletana - Ir para a Página Inicial"
-              className="flex items-center justify-center gap-2 group cursor-pointer"
+              className="flex items-center justify-center group cursor-pointer py-0.5"
             >
-              <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-xs overflow-hidden p-0.5 shrink-0 group-hover:scale-105 transition-transform">
-                <img
-                  src={customLogoUrl || deolindaLogo || "/deolinda_logo.png"}
-                  alt="Logo Pizzaria Deolinda"
-                  className="w-full h-full object-contain filter drop-shadow-xs"
-                  loading="eager"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-              <span className="font-serif-italian text-lg sm:text-xl font-bold text-[#181513]">
-                Deolinda
-              </span>
+              {renderHeaderLogotype(true)}
             </a>
 
             <TricolorBands direction="right" theme="light" className="w-7 sm:w-10 shrink-0" size="sm" />
@@ -169,7 +200,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </div>
 
-          {/* 3. LOGO CENTRALIZADO COM ESPAÇAMENTO GENEROSO (Sem borda amarela) */}
+          {/* 3. LOGOTIPO CENTRALIZADO COM ESPAÇAMENTO GENEROSO (Fundo 100% transparente) */}
           <div className="shrink-0 flex items-center justify-center px-4 sm:px-6 xl:px-12">
             <a
               href="/"
@@ -178,24 +209,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 handleNavClick('hero', '/');
               }}
               title="Deolinda Pizzaria Napoletana - Ir para a Página Inicial"
-              className="flex items-center justify-center group cursor-pointer"
+              className="flex items-center justify-center group cursor-pointer py-1"
             >
-              <div className="relative w-13 h-13 sm:w-16 sm:h-16 rounded-full bg-white flex items-center justify-center shadow-md p-1 group-hover:scale-105 transition-transform overflow-hidden shrink-0">
-                <img
-                  src={customLogoUrl || deolindaLogo || "/deolinda_logo.png"}
-                  alt="Logo Pizzaria Deolinda"
-                  className="w-full h-full object-contain filter drop-shadow-xs"
-                  loading="eager"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-              {customEmblemUrl && isEmblemEnabled !== false && (
-                <img
-                  src={customEmblemUrl}
-                  alt="Emblema Deolinda"
-                  className="h-9 w-auto max-w-[130px] object-contain ml-2.5 hidden 2xl:inline-block filter drop-shadow-xs"
-                />
-              )}
+              {renderHeaderLogotype(false)}
             </a>
           </div>
 

@@ -381,7 +381,7 @@ app.post(["/api/contact", "/api/contact/"], async (req, res) => {
     const smtpPort = Number(process.env.SMTP_PORT || 465);
     const smtpUser = process.env.SMTP_USER;
     const smtpPass = process.env.SMTP_PASS;
-    const contactTo = process.env.CONTACT_TO;
+    const contactTo = process.env.CONTACT_TO || "antonioestefanoprando@gmail.com";
 
     if (smtpHost && smtpUser && smtpPass && contactTo) {
       try {
@@ -641,9 +641,28 @@ app.post("/api/settings/upload-menu-image", (req, res) => {
     const filename = `${itemId || `upload_${Date.now()}`}.${ext}`;
     fs.writeFileSync(path.join(targetDir, filename), Buffer.from(match[2], "base64"));
     const publicUrl = `/menu_images/${filename}?v=${Date.now()}`;
-    return res.json({ success: true, url: publicUrl });
+    return res.json({ success: true, url: publicUrl, imageUrl: publicUrl });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to upload image" });
+  }
+});
+
+// Dedicated Fast Upload Gallery Image API (Fotos & Momentos)
+app.post("/api/settings/upload-gallery-image", (req, res) => {
+  try {
+    const { imageBase64, postId } = req.body;
+    if (!imageBase64) return res.status(400).json({ error: "No image data" });
+    const match = imageBase64.match(/^data:image\/(\w+);base64,(.+)$/);
+    if (!match) return res.status(400).json({ error: "Invalid base64 format" });
+    const ext = match[1] === "jpeg" ? "jpg" : match[1];
+    const targetDir = path.join(process.cwd(), "public", "gallery_images");
+    if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
+    const filename = `${postId || `moment_${Date.now()}`}.${ext}`;
+    fs.writeFileSync(path.join(targetDir, filename), Buffer.from(match[2], "base64"));
+    const publicUrl = `/gallery_images/${filename}?v=${Date.now()}`;
+    return res.json({ success: true, url: publicUrl, imageUrl: publicUrl });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to upload gallery image" });
   }
 });
 

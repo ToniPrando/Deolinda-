@@ -116,7 +116,7 @@ export const SocialFeedSection: React.FC<SocialFeedSectionProps> = ({ posts }) =
                   </p>
 
                   <div className="flex flex-wrap gap-1 pt-2 border-t border-[#F0EAE1]">
-                    {post.tags.map((tag, tIdx) => (
+                    {(post.tags || []).map((tag, tIdx) => (
                       <span key={tIdx} className="text-[10px] font-semibold text-[#C24D2C]">
                         {tag}
                       </span>

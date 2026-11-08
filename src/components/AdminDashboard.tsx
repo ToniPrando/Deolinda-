@@ -46,7 +46,8 @@ import {
   LayoutGrid,
   Lock,
   KeyRound,
-  ShieldCheck
+  ShieldCheck,
+  Mail
 } from 'lucide-react';
 import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES } from '../data/menuData';
 import { SOCIAL_POSTS } from '../data/socialData';
@@ -59,13 +60,18 @@ import {
   saveSingleMenuItemToFirestore,
   deleteSingleMenuItemFromFirestore,
   uploadMenuImageToServer,
+  uploadGalleryImageToServer,
   enqueueMenuItemSave,
   enqueueMenuItemDelete,
   saveQueue,
   saveGalleryPostsToFirestore,
   saveSiteInfoToFirestore,
   saveMenuCategoriesToFirestore,
-  saveAdminPasswordToFirestore
+  saveAdminPasswordToFirestore,
+  ContactMessageRecord,
+  subscribeToContactMessages,
+  markContactMessageAsRead,
+  deleteContactMessageFromFirestore
 } from '../services/firebaseService';
 import { TricolorBands } from './TricolorBands';
 import { compressImageFile } from '../utils/imageCompressor';
@@ -117,9 +123,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   customAdminPassword,
   onAdminPasswordUpdated
 }) => {
-  const [activeTab, setActiveTab] = useState<'menu' | 'gallery' | 'branding' | 'siteInfo' | 'security'>('menu');
+  const [activeTab, setActiveTab] = useState<'menu' | 'gallery' | 'messages' | 'branding' | 'siteInfo' | 'security'>('menu');
   const [isManualSyncing, setIsManualSyncing] = useState(false);
   const [, setLastSyncTime] = useState<string>('Agora');
+
+  // Contact messages from Fale Conosco
+  const [contactMessages, setContactMessages] = useState<ContactMessageRecord[]>([]);
+  const [messagesSearch, setMessagesSearch] = useState('');
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsub = subscribeToContactMessages((msgs) => {
+      setContactMessages(msgs);
+    });
+    return () => unsub();
+  }, []);
 
   // ==========================================
   // MENU ITEMS STATE & CONTROLS
@@ -577,7 +595,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [currentSocialPosts, setCurrentSocialPosts] = useState<SocialPost[]>(() => {
     if (socialPosts && socialPosts.length > 0) return socialPosts;
     try {
-      const saved = localStorage.getItem('deolinda_custom_social_posts');
+      const saved = localStorage.getItem('deolinda_custom_social_posts') || localStorage.getItem('deolinda_custom_gallery_posts');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -600,31 +618,68 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [confirmDeletePostId, setConfirmDeletePostId] = useState<string | null>(null);
   const [isDeletingPost, setIsDeletingPost] = useState(false);
   const [isSavingPost, setIsSavingPost] = useState(false);
+  const [isProcessingPostImage, setIsProcessingPostImage] = useState(false);
   const [galleryNotice, setGalleryNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const [postFormData, setPostFormData] = useState({
     imageUrl: '',
     caption: '',
     author: '@deolindapizzaria',
-    tagsStr: '#FornoALegna, #DeolindaNapoletana',
+    tagsStr: '#FornoALegna, #DeolindaNapoletana, #430Graus',
     timestamp: 'Recente'
   });
   const postImageInputRef = useRef<HTMLInputElement>(null);
 
   const galleryPresets = [
-    { label: '🍕 Pizza Margherita Especial', url: 'https://images.unsplash.com/photo-1604382355076-af4b0eb60143?auto=format&fit=crop&w=800&q=80' },
-    { label: '🔥 Pizza no Forno a Lenha', url: 'https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=800&q=80' },
-    { label: '✨ Mortadella & Burrata', url: 'https://images.unsplash.com/photo-1579751626657-72bc17010498?auto=format&fit=crop&w=800&q=80' },
-    { label: '🧀 Burrata ao Forno Borbulhante', url: 'https://images.unsplash.com/photo-1592417817098-8f3d6eb22521?auto=format&fit=crop&w=800&q=80' },
-    { label: '🍰 Tiramisù da Nonna', url: 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?auto=format&fit=crop&w=800&q=80' },
-    { label: '🍷 Vinho Chianti & Ambiente', url: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=800&q=80' }
+    { 
+      label: '🍕 Margherita Especial Verace', 
+      url: 'https://images.unsplash.com/photo-1604382355076-af4b0eb60143?auto=format&fit=crop&w=800&q=80',
+      caption: 'A simplicidade da perfeição: Margherita Verace com molho San Marzano e Mozzarella di Bufala fresca. 72h de fermentação lenta.',
+      tagsStr: '#MargheritaVerace, #DeolindaNapoletana, #SanMarzano'
+    },
+    { 
+      label: '🔥 Forno Napolitano a 430°C', 
+      url: 'https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=800&q=80',
+      caption: 'Saindo agora do forno a lenha a 430°C! Massa aerada com marcas de leopardo na pedra vulcânica.',
+      tagsStr: '#FornoALegna, #PedraVulcanica, #430Graus'
+    },
+    { 
+      label: '✨ Mortadella & Burrata', 
+      url: 'https://images.unsplash.com/photo-1579751626657-72bc17010498?auto=format&fit=crop&w=800&q=80',
+      caption: 'Mortadella Bologna com raspas de limão siciliano, pistache tostado e generosa burrata fresca.',
+      tagsStr: '#Mortadella, #Pistacchio, #Burrata'
+    },
+    { 
+      label: '🧀 Burrata ao Forno Borbulhante', 
+      url: 'https://images.unsplash.com/photo-1592417817098-8f3d6eb22521?auto=format&fit=crop&w=800&q=80',
+      caption: 'Burrata ao Forno servida com focaccia crocante e tomates assados.',
+      tagsStr: '#BurrataAlForno, #Focaccia, #Antipasti'
+    },
+    { 
+      label: '🍷 Vinho Chianti & Salão', 
+      url: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=800&q=80',
+      caption: 'Noite acolhedora com amigos, família, vinho italiano Chianti e o aroma inconfundível de lenha acesa.',
+      tagsStr: '#VinhoItaliano, #SalãoDeolinda, #MomentosEspeciais'
+    },
+    { 
+      label: '👐 Massa Aberta com as Mãos', 
+      url: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=800&q=80',
+      caption: 'Massa aberta artesanalmente com as mãos, respeitando cada alvéolo de ar de 72 horas de fermentação natural.',
+      tagsStr: '#MassaArtesanal, #LievitoMadre, #ArtePizzaiola'
+    },
+    { 
+      label: '🍰 Tiramisù da Nonna Deolinda', 
+      url: 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?auto=format&fit=crop&w=800&q=80',
+      caption: 'O autêntico Tiramisù da Nonna Deolinda com mascarpone aveludado e café espresso tirado na hora.',
+      tagsStr: '#Tiramisu, #NonnaDeolinda, #SobremesaArtesanal'
+    }
   ];
 
   const openAddPostModal = () => {
     setEditingPost(null);
     setPostFormError(null);
     setPostFormData({
-      imageUrl: 'https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=800&q=80',
+      imageUrl: '',
       caption: '',
       author: '@deolindapizzaria',
       tagsStr: '#FornoALegna, #DeolindaNapoletana, #430Graus',
@@ -646,43 +701,66 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setIsPostModalOpen(true);
   };
 
-  const handleUploadPostImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadPostImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       if (!file.type.startsWith('image/')) {
         setPostFormError('Selecione um arquivo de imagem válido (JPG, PNG, WebP).');
         return;
       }
-      if (file.size > 5 * 1024 * 1024) {
-        setPostFormError('A imagem deve ter no máximo 5MB.');
-        return;
+      setIsProcessingPostImage(true);
+      setPostFormError(null);
+      try {
+        // Compress client-side automatically to ~60KB to ensure smooth persistence
+        const compressedBase64 = await compressImageFile(file, 950, 950, 0.82);
+        // Try uploading to backend for static file URL if server is running
+        const finalUrl = await uploadGalleryImageToServer(compressedBase64, `moment_${Date.now()}`);
+        setPostFormData(prev => ({
+          ...prev,
+          imageUrl: finalUrl,
+          caption: prev.caption ? prev.caption : 'Momento especial na Deolinda Pizzaria Napoletana 🍕❤️'
+        }));
+      } catch (err) {
+        console.warn('Erro ao processar imagem:', err);
+        setPostFormError('Não foi possível processar o arquivo. Tente outro arquivo ou cole um link.');
+      } finally {
+        setIsProcessingPostImage(false);
+        if (e.target) e.target.value = '';
       }
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const result = event.target?.result as string;
-        if (result) {
-          setPostFormData(prev => ({ ...prev, imageUrl: result }));
-          setPostFormError(null);
-        }
-      };
-      reader.readAsDataURL(file);
     }
   };
 
   const handleSavePost = async (e: React.FormEvent) => {
     e.preventDefault();
     setPostFormError(null);
-    if (!postFormData.imageUrl.trim()) {
-      setPostFormError('Por favor, informe a URL da foto ou selecione um arquivo de imagem.');
+
+    const rawUrl = postFormData.imageUrl.trim();
+    if (!rawUrl) {
+      setPostFormError('Por favor, selecione um arquivo de foto ou informe o link da imagem.');
       return;
     }
-    if (!postFormData.caption.trim()) {
-      setPostFormError('Por favor, digite uma legenda / descrição para a foto.');
+
+    // Check if user pasted a social network webpage URL (e.g. facebook.com/share... or instagram.com/...)
+    const isSocialPage = (rawUrl.includes('facebook.com') || rawUrl.includes('instagram.com')) &&
+      !/\.(jpg|jpeg|png|webp|avif)(\?.*)?$/i.test(rawUrl) &&
+      !rawUrl.includes('fbcdn.net') &&
+      !rawUrl.includes('cdninstagram.com');
+
+    if (isSocialPage) {
+      setPostFormError('O link informado é de uma página do Facebook/Instagram e não uma imagem direta. Para fotos das redes sociais, clique no botão "Arquivo" para enviar o arquivo da foto salvo no seu celular/computador, ou selecione uma foto pronta nas sugestões abaixo.');
       return;
     }
 
     setIsSavingPost(true);
     try {
+      let finalImageUrl = rawUrl;
+      // If it's a raw base64 data URL, upload to static backend storage if available
+      if (finalImageUrl.startsWith('data:image/')) {
+        try {
+          finalImageUrl = await uploadGalleryImageToServer(finalImageUrl, editingPost ? editingPost.id : `moment_${Date.now()}`);
+        } catch {}
+      }
+
       const parsedTags = postFormData.tagsStr
         .split(/[\s,]+/)
         .map(t => t.trim())
@@ -691,11 +769,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       const savedPost: SocialPost = {
         id: editingPost ? editingPost.id : `post-${Date.now()}`,
-        imageUrl: postFormData.imageUrl.trim(),
-        caption: postFormData.caption.trim(),
+        imageUrl: finalImageUrl,
+        caption: postFormData.caption.trim() || 'Momento especial na Deolinda Pizzaria Napoletana 🍕❤️',
         author: postFormData.author.trim() || '@deolindapizzaria',
         timestamp: postFormData.timestamp.trim() || 'Recente',
-        tags: parsedTags.length > 0 ? parsedTags : ['#DeolindaNapoletana', '#FornoALegna'],
+        tags: parsedTags.length > 0 ? parsedTags : ['#DeolindaNapoletana', '#FornoALegna', '#430Graus'],
         likes: editingPost?.likes ?? 100,
         isHotOutOfOven: false
       };
@@ -1151,6 +1229,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {[
             { id: 'menu', label: `📝 Controle de Cardápio (${currentMenuItems.length})` },
             { id: 'gallery', label: `📸 Fotos dos Momentos (${currentSocialPosts.length})` },
+            { id: 'messages', label: `📬 Mensagens Recebidas (${contactMessages.length})` },
             { id: 'siteInfo', label: '🌐 Informações do Site' },
             { id: 'branding', label: '🎨 Identidade & Logotipo' },
             { id: 'security', label: '🔒 Senha de Acesso ADM' }
@@ -1677,6 +1756,183 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         )}
 
         {/* ========================================== */}
+        {/* Tab: Mensagens Recebidas (Fale Conosco)   */}
+        {/* ========================================== */}
+        {activeTab === 'messages' && (
+          <div className="flex-1 p-4 sm:p-6 overflow-y-auto bg-[#FAF7F2] space-y-4">
+            {/* Top Bar: Pesquisa e Contagem */}
+            <div className="bg-white p-4 sm:p-5 rounded-3xl border border-[#E0D5C3] shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+              <div>
+                <h4 className="font-serif-italian text-xl font-bold text-[#181513] flex items-center gap-2">
+                  <Mail className="w-5 h-5 text-[#C24D2C]" />
+                  <span>Mensagens do Fale Conosco ({contactMessages.length})</span>
+                </h4>
+                <p className="text-xs text-[#5C554E] mt-0.5">
+                  Mensagens enviadas pelos clientes pelo formulário do site e sincronizadas no Firestore.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {/* Search */}
+                <div className="relative w-full sm:w-72">
+                  <Search className="w-4 h-4 text-[#8C827A] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={messagesSearch}
+                    onChange={(e) => setMessagesSearch(e.target.value)}
+                    placeholder="Buscar por nome, e-mail ou assunto..."
+                    className="w-full pl-9 pr-4 py-2 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-xs text-[#181513] focus:outline-hidden focus:border-[#C24D2C]"
+                  />
+                  {messagesSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setMessagesSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 text-xs"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Messages List */}
+            {(() => {
+              const q = messagesSearch.toLowerCase().trim();
+              const filtered = contactMessages.filter((m) =>
+                !q ||
+                m.name.toLowerCase().includes(q) ||
+                m.email.toLowerCase().includes(q) ||
+                (m.subject && m.subject.toLowerCase().includes(q)) ||
+                m.message.toLowerCase().includes(q)
+              );
+
+              if (filtered.length === 0) {
+                return (
+                  <div className="bg-white rounded-3xl p-12 text-center border border-[#E0D5C3] shadow-xs">
+                    <Mail className="w-12 h-12 text-[#C24D2C]/40 mx-auto mb-3" />
+                    <h5 className="font-bold text-base text-[#181513] mb-1">
+                      {messagesSearch ? 'Nenhuma mensagem encontrada' : 'Nenhuma mensagem recebida ainda'}
+                    </h5>
+                    <p className="text-xs text-[#5C554E] max-w-md mx-auto">
+                      {messagesSearch
+                        ? 'Nenhuma mensagem corresponde aos termos digitados na busca.'
+                        : 'Quando os clientes enviarem mensagens pelo formulário "Fale Conosco", elas aparecerão aqui em tempo real.'}
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-3">
+                  {filtered.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`bg-white rounded-2xl p-4 sm:p-5 border transition-all ${
+                        msg.read ? 'border-[#E0D5C3]' : 'border-[#C24D2C]/50 shadow-xs ring-1 ring-[#C24D2C]/20'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-2.5">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-full bg-[#C24D2C] text-white flex items-center justify-center font-bold text-sm shrink-0">
+                            {msg.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h5 className="font-bold text-sm text-[#181513]">{msg.name}</h5>
+                              {!msg.read && (
+                                <span className="px-2 py-0.5 rounded-full bg-[#C24D2C] text-white text-[10px] font-bold">
+                                  Nova
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-[#5C554E] mt-0.5 flex-wrap">
+                              <span><strong>E-mail:</strong> {msg.email}</span>
+                              {msg.phone && <span>• <strong>Tel:</strong> {msg.phone}</span>}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="text-left sm:text-right text-[11px] text-[#8C827A] shrink-0">
+                          {new Date(msg.createdAt).toLocaleString('pt-BR', {
+                            dateStyle: 'short',
+                            timeStyle: 'short'
+                          })}
+                        </div>
+                      </div>
+
+                      {msg.subject && (
+                        <div className="mb-2">
+                          <span className="inline-block px-2.5 py-0.5 rounded-md bg-[#FAF7F2] text-[#C24D2C] text-xs font-bold border border-[#E0D5C3]">
+                            Assunto: {msg.subject}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="p-3.5 rounded-xl bg-[#FAF7F2] border border-[#F0EAE1] text-xs sm:text-sm text-[#181513] leading-relaxed whitespace-pre-wrap mb-3 font-normal">
+                        {msg.message}
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#F0EAE1] flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {/* Reply by Email */}
+                          <a
+                            href={`mailto:${msg.email}?subject=${encodeURIComponent(`Re: ${msg.subject || 'Contato Deolinda Pizzaria'}`)}&body=${encodeURIComponent(`Olá, ${msg.name}!\n\nRecebemos sua mensagem enviada pelo site:\n"${msg.message}"\n\n`)}`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#C24D2C] hover:bg-[#A83D22] text-white text-xs font-bold transition-colors cursor-pointer"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                            <span>Responder por E-mail</span>
+                          </a>
+
+                          {/* Reply by WhatsApp */}
+                          {msg.phone && (
+                            <a
+                              href={`https://wa.me/${msg.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${msg.name}! Aqui é da Deolinda Pizzaria Napoletana. Recebemos sua mensagem pelo site: "${msg.message}"`)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors cursor-pointer"
+                            >
+                              <Phone className="w-3.5 h-3.5" />
+                              <span>WhatsApp</span>
+                            </a>
+                          )}
+
+                          {!msg.read && (
+                            <button
+                              type="button"
+                              onClick={() => markContactMessageAsRead(msg.id)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold transition-colors cursor-pointer"
+                            >
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Marcar como Lida</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Delete button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm(`Deseja excluir a mensagem de "${msg.name}"?`)) {
+                              deleteContactMessageFromFirestore(msg.id);
+                            }
+                          }}
+                          className="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer"
+                          title="Excluir mensagem"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* ========================================== */}
         {/* Tab 3: Informações do Site (Completo)      */}
         {/* ========================================== */}
         {activeTab === 'siteInfo' && (
@@ -2103,7 +2359,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       rows={3}
                       value={currentSiteInfo.heroSubtitle}
                       onChange={(e) => handleUpdateSiteInfoField('heroSubtitle', e.target.value)}
-                      placeholder="Fermentação natural lenta de 72 horas, farinha italiana Tipo 00, ingredientes artesanais selecionados e o fogo vivo da pedra vulcânica a 430°C."
+                      placeholder="Fermentação natural lenta de 72 horas e o fogo intenso da pedra vulcânica a 430 °C.&#10;&#10;Porque aqui não fazemos apenas pizza. Criamos experiências com o verdadeiro sabor da Itália. ❤️"
                       className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
                     />
                   </div>
@@ -4213,26 +4469,51 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     />
                     <button
                       type="button"
+                      disabled={isProcessingPostImage}
                       onClick={() => postImageInputRef.current?.click()}
-                      className="px-3.5 py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#F2ECE1] text-[#181513] border border-[#E0D5C3] text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0"
+                      className="px-3.5 py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#F2ECE1] disabled:opacity-60 text-[#181513] border border-[#E0D5C3] text-xs font-bold flex items-center gap-1.5 cursor-pointer shrink-0"
                     >
-                      <Upload className="w-3.5 h-3.5 text-[#C24D2C]" />
-                      <span>Arquivo</span>
+                      {isProcessingPostImage ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 text-[#C24D2C] animate-spin" />
+                          <span>Processando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-3.5 h-3.5 text-[#C24D2C]" />
+                          <span>Arquivo</span>
+                        </>
+                      )}
                     </button>
                   </div>
 
+                  {isProcessingPostImage && (
+                    <div className="flex items-center gap-2 p-2 rounded-xl bg-amber-50 text-amber-800 text-xs">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#C24D2C]" />
+                      <span>Comprimindo e otimizando foto automaticamente para alta velocidade...</span>
+                    </div>
+                  )}
+
                   {/* Presets */}
-                  <div className="space-y-1 pt-1">
+                  <div className="space-y-1.5 pt-1">
                     <span className="text-[10px] font-semibold text-[#8C827A] uppercase tracking-wider">
-                      Sugestões Rápidas:
+                      Sugestões Rápidas de Fotos da Deolinda:
                     </span>
                     <div className="flex flex-wrap gap-1.5">
                       {galleryPresets.map((preset, pIdx) => (
                         <button
                           key={pIdx}
                           type="button"
-                          onClick={() => setPostFormData(prev => ({ ...prev, imageUrl: preset.url }))}
-                          className="px-2 py-1 rounded-lg bg-[#FAF7F2] hover:bg-[#F0EAE1] text-[10px] font-medium text-[#5C554E] border border-[#E0D5C3] cursor-pointer"
+                          onClick={() => {
+                            setPostFormData(prev => ({
+                              ...prev,
+                              imageUrl: preset.url,
+                              caption: prev.caption.trim() ? prev.caption : preset.caption,
+                              tagsStr: preset.tagsStr
+                            }));
+                            setPostFormError(null);
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-[#FAF7F2] hover:bg-[#F0EAE1] text-[10px] font-medium text-[#5C554E] hover:text-[#181513] border border-[#E0D5C3] cursor-pointer transition-colors shadow-2xs"
                         >
                           {preset.label}
                         </button>
@@ -4242,7 +4523,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                   {/* Live Image Preview */}
                   {postFormData.imageUrl && (
-                    <div className="mt-2 relative h-44 rounded-xl overflow-hidden border border-[#E0D5C3] bg-black/5">
+                    <div className="mt-2 relative h-48 rounded-xl overflow-hidden border border-[#E0D5C3] bg-black/5 group">
                       <img
                         src={postFormData.imageUrl}
                         alt="Pré-visualização"
@@ -4251,6 +4532,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=800&q=80';
                         }}
                       />
+                      <button
+                        type="button"
+                        onClick={() => setPostFormData(prev => ({ ...prev, imageUrl: '' }))}
+                        title="Remover foto"
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 hover:bg-rose-600 text-white transition-colors cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   )}
                 </div>

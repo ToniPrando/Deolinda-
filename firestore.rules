@@ -17,6 +17,11 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // Mail collection: Firebase Trigger Email extension
+    match /mail/{mailId} {
+      allow read, write: if true;
+    }
+
     // Settings collection: Global branding, logo and emblem synchronized in real-time
     match /settings/{settingId} {
       allow read, write: if true;

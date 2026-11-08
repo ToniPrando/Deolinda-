@@ -20,7 +20,7 @@ export const DEFAULT_SITE_INFO: SiteInfo = {
   // Hero (Cabeçalho)
   heroBadge: 'Tradição Napoletana Desde 1924',
   heroSubBadge: 'Pizzaria Napoletana',
-  heroSubtitle: 'Fermentação natural lenta de 72 horas, farinha italiana Tipo 00, ingredientes artesanais selecionados e o fogo vivo da pedra vulcânica a 430°C.',
+  heroSubtitle: 'Fermentação natural lenta de 72 horas e o fogo intenso da pedra vulcânica a 430 °C.\n\nPorque aqui não fazemos apenas pizza. Criamos experiências com o verdadeiro sabor da Itália. ❤️',
   heroCtaMenuText: 'Explorar Cardápio',
   heroCtaWhatsappText: 'WhatsApp (11) 91533-1853',
   heroFermentationHighlight: '72 Horas Lenta',

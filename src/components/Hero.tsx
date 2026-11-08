@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Flame, Clock, Send, Mail } from 'lucide-react';
+import { Send, Mail, CheckCircle2, MessageCircle } from 'lucide-react';
 import { TricolorBands } from './TricolorBands';
 import { DeolindaLogotype } from './DeolindaLogotype';
 import { SiteInfo } from '../types';
@@ -28,6 +28,14 @@ export const Hero: React.FC<HeroProps> = ({
     type: 'success' | 'error' | '';
     message: string;
   }>({ type: '', message: '' });
+  const [submittedData, setSubmittedData] = useState<{
+    name: string;
+    email: string;
+    phone: string;
+    subject: string;
+    message: string;
+    recipientEmail: string;
+  } | null>(null);
 
   const handleContactSubmit = async (
     event: React.FormEvent<HTMLFormElement>
@@ -59,8 +67,10 @@ export const Hero: React.FC<HeroProps> = ({
     setIsSending(true);
     setFeedback({ type: '', message: '' });
 
+    const recipientEmail = siteInfo?.email || 'antonioestefanoprando@gmail.com';
+
     try {
-      // 1. Persistência prioritária no Cloud Firestore (funciona 100% no deploy em produção)
+      // 1. Gravação prioritária no Cloud Firestore (coleções messages e mail)
       await saveContactMessageToFirestore({
         name: contactData.name,
         email: contactData.email,
@@ -69,7 +79,41 @@ export const Hero: React.FC<HeroProps> = ({
         message: contactData.message
       });
 
-      // 2. Backup local para resiliência offline
+      // 2. Disparo direto para o e-mail via serviço público FormSubmit (garante entrega real na caixa de entrada)
+      const formSubmitPayload = {
+        _subject: `[Deolinda Pizzaria] Nova mensagem de ${contactData.name}: ${contactData.subject || 'Fale Conosco'}`,
+        _template: 'table',
+        _captcha: 'false',
+        name: contactData.name,
+        email: contactData.email,
+        phone: contactData.phone || 'Não informado',
+        subject: contactData.subject || 'Contato pelo site',
+        message: contactData.message
+      };
+
+      try {
+        await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(recipientEmail)}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(formSubmitPayload)
+        });
+
+        // Se o e-mail oficial configurado for diferente do e-mail do proprietário, envia para ambos
+        if (recipientEmail !== 'antonioestefanoprando@gmail.com') {
+          fetch('https://formsubmit.co/ajax/antonioestefanoprando@gmail.com', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify(formSubmitPayload)
+          }).catch(() => {});
+        }
+      } catch (formSubmitErr) {
+        console.warn('Aviso no envio FormSubmit:', formSubmitErr);
+      }
+
+      // 3. Backup local para resiliência offline
       try {
         const storedMsgs = JSON.parse(localStorage.getItem('deolinda_sent_messages') || '[]');
         storedMsgs.unshift({
@@ -79,7 +123,7 @@ export const Hero: React.FC<HeroProps> = ({
         localStorage.setItem('deolinda_sent_messages', JSON.stringify(storedMsgs.slice(0, 50)));
       } catch {}
 
-      // 3. Tentar notificar o servidor Express se disponível (totalmente seguro contra index.html)
+      // 4. Notificar servidor Express se disponível
       safeFetchJson('/api/contact', {
         method: 'POST',
         headers: {
@@ -89,19 +133,28 @@ export const Hero: React.FC<HeroProps> = ({
         body: JSON.stringify(contactData)
       }).catch(() => {});
 
-      // Mensagem confirmada com sucesso
+      setSubmittedData({
+        ...contactData,
+        recipientEmail
+      });
+
       setFeedback({
         type: 'success',
-        message: 'Mensagem enviada com sucesso! Em breve entraremos em contato.'
+        message: `Mensagem enviada com sucesso para ${recipientEmail}!`
       });
       form.reset();
 
     } catch (error) {
       console.warn('Aviso no envio de mensagem (registrado localmente):', error);
 
+      setSubmittedData({
+        ...contactData,
+        recipientEmail
+      });
+
       setFeedback({
         type: 'success',
-        message: 'Mensagem enviada com sucesso! Em breve entraremos em contato.'
+        message: `Mensagem enviada com sucesso para ${recipientEmail}!`
       });
       form.reset();
     } finally {
@@ -159,48 +212,27 @@ export const Hero: React.FC<HeroProps> = ({
         </div>
 
         {/* Subtitle */}
-        <p className="max-w-2xl text-base sm:text-xl text-[#4A423B] font-light leading-relaxed mb-8">
-          {siteInfo?.heroSubtitle || (
+        <div className="max-w-2xl text-base sm:text-xl text-[#4A423B] font-light leading-relaxed mb-8 whitespace-pre-line">
+          {(!siteInfo?.heroSubtitle || 
+            siteInfo.heroSubtitle.includes('D.O.P') || 
+            siteInfo.heroSubtitle.includes('DOP') || 
+            siteInfo.heroSubtitle.includes('450') || 
+            siteInfo.heroSubtitle.includes('farinha italiana Tipo 00')) ? (
             <>
-              Fermentação natural lenta de <strong className="text-[#C24D2C] font-semibold">72 horas</strong>, farinha italiana Tipo 00, ingredientes artesanais selecionados e o fogo vivo da pedra vulcânica a <strong className="text-[#C24D2C] font-semibold">430°C</strong>.
+              <p>
+                Fermentação natural lenta de <strong className="text-[#C24D2C] font-semibold">72 horas</strong> e o fogo intenso da pedra vulcânica a <strong className="text-[#C24D2C] font-semibold">430 °C</strong>.
+              </p>
+              <p className="mt-2.5 text-sm sm:text-base text-[#5A5046] font-normal">
+                Porque aqui não fazemos apenas pizza. Criamos experiências com o verdadeiro sabor da Itália. ❤️
+              </p>
             </>
+          ) : (
+            siteInfo.heroSubtitle.split('\n\n').map((paragraph, idx) => (
+              <p key={idx} className={idx > 0 ? "mt-2.5 text-sm sm:text-base text-[#5A5046] font-normal" : ""}>
+                {paragraph}
+              </p>
+            ))
           )}
-        </p>
-
-        {/* Artisan Highlights Bar */}
-        <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-xl mx-auto border-t border-[#E5DAC8] pt-8 text-center sm:text-left">
-
-          <div className="bg-white rounded-2xl p-4 border border-[#E0D5C3] shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-3">
-            <div className="p-2.5 rounded-xl bg-[#C24D2C]/10 text-[#C24D2C] shrink-0">
-              <Clock className="w-5 h-5" />
-            </div>
-
-            <div className="flex flex-col items-center sm:items-start">
-              <p className="text-xs uppercase font-bold text-[#C24D2C] tracking-wider">Fermentação</p>
-              <p className="text-sm font-bold text-[#181513]">
-                {siteInfo?.heroFermentationHighlight || '72 Horas Lenta'}
-              </p>
-              <p className="text-[11px] text-[#6B6158]">
-                {siteInfo?.heroFermentationSubtext || 'Leve e digestiva'}
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-4 border border-[#E0D5C3] shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-3">
-            <div className="p-2.5 rounded-xl bg-[#C24D2C]/10 text-[#C24D2C] shrink-0">
-              <Flame className="w-5 h-5 animate-pulse" />
-            </div>
-
-            <div className="flex flex-col items-center sm:items-start">
-              <p className="text-xs uppercase font-bold text-[#C24D2C] tracking-wider">Forno a Lenha</p>
-              <p className="text-sm font-bold text-[#181513]">
-                {siteInfo?.heroOvenHighlight || '430°C em 90s'}
-              </p>
-              <p className="text-[11px] text-[#6B6158]">
-                {siteInfo?.heroOvenSubtext || 'Pedra vulcânica'}
-              </p>
-            </div>
-          </div>
         </div>
 
         {/* CONTACT FORM */}
@@ -321,13 +353,47 @@ export const Hero: React.FC<HeroProps> = ({
               <div
                 role="status"
                 aria-live="polite"
-                className={`rounded-xl p-3 text-sm font-medium ${
+                className={`rounded-2xl p-4 text-sm font-medium space-y-3 ${
                   feedback.type === 'success'
-                    ? 'bg-emerald-50 border border-emerald-300 text-emerald-800'
+                    ? 'bg-emerald-50 border border-emerald-300 text-emerald-900 shadow-xs'
                     : 'bg-rose-50 border border-rose-300 text-rose-800'
                 }`}
               >
-                {feedback.message}
+                <div className="flex items-start gap-2.5">
+                  {feedback.type === 'success' && (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1 text-left">
+                    <p className="font-bold text-emerald-950">{feedback.message}</p>
+                    {feedback.type === 'success' && submittedData && (
+                      <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
+                        Despachada para <strong>{submittedData.recipientEmail}</strong>. Verifique sua caixa de entrada (ou pasta de Spam/Lixo Eletrônico).
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {feedback.type === 'success' && submittedData && (
+                  <div className="pt-2 border-t border-emerald-200/70 flex flex-wrap gap-2">
+                    <a
+                      href={`mailto:${submittedData.recipientEmail}?subject=${encodeURIComponent(submittedData.subject || 'Contato pelo site - Deolinda Pizzaria')}&body=${encodeURIComponent(`Nome: ${submittedData.name}\nE-mail: ${submittedData.email}\nTelefone: ${submittedData.phone || 'Não informado'}\n\nMensagem:\n${submittedData.message}`)}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-emerald-300 hover:bg-emerald-100 text-emerald-900 text-xs font-bold transition-all shadow-2xs"
+                    >
+                      <Mail className="w-3.5 h-3.5 text-emerald-700" />
+                      <span>Abrir no App de E-mail (Gmail/Outlook)</span>
+                    </a>
+
+                    <a
+                      href={`https://wa.me/${(siteInfo?.whatsappNumber || '5511915331853').replace(/\D/g, '')}?text=${encodeURIComponent(`Olá, sou ${submittedData.name}! Enviei a seguinte mensagem pelo formulário do site:\n\n*Assunto:* ${submittedData.subject || 'Contato'}\n*Mensagem:* ${submittedData.message}`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-2xs"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>Enviar cópia pelo WhatsApp</span>
+                    </a>
+                  </div>
+                )}
               </div>
             )}
 

@@ -63,7 +63,7 @@ export const StorySection: React.FC<StorySectionProps> = ({ siteInfo }) => {
               </p>
             </div>
 
-            {/* 4 Pillars of Excellence */}
+            {/* Pillars of Excellence */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
               {ARTISAN_PILLARS.map((pillar, pIdx) => (
                 <div

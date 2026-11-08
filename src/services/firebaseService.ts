@@ -554,16 +554,39 @@ export async function uploadMenuImageToServer(imageBase64: string, itemId?: stri
     return imageBase64;
   }
   try {
-    const data = await safeFetchJson<{ imageUrl?: string }>('/api/settings/upload-menu-image', {
+    const data = await safeFetchJson<{ imageUrl?: string; url?: string }>('/api/settings/upload-menu-image', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ imageBase64, itemId })
     });
-    if (data && data.imageUrl) {
-      return data.imageUrl;
+    if (data && (data.imageUrl || data.url)) {
+      return data.imageUrl || data.url || imageBase64;
     }
   } catch (err) {
     console.warn('[Upload Image] Server image upload notice:', err);
+  }
+  return imageBase64;
+}
+
+/**
+ * Uploads a base64 gallery image to the server, which converts it to a permanent static file
+ * in public/gallery_images and returns the clean URL (/gallery_images/moment-<id>.jpg).
+ */
+export async function uploadGalleryImageToServer(imageBase64: string, postId?: string): Promise<string> {
+  if (!imageBase64 || !imageBase64.startsWith('data:image/')) {
+    return imageBase64;
+  }
+  try {
+    const data = await safeFetchJson<{ imageUrl?: string; url?: string }>('/api/settings/upload-gallery-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64, postId })
+    });
+    if (data && (data.imageUrl || data.url)) {
+      return data.imageUrl || data.url || imageBase64;
+    }
+  } catch (err) {
+    console.warn('[Upload Gallery] Server image upload notice:', err);
   }
   return imageBase64;
 }
@@ -797,9 +820,11 @@ export async function saveGalleryPostsToFirestore(posts: SocialPost[]): Promise<
     console.warn('[Backend] Gallery save error:', e);
   }
 
-  // Local storage fallback
+  // Local storage fallback (sync both keys for 100% compatibility across components)
   try {
-    localStorage.setItem('deolinda_custom_social_posts', JSON.stringify(posts));
+    const jsonStr = JSON.stringify(posts);
+    localStorage.setItem('deolinda_custom_social_posts', jsonStr);
+    localStorage.setItem('deolinda_custom_gallery_posts', jsonStr);
   } catch {}
 }
 
@@ -1319,7 +1344,9 @@ export function enqueueEmblemSave(emblemUrl: string | null, enabled: boolean): v
  */
 export function enqueueGalleryPostsSave(posts: SocialPost[]): void {
   try {
-    localStorage.setItem('deolinda_custom_gallery_posts', JSON.stringify(posts));
+    const jsonStr = JSON.stringify(posts);
+    localStorage.setItem('deolinda_custom_gallery_posts', jsonStr);
+    localStorage.setItem('deolinda_custom_social_posts', jsonStr);
   } catch {}
 
   saveQueue.enqueue({
@@ -1351,9 +1378,100 @@ export async function saveContactMessageToFirestore(messageData: {
       read: false,
       _serverTimestamp: serverTimestamp()
     });
+
+    // Also write to standard `mail` collection for Firebase Trigger Email extension
+    try {
+      const mailDocRef = doc(db, 'mail', msgId);
+      await setDoc(mailDocRef, {
+        to: ['antonioestefanoprando@gmail.com', 'contato@deolindapizzaria.com.br'],
+        message: {
+          subject: `[Deolinda Pizzaria] Nova mensagem de ${messageData.name}: ${messageData.subject || 'Fale Conosco'}`,
+          text: `Nova mensagem recebida pelo site da Deolinda Pizzaria.\n\nNome: ${messageData.name}\nE-mail: ${messageData.email}\nTelefone: ${messageData.phone || 'Não informado'}\nAssunto: ${messageData.subject || 'Fale Conosco'}\n\nMensagem:\n${messageData.message}`,
+          html: `<h2>Nova Mensagem pelo site Deolinda Pizzaria</h2><p><strong>Nome:</strong> ${messageData.name}</p><p><strong>E-mail:</strong> ${messageData.email}</p><p><strong>Telefone:</strong> ${messageData.phone || 'Não informado'}</p><p><strong>Assunto:</strong> ${messageData.subject || 'Fale Conosco'}</p><hr/><p><strong>Mensagem:</strong></p><p>${messageData.message.replace(/\n/g, '<br/>')}</p>`
+        },
+        createdAt: new Date().toISOString()
+      });
+    } catch {}
+
     console.log('[Firestore] Contact message saved to Cloud Firestore successfully:', msgId);
   } catch (error: any) {
     console.warn('[Firestore] Notice while saving contact message to Firestore:', error?.message || error);
+  }
+}
+
+export interface ContactMessageRecord {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  subject?: string;
+  message: string;
+  createdAt: string;
+  read?: boolean;
+}
+
+/**
+ * Subscribes to customer contact messages from Cloud Firestore in real time.
+ */
+export function subscribeToContactMessages(
+  onUpdate: (messages: ContactMessageRecord[]) => void
+): () => void {
+  try {
+    const msgCol = collection(db, 'messages');
+    const unsubscribe = onSnapshot(
+      msgCol,
+      (snapshot) => {
+        const list: ContactMessageRecord[] = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          if (data && data.name && data.message) {
+            list.push({
+              id: docSnap.id,
+              name: data.name,
+              email: data.email || '',
+              phone: data.phone || '',
+              subject: data.subject || '',
+              message: data.message || '',
+              createdAt: data.createdAt || new Date().toISOString(),
+              read: Boolean(data.read)
+            });
+          }
+        });
+        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        onUpdate(list);
+      },
+      (err) => {
+        console.warn('[Firestore] Messages subscription notice:', err?.message || err);
+      }
+    );
+    return unsubscribe;
+  } catch (err) {
+    console.warn('[Firestore] Could not establish messages subscription:', err);
+    return () => {};
+  }
+}
+
+/**
+ * Marks a contact message as read in Cloud Firestore.
+ */
+export async function markContactMessageAsRead(id: string): Promise<void> {
+  try {
+    const msgRef = doc(db, 'messages', id);
+    await updateDoc(msgRef, { read: true });
+  } catch (err) {
+    console.warn('[Firestore] Error marking message as read:', err);
+  }
+}
+
+/**
+ * Deletes a contact message from Cloud Firestore.
+ */
+export async function deleteContactMessageFromFirestore(id: string): Promise<void> {
+  try {
+    const msgRef = doc(db, 'messages', id);
+    await deleteDoc(msgRef);
+  } catch (err) {
+    console.warn('[Firestore] Error deleting message:', err);
   }
 }
 
