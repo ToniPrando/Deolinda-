@@ -909,6 +909,7 @@ export default function App() {
               customEmblemUrl={customEmblemUrl}
               isEmblemEnabled={isEmblemEnabled}
               siteInfo={siteInfo}
+              onNavigate={handleNavigate}
             />
             {/* Galeria de Fotos e Momentos da Pizzaria na Página Inicial */}
             <SocialFeedSection posts={socialPosts} />

@@ -11,6 +11,7 @@ interface HeroProps {
   onOpenMenu?: () => void;
   onOpenReservation?: () => void;
   onOpenConcierge?: () => void;
+  onNavigate?: (id: string, pathOverride?: string) => void;
   customLogoUrl?: string | null;
   customEmblemUrl?: string | null;
   isEmblemEnabled?: boolean;
@@ -21,7 +22,8 @@ export const Hero: React.FC<HeroProps> = ({
   customLogoUrl,
   customEmblemUrl,
   isEmblemEnabled = true,
-  siteInfo
+  siteInfo,
+  onNavigate
 }) => {
   const [isSending, setIsSending] = useState(false);
   const [feedback, setFeedback] = useState<{

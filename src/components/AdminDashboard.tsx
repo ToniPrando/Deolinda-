@@ -63,6 +63,7 @@ import {
   uploadGalleryImageToServer,
   enqueueMenuItemSave,
   enqueueMenuItemDelete,
+  enqueueGalleryPostsSave,
   saveQueue,
   saveGalleryPostsToFirestore,
   saveSiteInfoToFirestore,
@@ -791,14 +792,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       if (onSocialPostsUpdated) {
         onSocialPostsUpdated(updatedPosts);
       }
-      await saveGalleryPostsToFirestore(updatedPosts);
       setIsPostModalOpen(false);
       setEditingPost(null);
+      setIsSavingPost(false);
       setTimeout(() => setGalleryNotice(null), 5000);
+
+      // Background non-blocking persistence
+      enqueueGalleryPostsSave(updatedPosts);
     } catch (err: any) {
       console.error('Erro ao salvar foto na galeria:', err);
       setPostFormError('Erro ao salvar foto. Tente novamente.');
-    } finally {
       setIsSavingPost(false);
     }
   };
@@ -811,15 +814,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       if (onSocialPostsUpdated) {
         onSocialPostsUpdated(updated);
       }
-      await saveGalleryPostsToFirestore(updated);
       setPostToDelete(null);
       setConfirmDeletePostId(null);
       setGalleryNotice({ type: 'success', text: 'Foto removida com sucesso da galeria!' });
+      setIsDeletingPost(false);
       setTimeout(() => setGalleryNotice(null), 5000);
+
+      // Background non-blocking persistence
+      enqueueGalleryPostsSave(updated);
     } catch (err) {
       console.error('Erro ao excluir foto:', err);
       setGalleryNotice({ type: 'error', text: 'Erro ao remover foto. Tente novamente.' });
-    } finally {
       setIsDeletingPost(false);
     }
   };
@@ -870,7 +875,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [isSavingSiteInfo, setIsSavingSiteInfo] = useState(false);
   const [isConfirmingResetSiteInfo, setIsConfirmingResetSiteInfo] = useState(false);
 
-  const handleUpdateSiteInfoField = (field: keyof SiteInfo, value: string) => {
+  const handleUpdateSiteInfoField = (field: keyof SiteInfo, value: any) => {
     setCurrentSiteInfo(prev => ({
       ...prev,
       [field]: value
@@ -2388,53 +2393,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       placeholder="WhatsApp (11) 91533-1853"
                       className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
                     />
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-[#F0EAE1]">
-                  <h6 className="font-bold text-xs uppercase tracking-wider text-[#181513] mb-4">
-                    Cartões de Destaque no Hero (2 Cartões)
-                  </h6>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
-                    
-                    {/* Destaque 1 */}
-                    <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E0D5C3] space-y-2">
-                      <span className="text-[11px] font-bold text-[#C24D2C] uppercase">1. Fermentação</span>
-                      <input
-                        type="text"
-                        value={currentSiteInfo.heroFermentationHighlight}
-                        onChange={(e) => handleUpdateSiteInfoField('heroFermentationHighlight', e.target.value)}
-                        placeholder="72 Horas Lenta"
-                        className="w-full px-3 py-1.5 rounded-lg bg-white border border-[#E0D5C3] text-xs font-bold"
-                      />
-                      <input
-                        type="text"
-                        value={currentSiteInfo.heroFermentationSubtext}
-                        onChange={(e) => handleUpdateSiteInfoField('heroFermentationSubtext', e.target.value)}
-                        placeholder="Leve e digestiva"
-                        className="w-full px-3 py-1.5 rounded-lg bg-white border border-[#E0D5C3] text-xs"
-                      />
-                    </div>
-
-                    {/* Destaque 2 */}
-                    <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E0D5C3] space-y-2">
-                      <span className="text-[11px] font-bold text-[#C24D2C] uppercase">2. Forno Napoletano</span>
-                      <input
-                        type="text"
-                        value={currentSiteInfo.heroOvenHighlight}
-                        onChange={(e) => handleUpdateSiteInfoField('heroOvenHighlight', e.target.value)}
-                        placeholder="430°C em 90s"
-                        className="w-full px-3 py-1.5 rounded-lg bg-white border border-[#E0D5C3] text-xs font-bold"
-                      />
-                      <input
-                        type="text"
-                        value={currentSiteInfo.heroOvenSubtext}
-                        onChange={(e) => handleUpdateSiteInfoField('heroOvenSubtext', e.target.value)}
-                        placeholder="Pedra vulcânica"
-                        className="w-full px-3 py-1.5 rounded-lg bg-white border border-[#E0D5C3] text-xs"
-                      />
-                    </div>
-
                   </div>
                 </div>
 
