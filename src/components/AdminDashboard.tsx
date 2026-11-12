@@ -788,17 +788,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         setGalleryNotice({ type: 'success', text: 'Nova foto cadastrada com sucesso na galeria!' });
       }
 
-      setCurrentSocialPosts(updatedPosts);
+      // Synchronous persistence to backend and Cloud Firestore
+      const cleanSavedPosts = await saveGalleryPostsToFirestore(updatedPosts);
+
+      setCurrentSocialPosts(cleanSavedPosts);
       if (onSocialPostsUpdated) {
-        onSocialPostsUpdated(updatedPosts);
+        onSocialPostsUpdated(cleanSavedPosts);
       }
       setIsPostModalOpen(false);
       setEditingPost(null);
       setIsSavingPost(false);
       setTimeout(() => setGalleryNotice(null), 5000);
-
-      // Background non-blocking persistence
-      enqueueGalleryPostsSave(updatedPosts);
     } catch (err: any) {
       console.error('Erro ao salvar foto na galeria:', err);
       setPostFormError('Erro ao salvar foto. Tente novamente.');
@@ -810,18 +810,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setIsDeletingPost(true);
     try {
       const updated = currentSocialPosts.filter(p => p.id !== id);
-      setCurrentSocialPosts(updated);
+      const cleanSavedPosts = await saveGalleryPostsToFirestore(updated);
+      setCurrentSocialPosts(cleanSavedPosts);
       if (onSocialPostsUpdated) {
-        onSocialPostsUpdated(updated);
+        onSocialPostsUpdated(cleanSavedPosts);
       }
       setPostToDelete(null);
       setConfirmDeletePostId(null);
       setGalleryNotice({ type: 'success', text: 'Foto removida com sucesso da galeria!' });
       setIsDeletingPost(false);
       setTimeout(() => setGalleryNotice(null), 5000);
-
-      // Background non-blocking persistence
-      enqueueGalleryPostsSave(updated);
     } catch (err) {
       console.error('Erro ao excluir foto:', err);
       setGalleryNotice({ type: 'error', text: 'Erro ao remover foto. Tente novamente.' });

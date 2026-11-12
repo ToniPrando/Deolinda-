@@ -795,11 +795,37 @@ export function subscribeToMenuItems(
 /**
  * Saves the full gallery / Fotos & Momentos posts collection to Cloud Firestore, backend, and localStorage.
  */
-export async function saveGalleryPostsToFirestore(posts: SocialPost[]): Promise<void> {
+export async function saveGalleryPostsToFirestore(posts: SocialPost[]): Promise<SocialPost[]> {
+  let cleanPosts: SocialPost[] = [...posts];
+
+  // 1. Synchronize with backend API first so any base64 images are converted to permanent static files on disk
+  try {
+    const data = await safeFetchJson<{ success?: boolean; posts?: SocialPost[] }>('/api/settings/gallery', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ posts })
+    });
+    if (data && Array.isArray(data.posts) && data.posts.length > 0) {
+      cleanPosts = data.posts;
+    }
+  } catch (backendErr) {
+    console.warn('[Backend] Gallery save notice:', backendErr);
+  }
+
+  // 2. Local storage fallback (sync both keys with clean URLs)
+  try {
+    const jsonStr = JSON.stringify(cleanPosts);
+    localStorage.setItem('deolinda_custom_social_posts', jsonStr);
+    localStorage.setItem('deolinda_custom_gallery_posts', jsonStr);
+  } catch (localErr) {
+    console.warn('[LocalStorage] Gallery save notice:', localErr);
+  }
+
+  // 3. Save to Cloud Firestore with clean lightweight URLs (never exceeds 1MB quota limit)
   try {
     const galleryDocRef = doc(db, 'settings', 'gallery');
     await setDoc(galleryDocRef, {
-      posts,
+      posts: cleanPosts,
       updatedAt: new Date().toISOString(),
       type: 'gallery_posts',
       _serverTimestamp: serverTimestamp()
@@ -809,23 +835,7 @@ export async function saveGalleryPostsToFirestore(posts: SocialPost[]): Promise<
     console.warn('[Firestore] Notice while saving gallery posts to Firestore:', error?.message || error);
   }
 
-  // Backup to Express backend API
-  try {
-    await fetch('/api/settings/gallery', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ posts })
-    });
-  } catch (e) {
-    console.warn('[Backend] Gallery save error:', e);
-  }
-
-  // Local storage fallback (sync both keys for 100% compatibility across components)
-  try {
-    const jsonStr = JSON.stringify(posts);
-    localStorage.setItem('deolinda_custom_social_posts', jsonStr);
-    localStorage.setItem('deolinda_custom_gallery_posts', jsonStr);
-  } catch {}
+  return cleanPosts;
 }
 
 /**
@@ -843,16 +853,38 @@ export function subscribeToGalleryPosts(
           onUpdate(data.posts);
           try {
             localStorage.setItem('deolinda_custom_social_posts', JSON.stringify(data.posts));
+            localStorage.setItem('deolinda_custom_gallery_posts', JSON.stringify(data.posts));
           } catch {}
+          return;
         }
       }
+      // Fallback: fetch from backend API if doc does not exist or is empty
+      safeFetchJson<{ posts?: SocialPost[] }>('/api/settings/gallery').then(data => {
+        if (data && Array.isArray(data.posts) && data.posts.length > 0) {
+          onUpdate(data.posts);
+          try {
+            localStorage.setItem('deolinda_custom_social_posts', JSON.stringify(data.posts));
+            localStorage.setItem('deolinda_custom_gallery_posts', JSON.stringify(data.posts));
+          } catch {}
+        }
+      });
     }, (err) => {
       console.warn('[Firestore] Gallery subscription notice:', err?.message || err);
+      safeFetchJson<{ posts?: SocialPost[] }>('/api/settings/gallery').then(data => {
+        if (data && Array.isArray(data.posts) && data.posts.length > 0) {
+          onUpdate(data.posts);
+        }
+      });
     });
 
     return unsubscribe;
   } catch (err) {
     console.warn('[Firestore] Gallery subscribe error:', err);
+    safeFetchJson<{ posts?: SocialPost[] }>('/api/settings/gallery').then(data => {
+      if (data && Array.isArray(data.posts) && data.posts.length > 0) {
+        onUpdate(data.posts);
+      }
+    });
     return () => {};
   }
 }

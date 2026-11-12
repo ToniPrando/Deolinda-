@@ -648,6 +648,29 @@ app.post("/api/settings/upload-menu-image", (req, res) => {
 });
 
 // Dedicated Fast Upload Gallery Image API (Fotos & Momentos)
+function processGalleryPostImage(post: any): any {
+  if (!post || !post.imageUrl) return post;
+  if (typeof post.imageUrl === "string" && post.imageUrl.startsWith("data:image/")) {
+    try {
+      const match = post.imageUrl.match(/^data:image\/(\w+);base64,(.+)$/);
+      if (match) {
+        const ext = match[1] === "jpeg" ? "jpg" : match[1];
+        const targetDir = path.join(process.cwd(), "public", "gallery_images");
+        if (!fs.existsSync(targetDir)) {
+          fs.mkdirSync(targetDir, { recursive: true });
+        }
+        const filename = `${post.id || `moment_${Date.now()}`}.${ext}`;
+        const filePath = path.join(targetDir, filename);
+        fs.writeFileSync(filePath, Buffer.from(match[2], "base64"));
+        post.imageUrl = `/gallery_images/${filename}?v=${Date.now()}`;
+      }
+    } catch (imgErr) {
+      console.warn("[Server] Error saving gallery image to disk:", imgErr);
+    }
+  }
+  return post;
+}
+
 app.post("/api/settings/upload-gallery-image", (req, res) => {
   try {
     const { imageBase64, postId } = req.body;
@@ -736,9 +759,10 @@ app.post("/api/settings/gallery", (req, res) => {
   try {
     const { posts } = req.body;
     if (Array.isArray(posts)) {
-      (db as any).galleryPosts = posts;
+      const processedPosts = posts.map(processGalleryPostImage);
+      (db as any).galleryPosts = processedPosts;
       saveDatabase();
-      return res.json({ success: true, count: posts.length });
+      return res.json({ success: true, count: processedPosts.length, posts: processedPosts });
     }
     return res.status(400).json({ error: "Invalid posts array" });
   } catch (error: any) {

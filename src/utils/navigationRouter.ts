@@ -29,8 +29,8 @@ export const APP_ROUTES: RouteConfig[] = [
   {
     id: 'galeria',
     path: '/galeria',
-    title: 'Fotos & Momentos (#DeolindaNapoletana) | Deolinda Pizzaria Napoletana',
-    aliases: ['/fotos', '/momentos', '/instagram', '/feed']
+    title: 'Galeria de Momentos | Deolinda Pizzaria Napoletana',
+    aliases: ['/galeria-de-momentos', '/fotos', '/momentos', '/instagram', '/feed']
   },
   {
     id: 'localizacao',

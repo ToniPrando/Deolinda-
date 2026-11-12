@@ -173,9 +173,9 @@ export const Hero: React.FC<HeroProps> = ({
       {/* Hero Content Container */}
       <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 sm:pt-4 pb-6 text-center flex flex-col items-center">
 
-        {/* Logo Deolinda - Reduzido em 25% para proporção ideal e limpo */}
+        {/* Logo Deolinda - Reduzido em 10% para harmonia e proporção ideal */}
         <div className="flex flex-col items-center justify-center mb-6 w-full group">
-          <div className="w-44 h-44 sm:w-60 sm:h-60 md:w-72 md:h-72 lg:w-[315px] lg:h-[315px] flex items-center justify-center transform group-hover:scale-105 transition-transform duration-300 shrink-0 mb-4">
+          <div className="w-[158px] h-[158px] sm:w-[216px] sm:h-[216px] md:w-[259px] md:h-[259px] lg:w-[283px] lg:h-[283px] flex items-center justify-center transform group-hover:scale-105 transition-transform duration-300 shrink-0 mb-4">
             <img
               src={customLogoUrl || "/deolinda_logo.png"}
               alt="Logo Deolinda Pizzaria"
