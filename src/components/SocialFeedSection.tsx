@@ -11,6 +11,7 @@ import { SocialPost } from '../types';
 import { SOCIAL_POSTS } from '../data/socialData';
 import { LazyGalleryImage } from './LazyGalleryImage';
 import { PhotoLightbox } from './PhotoLightbox';
+import { migrateCachedGalleryImageToFirestore } from '../services/firebaseService';
 
 interface SocialFeedSectionProps {
   posts?: SocialPost[];
@@ -166,6 +167,9 @@ export const SocialFeedSection: React.FC<SocialFeedSectionProps> = ({ posts }) =
                     alt={post.caption}
                     aspectRatioClass="h-full w-full"
                     className="group-hover:scale-108 transition-transform duration-500"
+                    onRelativeImageLoaded={(portableDataUrl) => {
+                      migrateCachedGalleryImageToFirestore(post, portableDataUrl);
+                    }}
                   />
 
                   {/* Gradiente escuro para legibilidade */}

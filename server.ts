@@ -647,27 +647,8 @@ app.post("/api/settings/upload-menu-image", (req, res) => {
   }
 });
 
-// Dedicated Fast Upload Gallery Image API (Fotos & Momentos)
+// Keep gallery post image URLs portable (base64 data URLs or https URLs) so all devices and containers render them reliably
 function processGalleryPostImage(post: any): any {
-  if (!post || !post.imageUrl) return post;
-  if (typeof post.imageUrl === "string" && post.imageUrl.startsWith("data:image/")) {
-    try {
-      const match = post.imageUrl.match(/^data:image\/(\w+);base64,(.+)$/);
-      if (match) {
-        const ext = match[1] === "jpeg" ? "jpg" : match[1];
-        const targetDir = path.join(process.cwd(), "public", "gallery_images");
-        if (!fs.existsSync(targetDir)) {
-          fs.mkdirSync(targetDir, { recursive: true });
-        }
-        const filename = `${post.id || `moment_${Date.now()}`}.${ext}`;
-        const filePath = path.join(targetDir, filename);
-        fs.writeFileSync(filePath, Buffer.from(match[2], "base64"));
-        post.imageUrl = `/gallery_images/${filename}?v=${Date.now()}`;
-      }
-    } catch (imgErr) {
-      console.warn("[Server] Error saving gallery image to disk:", imgErr);
-    }
-  }
   return post;
 }
 

@@ -387,8 +387,16 @@ export default function App() {
     // 4. Fetch gallery posts from backend API
     safeFetchJson<{ posts?: SocialPost[] }>('/api/settings/gallery').then(data => {
       if (data && Array.isArray(data.posts) && data.posts.length > 0) {
-        setSocialPosts(data.posts);
-        localStorage.setItem('deolinda_custom_social_posts', JSON.stringify(data.posts));
+        setSocialPosts(prev => {
+          // Prefer Firestore real-time posts if they already contain portable data URLs
+          const prevHasDataUrls = prev.some(p => p.imageUrl?.startsWith('data:image/'));
+          const apiHasDataUrls = data.posts!.some(p => p.imageUrl?.startsWith('data:image/'));
+          if (prevHasDataUrls && !apiHasDataUrls) return prev;
+          return data.posts!;
+        });
+        try {
+          localStorage.setItem('deolinda_custom_social_posts', JSON.stringify(data.posts));
+        } catch {}
       }
     });
 
@@ -404,7 +412,9 @@ export default function App() {
       if (data && data.siteInfo && typeof data.siteInfo === 'object') {
         const cleaned = cleanSiteInfoSubtitle({ ...DEFAULT_SITE_INFO, ...data.siteInfo });
         setSiteInfo(cleaned);
-        localStorage.setItem('deolinda_custom_site_info', JSON.stringify(cleaned));
+        try {
+          localStorage.setItem('deolinda_custom_site_info', JSON.stringify(cleaned));
+        } catch {}
       }
     });
 
@@ -413,7 +423,9 @@ export default function App() {
       if (info && typeof info === 'object') {
         const cleaned = cleanSiteInfoSubtitle({ ...DEFAULT_SITE_INFO, ...info });
         setSiteInfo(cleaned);
-        localStorage.setItem('deolinda_custom_site_info', JSON.stringify(cleaned));
+        try {
+          localStorage.setItem('deolinda_custom_site_info', JSON.stringify(cleaned));
+        } catch {}
       }
     });
 
@@ -424,7 +436,9 @@ export default function App() {
           .filter((c: any) => c && c.id !== 'antipasti' && c.label !== 'Entradas & Aperitivos')
           .map((c: any) => c.id === 'bevande' ? { ...c, label: 'Bebidas' } : c);
         setMenuCategories(cleaned);
-        localStorage.setItem('deolinda_custom_menu_categories', JSON.stringify(cleaned));
+        try {
+          localStorage.setItem('deolinda_custom_menu_categories', JSON.stringify(cleaned));
+        } catch {}
       }
     });
 
@@ -491,7 +505,6 @@ export default function App() {
       localStorage.setItem('deolinda_custom_gallery_posts', jsonStr);
       localStorage.setItem('deolinda_custom_social_posts', jsonStr);
     } catch {}
-    enqueueGalleryPostsSave(updatedPosts);
   };
 
   const handleLogoUpdated = (newUrl: string | null) => {

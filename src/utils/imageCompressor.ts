@@ -69,3 +69,101 @@ export async function compressImageFile(
     reader.readAsDataURL(file);
   });
 }
+
+/**
+ * Encodes an already-loaded HTMLImageElement into an optimized JPEG data URL
+ * safely under the target byte limit for Cloud Firestore storage.
+ */
+export function compressImageElementToDataUrl(
+  img: HTMLImageElement,
+  maxBytes = 420000
+): string | null {
+  try {
+    if (!img || !img.complete || img.naturalWidth === 0 || img.naturalHeight === 0) {
+      return null;
+    }
+
+    const attempts = [
+      { maxDim: 760, quality: 0.76 },
+      { maxDim: 620, quality: 0.68 },
+      { maxDim: 500, quality: 0.58 },
+      { maxDim: 400, quality: 0.5 }
+    ];
+
+    for (const { maxDim, quality } of attempts) {
+      let width = img.naturalWidth;
+      let height = img.naturalHeight;
+
+      if (width > maxDim || height > maxDim) {
+        if (width > height) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(width, 1);
+      canvas.height = Math.max(height, 1);
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const dataUrl = canvas.toDataURL('image/jpeg', quality);
+      if (dataUrl.length <= maxBytes) {
+        return dataUrl;
+      }
+    }
+
+    // Final guaranteed compact fallback
+    const canvas = document.createElement('canvas');
+    canvas.width = 360;
+    canvas.height = Math.max(1, Math.round((img.naturalHeight * 360) / img.naturalWidth));
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.45);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Compresses an uploaded File or existing data:image URL so it is guaranteed
+ * to fit comfortably inside a single Cloud Firestore document (< 420KB).
+ */
+export async function compressImageForFirestore(
+  source: File | string,
+  maxBytes = 420000
+): Promise<string> {
+  if (typeof source === 'string') {
+    if (!source.startsWith('data:image/') || source.length <= maxBytes) {
+      return source;
+    }
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const compressed = compressImageElementToDataUrl(img, maxBytes);
+        resolve(compressed || source);
+      };
+      img.onerror = () => resolve(source);
+      img.src = source;
+    });
+  }
+
+  let result = await compressImageFile(source, 760, 760, 0.76);
+  if (result.length > maxBytes) {
+    result = await compressImageFile(source, 600, 600, 0.65);
+  }
+  if (result.length > maxBytes) {
+    result = await compressImageFile(source, 460, 460, 0.55);
+  }
+  return result;
+}
+

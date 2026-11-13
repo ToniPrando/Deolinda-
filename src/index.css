@@ -31,6 +31,16 @@ html {
   color-scheme: light;
 }
 
+::selection {
+  background-color: #22d3ee;
+  color: #082f49;
+}
+
+::-moz-selection {
+  background-color: #22d3ee;
+  color: #082f49;
+}
+
 .dark .text-\[\#1E1B18\] {
   color: #FAF7F2 !important;
 }

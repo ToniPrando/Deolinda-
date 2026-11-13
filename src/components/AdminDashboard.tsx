@@ -60,7 +60,6 @@ import {
   saveSingleMenuItemToFirestore,
   deleteSingleMenuItemFromFirestore,
   uploadMenuImageToServer,
-  uploadGalleryImageToServer,
   enqueueMenuItemSave,
   enqueueMenuItemDelete,
   enqueueGalleryPostsSave,
@@ -75,7 +74,7 @@ import {
   deleteContactMessageFromFirestore
 } from '../services/firebaseService';
 import { TricolorBands } from './TricolorBands';
-import { compressImageFile } from '../utils/imageCompressor';
+import { compressImageFile, compressImageForFirestore } from '../utils/imageCompressor';
 
 interface AdminDashboardProps {
   isOpen: boolean;
@@ -712,13 +711,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setIsProcessingPostImage(true);
       setPostFormError(null);
       try {
-        // Compress client-side automatically to ~60KB to ensure smooth persistence
-        const compressedBase64 = await compressImageFile(file, 950, 950, 0.82);
-        // Try uploading to backend for static file URL if server is running
-        const finalUrl = await uploadGalleryImageToServer(compressedBase64, `moment_${Date.now()}`);
+        // Compress client-side automatically to fit cleanly inside a Cloud Firestore document (< 420KB)
+        // Keeping portable data:image/jpeg;base64 guarantees visibility across ALL devices & browsers
+        const portableDataUrl = await compressImageForFirestore(file, 420000);
         setPostFormData(prev => ({
           ...prev,
-          imageUrl: finalUrl,
+          imageUrl: portableDataUrl,
           caption: prev.caption ? prev.caption : 'Momento especial na Deolinda Pizzaria Napoletana 🍕❤️'
         }));
       } catch (err) {
@@ -755,10 +753,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setIsSavingPost(true);
     try {
       let finalImageUrl = rawUrl;
-      // If it's a raw base64 data URL, upload to static backend storage if available
+      // Ensure any base64 data URL fits comfortably inside a Cloud Firestore document (< 420KB)
       if (finalImageUrl.startsWith('data:image/')) {
         try {
-          finalImageUrl = await uploadGalleryImageToServer(finalImageUrl, editingPost ? editingPost.id : `moment_${Date.now()}`);
+          finalImageUrl = await compressImageForFirestore(finalImageUrl, 420000);
         } catch {}
       }
 

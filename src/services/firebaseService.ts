@@ -792,27 +792,80 @@ export function subscribeToMenuItems(
   }
 }
 
+const migratedGalleryPostIds = new Set<string>();
+
 /**
- * Saves the full gallery / Fotos & Momentos posts collection to Cloud Firestore, backend, and localStorage.
+ * Sanitizes a SocialPost object for Cloud Firestore (removes undefined fields).
+ */
+export function sanitizeGalleryPostForFirestore(
+  post: SocialPost,
+  orderIndex = 0
+): Record<string, any> {
+  return {
+    id: String(post.id || `post-${Date.now()}`),
+    imageUrl: String(post.imageUrl || ''),
+    caption: String(post.caption || 'Momento especial na Deolinda Pizzaria Napoletana 🍕❤️'),
+    author: String(post.author || '@deolindapizzaria'),
+    timestamp: String(post.timestamp || 'Recente'),
+    tags: Array.isArray(post.tags) ? post.tags.map(String) : ['#DeolindaNapoletana'],
+    likes: typeof post.likes === 'number' && !isNaN(post.likes) ? post.likes : 100,
+    isHotOutOfOven: Boolean(post.isHotOutOfOven),
+    orderIndex: Number(orderIndex),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+/**
+ * Migrates a locally-cached `/gallery_images/...` photo (from the uploading device's browser cache)
+ * into a portable base64 Cloud Firestore document in `gallery_posts/{post.id}` so all other devices see it.
+ */
+export async function migrateCachedGalleryImageToFirestore(
+  post: SocialPost,
+  portableDataUrl: string
+): Promise<void> {
+  if (!post?.id || !portableDataUrl || !portableDataUrl.startsWith('data:image/')) {
+    return;
+  }
+  if (migratedGalleryPostIds.has(post.id)) {
+    return;
+  }
+  migratedGalleryPostIds.add(post.id);
+
+  try {
+    const cleanPost = sanitizeGalleryPostForFirestore(
+      { ...post, imageUrl: portableDataUrl },
+      0
+    );
+    const postDocRef = doc(db, 'gallery_posts', cleanPost.id);
+    await setDoc(
+      postDocRef,
+      {
+        ...cleanPost,
+        _migratedFromCache: true,
+        _serverTimestamp: serverTimestamp()
+      },
+      { merge: true }
+    );
+    console.log(`[Firestore] Migrated cached gallery image "${cleanPost.id}" to Cloud Firestore for all devices.`);
+  } catch (error: any) {
+    migratedGalleryPostIds.delete(post.id);
+    console.warn('[Firestore] Notice migrating cached gallery photo:', error?.message || error);
+  }
+}
+
+/**
+ * Saves the full gallery / Fotos & Momentos posts collection across:
+ * 1. Individual Cloud Firestore documents (`gallery_posts/{post.id}`) so each compressed image
+ *    fits comfortably under Firestore's 1MB limit and syncs in real time to ALL devices.
+ * 2. Lightweight manifest in `settings/gallery` (`useCollection: true`, `activeIds`).
+ * 3. Express backend (`/api/settings/gallery`) & localStorage fallback.
  */
 export async function saveGalleryPostsToFirestore(posts: SocialPost[]): Promise<SocialPost[]> {
-  let cleanPosts: SocialPost[] = [...posts];
+  const cleanPosts: SocialPost[] = posts.map((post, idx) =>
+    sanitizeGalleryPostForFirestore(post, idx) as unknown as SocialPost
+  );
 
-  // 1. Synchronize with backend API first so any base64 images are converted to permanent static files on disk
-  try {
-    const data = await safeFetchJson<{ success?: boolean; posts?: SocialPost[] }>('/api/settings/gallery', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ posts })
-    });
-    if (data && Array.isArray(data.posts) && data.posts.length > 0) {
-      cleanPosts = data.posts;
-    }
-  } catch (backendErr) {
-    console.warn('[Backend] Gallery save notice:', backendErr);
-  }
-
-  // 2. Local storage fallback (sync both keys with clean URLs)
+  // 1. Local storage fallback (safe against quota limits)
   try {
     const jsonStr = JSON.stringify(cleanPosts);
     localStorage.setItem('deolinda_custom_social_posts', jsonStr);
@@ -821,16 +874,73 @@ export async function saveGalleryPostsToFirestore(posts: SocialPost[]): Promise<
     console.warn('[LocalStorage] Gallery save notice:', localErr);
   }
 
-  // 3. Save to Cloud Firestore with clean lightweight URLs (never exceeds 1MB quota limit)
+  // 2. Synchronize with backend API (keeps portable URLs intact)
   try {
+    await safeFetchJson<{ success?: boolean; posts?: SocialPost[] }>('/api/settings/gallery', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ posts: cleanPosts })
+    });
+  } catch (backendErr) {
+    console.warn('[Backend] Gallery save notice:', backendErr);
+  }
+
+  // 3. Persist each post as its own document in Cloud Firestore `gallery_posts` collection
+  try {
+    const galleryColRef = collection(db, 'gallery_posts');
+    const existingSnap = await getDocs(galleryColRef);
+    const keepIds = new Set(cleanPosts.map((p) => p.id));
+
+    // Delete any removed gallery post documents
+    const deletePromises: Promise<void>[] = [];
+    existingSnap.forEach((docSnap) => {
+      if (!keepIds.has(docSnap.id)) {
+        deletePromises.push(deleteDoc(doc(db, 'gallery_posts', docSnap.id)));
+      }
+    });
+    if (deletePromises.length > 0) {
+      await Promise.all(deletePromises);
+    }
+
+    // Write/update each gallery post document in parallel (each ~40KB-250KB, always < 1MB)
+    await Promise.all(
+      cleanPosts.map((post, idx) => {
+        const sanitized = sanitizeGalleryPostForFirestore(post, idx);
+        return setDoc(
+          doc(db, 'gallery_posts', sanitized.id),
+          {
+            ...sanitized,
+            _serverTimestamp: serverTimestamp()
+          },
+          { merge: true }
+        );
+      })
+    );
+
+    // Update lightweight manifest in `settings/gallery` (always < 5KB, never exceeds 1MB limit)
     const galleryDocRef = doc(db, 'settings', 'gallery');
-    await setDoc(galleryDocRef, {
-      posts: cleanPosts,
+    const manifestPayload: Record<string, any> = {
+      useCollection: true,
+      activeIds: cleanPosts.map((p) => p.id),
       updatedAt: new Date().toISOString(),
       type: 'gallery_posts',
       _serverTimestamp: serverTimestamp()
-    }, { merge: true });
-    console.log('[Firestore] Gallery posts saved successfully to Cloud Firestore.');
+    };
+
+    // Keep legacy `posts` array only if total serialized size is safely under 500KB
+    const serialized = JSON.stringify(cleanPosts);
+    if (serialized.length < 500000) {
+      manifestPayload.posts = cleanPosts;
+    } else {
+      manifestPayload.posts = cleanPosts.map((p) => ({
+        ...p,
+        // Keep external URLs in legacy manifest; heavy base64 lives in `gallery_posts/{id}`
+        imageUrl: p.imageUrl.startsWith('data:image/') ? '' : p.imageUrl
+      }));
+    }
+
+    await setDoc(galleryDocRef, manifestPayload);
+    console.log(`[Firestore] ${cleanPosts.length} gallery posts persisted to Cloud Firestore (gallery_posts collection).`);
   } catch (error: any) {
     console.warn('[Firestore] Notice while saving gallery posts to Firestore:', error?.message || error);
   }
@@ -839,48 +949,177 @@ export async function saveGalleryPostsToFirestore(posts: SocialPost[]): Promise<
 }
 
 /**
- * Subscribes to real-time gallery / Fotos & Momentos updates from Cloud Firestore
+ * Subscribes to real-time gallery / Fotos & Momentos updates from Cloud Firestore.
+ * Merges individual `gallery_posts` documents with `settings/gallery` manifest so all
+ * devices receive every photo in real time.
  */
 export function subscribeToGalleryPosts(
   onUpdate: (posts: SocialPost[]) => void
 ): () => void {
-  try {
-    const galleryDocRef = doc(db, 'settings', 'gallery');
-    const unsubscribe = onSnapshot(galleryDocRef, (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        if (data && Array.isArray(data.posts) && data.posts.length > 0) {
-          onUpdate(data.posts);
-          try {
-            localStorage.setItem('deolinda_custom_social_posts', JSON.stringify(data.posts));
-            localStorage.setItem('deolinda_custom_gallery_posts', JSON.stringify(data.posts));
-          } catch {}
-          return;
+  let collectionDocsMap = new Map<string, SocialPost & { orderIndex?: number }>();
+  let legacyPosts: SocialPost[] = [];
+  let useCollectionMode = false;
+  let activeIds: string[] | null = null;
+  let hasCollectionSnap = false;
+  let hasManifestSnap = false;
+
+  const emitMergedPosts = () => {
+    if (!hasCollectionSnap && !hasManifestSnap) return;
+
+    let result: SocialPost[] = [];
+
+    if (useCollectionMode && Array.isArray(activeIds)) {
+      const legacyMap = new Map<string, SocialPost>();
+      legacyPosts.forEach((p) => {
+        if (p && p.id) legacyMap.set(p.id, p);
+      });
+
+      const seen = new Set<string>();
+      for (const id of activeIds) {
+        const fromCol = collectionDocsMap.get(id);
+        const fromLegacy = legacyMap.get(id);
+        if (fromCol && fromCol.imageUrl) {
+          result.push(fromCol);
+          seen.add(id);
+        } else if (fromLegacy) {
+          result.push(fromLegacy);
+          seen.add(id);
+        } else if (fromCol) {
+          result.push(fromCol);
+          seen.add(id);
         }
       }
-      // Fallback: fetch from backend API if doc does not exist or is empty
-      safeFetchJson<{ posts?: SocialPost[] }>('/api/settings/gallery').then(data => {
+
+      // Include any newly added docs in collection not yet listed in activeIds
+      collectionDocsMap.forEach((docPost, id) => {
+        if (!seen.has(id) && docPost.imageUrl) {
+          result.unshift(docPost);
+        }
+      });
+    } else if (legacyPosts.length > 0) {
+      // Transition mode: merge any migrated `gallery_posts` docs over legacy `settings/gallery`
+      const legacyIds = new Set<string>();
+      const extraDocs: SocialPost[] = [];
+
+      collectionDocsMap.forEach((docPost, id) => {
+        if (!legacyPosts.some((lp) => lp.id === id) && docPost.imageUrl) {
+          extraDocs.push(docPost);
+        }
+      });
+
+      const mergedLegacy = legacyPosts.map((lp) => {
+        legacyIds.add(lp.id);
+        const migrated = collectionDocsMap.get(lp.id);
+        if (migrated && migrated.imageUrl) {
+          return {
+            ...lp,
+            ...migrated,
+            imageUrl: migrated.imageUrl
+          };
+        }
+        return lp;
+      });
+
+      result = [...extraDocs, ...mergedLegacy];
+    } else if (collectionDocsMap.size > 0) {
+      result = Array.from(collectionDocsMap.values()).sort(
+        (a, b) => (a.orderIndex ?? 9999) - (b.orderIndex ?? 9999)
+      );
+    }
+
+    if (result.length > 0) {
+      onUpdate(result);
+      try {
+        const jsonStr = JSON.stringify(result);
+        localStorage.setItem('deolinda_custom_social_posts', jsonStr);
+        localStorage.setItem('deolinda_custom_gallery_posts', jsonStr);
+      } catch {
+        // Ignore localStorage quota exceeded when many photos are stored in Firestore
+      }
+      return;
+    }
+
+    // Fallback to backend API if Firestore has no gallery posts yet
+    if (hasCollectionSnap && hasManifestSnap) {
+      safeFetchJson<{ posts?: SocialPost[] }>('/api/settings/gallery').then((data) => {
         if (data && Array.isArray(data.posts) && data.posts.length > 0) {
           onUpdate(data.posts);
           try {
-            localStorage.setItem('deolinda_custom_social_posts', JSON.stringify(data.posts));
-            localStorage.setItem('deolinda_custom_gallery_posts', JSON.stringify(data.posts));
+            const jsonStr = JSON.stringify(data.posts);
+            localStorage.setItem('deolinda_custom_social_posts', jsonStr);
+            localStorage.setItem('deolinda_custom_gallery_posts', jsonStr);
           } catch {}
         }
       });
-    }, (err) => {
-      console.warn('[Firestore] Gallery subscription notice:', err?.message || err);
-      safeFetchJson<{ posts?: SocialPost[] }>('/api/settings/gallery').then(data => {
-        if (data && Array.isArray(data.posts) && data.posts.length > 0) {
-          onUpdate(data.posts);
-        }
-      });
-    });
+    }
+  };
 
-    return unsubscribe;
+  try {
+    const galleryColRef = collection(db, 'gallery_posts');
+    const galleryDocRef = doc(db, 'settings', 'gallery');
+
+    const unsubCollection = onSnapshot(
+      galleryColRef,
+      (snap) => {
+        const nextMap = new Map<string, SocialPost & { orderIndex?: number }>();
+        snap.forEach((docSnap) => {
+          const d = docSnap.data();
+          if (d && (d.id || docSnap.id)) {
+            const id = String(d.id || docSnap.id);
+            nextMap.set(id, {
+              id,
+              imageUrl: String(d.imageUrl || ''),
+              caption: String(d.caption || ''),
+              author: String(d.author || '@deolindapizzaria'),
+              timestamp: String(d.timestamp || 'Recente'),
+              tags: Array.isArray(d.tags) ? d.tags : [],
+              likes: typeof d.likes === 'number' ? d.likes : 100,
+              isHotOutOfOven: Boolean(d.isHotOutOfOven),
+              orderIndex: typeof d.orderIndex === 'number' ? d.orderIndex : 9999
+            });
+          }
+        });
+        collectionDocsMap = nextMap;
+        hasCollectionSnap = true;
+        emitMergedPosts();
+      },
+      (err) => {
+        console.warn('[Firestore] gallery_posts collection subscription notice:', err?.message || err);
+        hasCollectionSnap = true;
+        emitMergedPosts();
+      }
+    );
+
+    const unsubManifest = onSnapshot(
+      galleryDocRef,
+      (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          useCollectionMode = Boolean(data?.useCollection);
+          activeIds = Array.isArray(data?.activeIds) ? data.activeIds : null;
+          legacyPosts = Array.isArray(data?.posts) ? data.posts : [];
+        } else {
+          useCollectionMode = false;
+          activeIds = null;
+          legacyPosts = [];
+        }
+        hasManifestSnap = true;
+        emitMergedPosts();
+      },
+      (err) => {
+        console.warn('[Firestore] Gallery manifest subscription notice:', err?.message || err);
+        hasManifestSnap = true;
+        emitMergedPosts();
+      }
+    );
+
+    return () => {
+      unsubCollection();
+      unsubManifest();
+    };
   } catch (err) {
     console.warn('[Firestore] Gallery subscribe error:', err);
-    safeFetchJson<{ posts?: SocialPost[] }>('/api/settings/gallery').then(data => {
+    safeFetchJson<{ posts?: SocialPost[] }>('/api/settings/gallery').then((data) => {
       if (data && Array.isArray(data.posts) && data.posts.length > 0) {
         onUpdate(data.posts);
       }

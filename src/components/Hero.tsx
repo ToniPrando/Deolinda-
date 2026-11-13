@@ -173,13 +173,13 @@ export const Hero: React.FC<HeroProps> = ({
       {/* Hero Content Container */}
       <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 sm:pt-4 pb-6 text-center flex flex-col items-center">
 
-        {/* Logo Deolinda - Reduzido em 10% para harmonia e proporção ideal */}
+        {/* Logo Deolinda Principal */}
         <div className="flex flex-col items-center justify-center mb-6 w-full group">
-          <div className="w-[158px] h-[158px] sm:w-[216px] sm:h-[216px] md:w-[259px] md:h-[259px] lg:w-[283px] lg:h-[283px] flex items-center justify-center transform group-hover:scale-105 transition-transform duration-300 shrink-0 mb-4">
+          <div className="relative w-[172px] h-[172px] sm:w-[234px] sm:h-[234px] md:w-[280px] md:h-[280px] lg:w-[306px] lg:h-[306px] flex items-center justify-center transform group-hover:scale-105 transition-transform duration-300 shrink-0 mb-4">
             <img
               src={customLogoUrl || "/deolinda_logo.png"}
               alt="Logo Deolinda Pizzaria"
-              className="w-full h-full object-contain filter drop-shadow-md"
+              className="w-full h-full object-contain filter drop-shadow-xs"
               loading="eager"
               referrerPolicy="no-referrer"
             />

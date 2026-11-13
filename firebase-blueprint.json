@@ -48,6 +48,22 @@
         "updatedAt": { "type": "string", "description": "Timestamp of the last update" },
         "type": { "type": "string", "description": "Setting category identifier" }
       }
+    },
+    "GalleryPost": {
+      "title": "GalleryPost",
+      "description": "Photo moment displayed in the pizzeria gallery across all devices",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique GalleryPost ID" },
+        "imageUrl": { "type": "string", "description": "Public URL or compressed JPEG Base64 data URI" },
+        "caption": { "type": "string", "description": "Photo caption" },
+        "author": { "type": "string", "description": "Author handle" },
+        "timestamp": { "type": "string", "description": "Display timestamp label" },
+        "likes": { "type": "number", "description": "Like counter" },
+        "isHotOutOfOven": { "type": "boolean", "description": "Badge flag" },
+        "orderIndex": { "type": "number", "description": "Display order index" }
+      },
+      "required": ["id", "imageUrl", "caption"]
     }
   },
   "firestore": {
@@ -66,6 +82,10 @@
     "/settings/{settingId}": {
       "schema": "Setting",
       "description": "Real-time restaurant branding and logo settings synchronized across all devices"
+    },
+    "/gallery_posts/{postId}": {
+      "schema": "GalleryPost",
+      "description": "Individual gallery photo documents synchronized in real time across all devices"
     }
   }
 }
