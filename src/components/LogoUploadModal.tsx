@@ -15,6 +15,7 @@ import {
   Layers
 } from 'lucide-react';
 import { saveLogoToFirestore, saveEmblemToFirestore } from '../services/firebaseService';
+import { compressBrandImageForFirestore } from '../utils/imageCompressor';
 
 interface LogoUploadModalProps {
   isOpen: boolean;
@@ -189,34 +190,12 @@ export const LogoUploadModal: React.FC<LogoUploadModalProps> = ({
     }
   };
 
-  const optimizeImage = (dataUrl: string, maxDim = 500): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        let { width, height } = img;
-        if (width > maxDim || height > maxDim) {
-          if (width > height) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          } else {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
-          }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/png', 0.92));
-        } else {
-          resolve(dataUrl);
-        }
-      };
-      img.onerror = () => resolve(dataUrl);
-      img.src = dataUrl;
-    });
+  const optimizeImage = async (dataUrl: string, _maxDim = 450): Promise<string> => {
+    try {
+      return await compressBrandImageForFirestore(dataUrl, 380000);
+    } catch {
+      return dataUrl;
+    }
   };
 
   // --- SAVE LOGO ---

@@ -604,27 +604,8 @@ app.get("/api/settings/menu", (_req, res) => {
   }
 });
 
-// Helper to offload base64 images to static files
+// Keep menu item image URLs portable (base64 data URLs or https URLs) so all devices and containers render them reliably
 function processMenuItemImage(item: any): any {
-  if (!item || !item.image) return item;
-  if (typeof item.image === "string" && item.image.startsWith("data:image/")) {
-    try {
-      const match = item.image.match(/^data:image\/(\w+);base64,(.+)$/);
-      if (match) {
-        const ext = match[1] === "jpeg" ? "jpg" : match[1];
-        const targetDir = path.join(process.cwd(), "public", "menu_images");
-        if (!fs.existsSync(targetDir)) {
-          fs.mkdirSync(targetDir, { recursive: true });
-        }
-        const filename = `${item.id || Date.now()}.${ext}`;
-        const filePath = path.join(targetDir, filename);
-        fs.writeFileSync(filePath, Buffer.from(match[2], "base64"));
-        item.image = `/menu_images/${filename}?v=${Date.now()}`;
-      }
-    } catch (imgErr) {
-      console.warn("[Server] Error saving menu image to disk:", imgErr);
-    }
-  }
   return item;
 }
 

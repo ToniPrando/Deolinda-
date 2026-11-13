@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { MenuItem, CategoryType, CartItem, CustomerUser, MenuCategory, SiteInfo } from '../types';
 import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES } from '../data/menuData';
+import { compressImageElementToDataUrl } from '../utils/imageCompressor';
+import { migrateCachedMenuImageToFirestore } from '../services/firebaseService';
 
 interface MenuSectionProps {
   menuItems?: MenuItem[];
@@ -270,7 +272,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.35 }}
-            className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6 max-w-6xl mx-auto"
+            className="grid grid-cols-1 md:grid-cols-2 auto-rows-fr gap-5 sm:gap-6 max-w-6xl mx-auto"
           >
             {filteredItems.map((item, index) => (
               <motion.div
@@ -283,11 +285,11 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                   ease: [0.22, 1, 0.36, 1],
                   delay: Math.min((index % 4) * 0.05, 0.2)
                 }}
-                className="bg-white rounded-2xl overflow-hidden border border-[#E0D5C3] shadow-xs hover:shadow-xl transition-all duration-300 flex flex-row items-stretch group will-change-transform hover:-translate-y-0.5 min-h-[164px] sm:min-h-[188px]"
+                className="bg-white rounded-2xl overflow-hidden border border-[#E0D5C3] shadow-xs hover:shadow-xl transition-all duration-300 flex flex-row items-stretch group will-change-transform hover:-translate-y-0.5 h-[196px] sm:h-[220px]"
               >
                 {/* Esquerda: Informações do Item + Preço e Botão WhatsApp abaixo do texto */}
-                <div className="p-3.5 sm:p-5 flex flex-col flex-1 min-w-0 justify-between gap-3">
-                  <div>
+                <div className="p-3.5 sm:p-5 flex flex-col flex-1 min-w-0 justify-between gap-2 overflow-hidden">
+                  <div className="min-w-0">
                     {item.italianName && (
                       <p className="text-[10px] sm:text-[11px] font-cinzel font-semibold uppercase tracking-wider text-[#C24D2C] mb-0.5 truncate">
                         {item.italianName}
@@ -304,7 +306,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
 
                     <p 
                       onClick={() => openItemDetails(item)}
-                      className="text-xs sm:text-sm text-[#5C554E] leading-relaxed line-clamp-3 cursor-pointer"
+                      className="text-xs sm:text-sm text-[#5C554E] leading-relaxed line-clamp-2 sm:line-clamp-3 cursor-pointer"
                       title="Clique para ver foto e detalhes"
                     >
                       {item.description}
@@ -312,7 +314,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                   </div>
 
                   {/* Abaixo do texto: Preço e Botão WhatsApp */}
-                  <div className="pt-2.5 border-t border-[#F0EAE1] flex items-center justify-start gap-3 flex-wrap">
+                  <div className="pt-2.5 border-t border-[#F0EAE1] flex items-center justify-start gap-3 flex-wrap shrink-0">
                     <span className="font-extrabold text-sm sm:text-base text-[#C24D2C] font-serif-italian tabular-nums whitespace-nowrap">
                       {formatBRL(item.price)}
                     </span>
@@ -336,14 +338,33 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                 {/* Direita: Foto do Item (sem valor sobreposto) */}
                 <div 
                   onClick={() => openItemDetails(item)}
-                  className="relative w-32 sm:w-44 lg:w-48 shrink-0 overflow-hidden bg-[#181513] cursor-pointer"
+                  className="relative w-32 sm:w-44 lg:w-48 h-full shrink-0 overflow-hidden bg-[#181513] cursor-pointer"
                   title="Clique para ver foto e detalhes"
                 >
                   <img
                     src={item.image}
                     alt={item.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     loading="lazy"
+                    onLoad={(e) => {
+                      if (
+                        item.image &&
+                        item.image.startsWith('/menu_images/') &&
+                        e.currentTarget.complete &&
+                        e.currentTarget.naturalWidth > 0
+                      ) {
+                        const portable = compressImageElementToDataUrl(e.currentTarget, 420000);
+                        if (portable) {
+                          migrateCachedMenuImageToFirestore(item, portable).catch(() => {});
+                        }
+                      }
+                    }}
+                    onError={(e) => {
+                      const fallback = 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=800&q=80';
+                      if (e.currentTarget.src !== fallback) {
+                        e.currentTarget.src = fallback;
+                      }
+                    }}
                   />
                 </div>
               </motion.div>
@@ -369,6 +390,12 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                 src={viewingItem.image}
                 alt={viewingItem.name}
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  const fallback = 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=800&q=80';
+                  if (e.currentTarget.src !== fallback) {
+                    e.currentTarget.src = fallback;
+                  }
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
               

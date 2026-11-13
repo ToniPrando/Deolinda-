@@ -64,6 +64,25 @@
         "orderIndex": { "type": "number", "description": "Display order index" }
       },
       "required": ["id", "imageUrl", "caption"]
+    },
+    "MenuItem": {
+      "title": "MenuItem",
+      "description": "Menu item persisted in Cloud Firestore with portable photo and details synced across all devices",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique MenuItem ID" },
+        "name": { "type": "string", "description": "Dish or pizza name" },
+        "italianName": { "type": "string", "description": "Optional Italian subtitle" },
+        "category": { "type": "string", "description": "Category ID" },
+        "description": { "type": "string", "description": "Dish description" },
+        "price": { "type": "number", "description": "Unit price in BRL" },
+        "image": { "type": "string", "description": "Public URL or compressed JPEG Base64 data URI" },
+        "ingredients": { "type": "array", "description": "List of main ingredients" },
+        "tags": { "type": "array", "description": "Dietary/style tags" },
+        "pairing": { "type": "string", "description": "Optional pairing suggestion" },
+        "isAvailable": { "type": "boolean", "description": "Whether the item is active in the menu" }
+      },
+      "required": ["id", "name", "category", "price", "image"]
     }
   },
   "firestore": {
@@ -81,7 +100,11 @@
     },
     "/settings/{settingId}": {
       "schema": "Setting",
-      "description": "Real-time restaurant branding and logo settings synchronized across all devices"
+      "description": "Real-time restaurant branding, logo, categories, and site_info settings synchronized across all devices"
+    },
+    "/menu_items/{itemId}": {
+      "schema": "MenuItem",
+      "description": "Individual menu items with portable images synchronized in real time across all devices"
     },
     "/gallery_posts/{postId}": {
       "schema": "GalleryPost",

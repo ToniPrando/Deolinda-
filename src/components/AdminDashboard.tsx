@@ -59,7 +59,7 @@ import {
   saveMenuItemsToFirestore,
   saveSingleMenuItemToFirestore,
   deleteSingleMenuItemFromFirestore,
-  uploadMenuImageToServer,
+  migrateCachedMenuImageToFirestore,
   enqueueMenuItemSave,
   enqueueMenuItemDelete,
   enqueueGalleryPostsSave,
@@ -74,7 +74,12 @@ import {
   deleteContactMessageFromFirestore
 } from '../services/firebaseService';
 import { TricolorBands } from './TricolorBands';
-import { compressImageFile, compressImageForFirestore } from '../utils/imageCompressor';
+import {
+  compressImageFile,
+  compressImageForFirestore,
+  compressBrandImageForFirestore,
+  compressImageElementToDataUrl
+} from '../utils/imageCompressor';
 
 interface AdminDashboardProps {
   isOpen: boolean;
@@ -82,13 +87,13 @@ interface AdminDashboardProps {
   orders?: any[];
   reservations?: any[];
   menuItems?: MenuItem[];
-  onMenuItemsUpdated?: (items: MenuItem[]) => void;
+  onMenuItemsUpdated?: (items: MenuItem[], options?: { skipCloudBatch?: boolean }) => void;
   menuCategories?: MenuCategory[];
-  onMenuCategoriesUpdated?: (categories: MenuCategory[]) => void;
+  onMenuCategoriesUpdated?: (categories: MenuCategory[], options?: { skipCloudSync?: boolean }) => void;
   socialPosts?: SocialPost[];
   onSocialPostsUpdated?: (posts: SocialPost[]) => void;
   siteInfo?: SiteInfo;
-  onSiteInfoUpdated?: (info: SiteInfo) => void;
+  onSiteInfoUpdated?: (info: SiteInfo, options?: { skipCloudSync?: boolean }) => void;
   onUpdateOrderStatus?: (orderId: string, status: any) => void;
   onUpdateReservationStatus?: (resId: string, status: any) => void;
   onRefreshOrders?: () => Promise<void> | void;
@@ -301,7 +306,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             return item;
           });
           setCurrentMenuItems(updatedMenuItems);
-          if (onMenuItemsUpdated) onMenuItemsUpdated(updatedMenuItems);
+          if (onMenuItemsUpdated) onMenuItemsUpdated(updatedMenuItems, { skipCloudBatch: true });
           await saveMenuItemsToFirestore(updatedMenuItems);
         }
 
@@ -313,7 +318,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       setCurrentCategories(updatedCategories);
       if (onMenuCategoriesUpdated) {
-        onMenuCategoriesUpdated(updatedCategories);
+        onMenuCategoriesUpdated(updatedCategories, { skipCloudSync: true });
       }
       await saveMenuCategoriesToFirestore(updatedCategories);
 
@@ -335,7 +340,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const updated = currentCategories.filter(c => c.id !== catId);
       setCurrentCategories(updated);
       if (onMenuCategoriesUpdated) {
-        onMenuCategoriesUpdated(updated);
+        onMenuCategoriesUpdated(updated, { skipCloudSync: true });
       }
       await saveMenuCategoriesToFirestore(updated);
       setConfirmDeleteCatId(null);
@@ -364,7 +369,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     setCurrentCategories(reordered);
     if (onMenuCategoriesUpdated) {
-      onMenuCategoriesUpdated(reordered);
+      onMenuCategoriesUpdated(reordered, { skipCloudSync: true });
     }
     await saveMenuCategoriesToFirestore(reordered);
   };
@@ -374,7 +379,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     try {
       setCurrentCategories(DEFAULT_MENU_CATEGORIES);
       if (onMenuCategoriesUpdated) {
-        onMenuCategoriesUpdated(DEFAULT_MENU_CATEGORIES);
+        onMenuCategoriesUpdated(DEFAULT_MENU_CATEGORIES, { skipCloudSync: true });
       }
       await saveMenuCategoriesToFirestore(DEFAULT_MENU_CATEGORIES);
       setIsConfirmingRestoreDefaultCats(false);
@@ -397,6 +402,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [confirmDeleteMenuId, setConfirmDeleteMenuId] = useState<string | null>(null);
   const [isDeletingItem, setIsDeletingItem] = useState(false);
   const [isSavingItem, setIsSavingItem] = useState(false);
+  const [isProcessingItemImage, setIsProcessingItemImage] = useState(false);
   const [isConfirmingRestoreLogo, setIsConfirmingRestoreLogo] = useState(false);
   const [isConfirmingRestoreDefaultMenu, setIsConfirmingRestoreDefaultMenu] = useState(false);
 
@@ -427,7 +433,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     try {
       setCurrentMenuItems(MENU_ITEMS);
       if (onMenuItemsUpdated) {
-        onMenuItemsUpdated(MENU_ITEMS);
+        onMenuItemsUpdated(MENU_ITEMS, { skipCloudBatch: true });
       }
       await saveMenuItemsToFirestore(MENU_ITEMS);
       setIsConfirmingRestoreDefaultMenu(false);
@@ -495,6 +501,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       .map(s => s.trim())
       .filter(Boolean);
 
+    let finalImage = itemFormData.image.trim() || 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=800&q=80';
+    if (finalImage.startsWith('data:image/')) {
+      try {
+        finalImage = await compressImageForFirestore(finalImage, 420000);
+      } catch {}
+    }
+
     const savedItem: MenuItem = {
       id: editingItem ? editingItem.id : `item-${Date.now()}`,
       name: itemFormData.name.trim(),
@@ -504,7 +517,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       description: itemFormData.description.trim() || 'Prato artesanal preparado com ingredientes frescos e selecionados.',
       ingredients: ingredientsList.length > 0 ? ingredientsList : ['Ingredientes frescos da casa'],
       pairing: itemFormData.pairing.trim() || undefined,
-      image: itemFormData.image.trim() || 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=800&q=80',
+      image: finalImage,
       tags: editingItem?.tags || [],
       isAvailable: itemFormData.isAvailable,
       isPopular: editingItem?.isPopular || false,
@@ -513,19 +526,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       pointsBonusTag: editingItem?.pointsBonusTag || undefined
     };
 
-    // 1. Optimistic Instant UI Update (< 10ms)
+    // 1. Optimistic Instant UI Update (< 10ms) without overlapping batch write
     let updatedList: MenuItem[];
     if (editingItem) {
       updatedList = currentMenuItems.map(it => it.id === editingItem.id ? savedItem : it);
-      setMenuNotice({ type: 'success', text: `Item "${savedItem.name}" atualizado com sucesso no cardápio!` });
+      setMenuNotice({ type: 'success', text: `Item "${savedItem.name}" atualizado e sincronizado na nuvem para todos os dispositivos!` });
     } else {
       updatedList = [savedItem, ...currentMenuItems];
-      setMenuNotice({ type: 'success', text: `Novo item "${savedItem.name}" adicionado com sucesso ao cardápio!` });
+      setMenuNotice({ type: 'success', text: `Novo item "${savedItem.name}" adicionado e sincronizado para todos os dispositivos!` });
     }
 
     setCurrentMenuItems(updatedList);
     if (onMenuItemsUpdated) {
-      onMenuItemsUpdated(updatedList);
+      onMenuItemsUpdated(updatedList, { skipCloudBatch: true });
     }
 
     // Immediately close modal and clear state so the user never waits
@@ -534,7 +547,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setIsSavingItem(false);
     setTimeout(() => setMenuNotice(null), 5000);
 
-    // 2. Background non-blocking persistence via Save Queue
+    // 2. Background non-blocking persistence via Save Queue (writes portable compressed photo + data to Firestore menu_items)
     enqueueMenuItemSave(savedItem);
   };
 
@@ -543,7 +556,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const updatedList = currentMenuItems.filter(it => it.id !== id);
     setCurrentMenuItems(updatedList);
     if (onMenuItemsUpdated) {
-      onMenuItemsUpdated(updatedList);
+      onMenuItemsUpdated(updatedList, { skipCloudBatch: true });
     }
 
     setItemToDelete(null);
@@ -568,12 +581,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     });
     setCurrentMenuItems(updatedList);
     if (onMenuItemsUpdated) {
-      onMenuItemsUpdated(updatedList);
+      onMenuItemsUpdated(updatedList, { skipCloudBatch: true });
     }
     if (targetItem) {
       await saveSingleMenuItemToFirestore(targetItem);
     }
-    saveMenuItemsToFirestore(updatedList).catch(e => console.warn('[Menu Batch Notice]', e));
   };
 
   // Filtered menu items for admin view
@@ -869,6 +881,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [siteInfoCategory, setSiteInfoCategory] = useState<'contact' | 'hero' | 'fermentation' | 'story' | 'hours'>('contact');
   const [siteInfoNotice, setSiteInfoNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isSavingSiteInfo, setIsSavingSiteInfo] = useState(false);
+  const [isProcessingStoryImage, setIsProcessingStoryImage] = useState(false);
+  const [showStoryUrlInput, setShowStoryUrlInput] = useState(false);
   const [isConfirmingResetSiteInfo, setIsConfirmingResetSiteInfo] = useState(false);
 
   const handleUpdateSiteInfoField = (field: keyof SiteInfo, value: any) => {
@@ -881,13 +895,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleSaveSiteInfo = async () => {
     setIsSavingSiteInfo(true);
     try {
-      if (onSiteInfoUpdated) {
-        onSiteInfoUpdated(currentSiteInfo);
+      const infoToSave = { ...currentSiteInfo };
+      if (infoToSave.storyImageUrl && infoToSave.storyImageUrl.startsWith('data:image/')) {
+        try {
+          infoToSave.storyImageUrl = await compressImageForFirestore(infoToSave.storyImageUrl, 360000);
+        } catch {}
       }
-      await saveSiteInfoToFirestore(currentSiteInfo);
+      setCurrentSiteInfo(infoToSave);
+      if (onSiteInfoUpdated) {
+        onSiteInfoUpdated(infoToSave, { skipCloudSync: true });
+      }
+      await saveSiteInfoToFirestore(infoToSave);
       setSiteInfoNotice({
         type: 'success',
-        text: 'Todas as informações do site foram salvas e sincronizadas com sucesso!'
+        text: 'Todas as informações e fotos do site foram salvas e sincronizadas com sucesso em todos os dispositivos!'
       });
       setTimeout(() => setSiteInfoNotice(null), 5000);
     } catch (err: any) {
@@ -907,7 +928,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setIsSavingSiteInfo(true);
     try {
       if (onSiteInfoUpdated) {
-        onSiteInfoUpdated(DEFAULT_SITE_INFO);
+        onSiteInfoUpdated(DEFAULT_SITE_INFO, { skipCloudSync: true });
       }
       await saveSiteInfoToFirestore(DEFAULT_SITE_INFO);
       setSiteInfoNotice({
@@ -1282,7 +1303,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </p>
               </div>
 
-              <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap shrink-0">
+              <div className="flex items-center gap-2.5 flex-wrap shrink-0">
+                {/* Botão Gerenciar Categorias / Botões do Cardápio */}
+                <button
+                  type="button"
+                  onClick={() => setIsCategoryModalOpen(true)}
+                  className="px-4 py-3 rounded-2xl bg-[#FAF7F2] hover:bg-[#EAE4D9] text-[#181513] border border-[#E0D5C3] font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  title="Adicionar, editar, reordenar ou excluir categorias/opções do cardápio"
+                >
+                  <Tag className="w-3.5 h-3.5 text-[#C24D2C]" />
+                  <span>Categorias</span>
+                </button>
+
                 {/* Botão Restaurar Cardápio Original */}
                 {isConfirmingRestoreDefaultMenu ? (
                   <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-amber-50 border border-amber-300 animate-in fade-in">
@@ -1308,7 +1340,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     type="button"
                     onClick={() => setIsConfirmingRestoreDefaultMenu(true)}
                     className="px-4 py-3 rounded-2xl bg-[#FAF7F2] hover:bg-[#EAE4D9] text-[#5C554E] hover:text-[#181513] border border-[#E0D5C3] font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                    title="Restaurar o cardápio padrão com as 13 receitas autênticas de Nápoles"
+                    title="Restaurar o cardápio padrão com as receitas autênticas de Nápoles"
                   >
                     <RotateCcw className="w-3.5 h-3.5 text-[#C24D2C]" />
                     <span>Restaurar Padrão</span>
@@ -1409,6 +1441,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           src={item.image}
                           alt={item.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          onLoad={(e) => {
+                            if (
+                              item.image &&
+                              item.image.startsWith('/menu_images/') &&
+                              e.currentTarget.complete &&
+                              e.currentTarget.naturalWidth > 0
+                            ) {
+                              const portable = compressImageElementToDataUrl(e.currentTarget, 420000);
+                              if (portable) {
+                                migrateCachedMenuImageToFirestore(item, portable).catch(() => {});
+                              }
+                            }
+                          }}
+                          onError={(e) => {
+                            const fallback = 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=800&q=80';
+                            if (e.currentTarget.src !== fallback) {
+                              e.currentTarget.src = fallback;
+                            }
+                          }}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
 
@@ -2220,17 +2271,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           type="file"
                           accept="image/*"
                           className="hidden"
-                          onChange={(e) => {
+                          onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (file) {
-                              const reader = new FileReader();
-                              reader.onload = (event) => {
-                                const base64 = event.target?.result as string;
-                                if (base64 && onLogoUpdated) {
-                                  onLogoUpdated(base64);
+                              try {
+                                const compressedLogo = await compressBrandImageForFirestore(file, 380000);
+                                if (compressedLogo) {
+                                  if (onLogoUpdated) {
+                                    onLogoUpdated(compressedLogo);
+                                  } else {
+                                    await saveLogoToFirestore(compressedLogo);
+                                  }
+                                  setSiteInfoNotice({
+                                    type: 'success',
+                                    text: 'Logotipo atualizado e sincronizado na nuvem para todos os dispositivos!'
+                                  });
+                                  setTimeout(() => setSiteInfoNotice(null), 4000);
                                 }
-                              };
-                              reader.readAsDataURL(file);
+                              } catch {
+                                setSiteInfoNotice({
+                                  type: 'error',
+                                  text: 'Não foi possível processar a imagem do logotipo.'
+                                });
+                              } finally {
+                                e.target.value = '';
+                              }
                             }
                           }}
                         />
@@ -2596,68 +2661,95 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
 
                 {/* Foto da História da Nonna Deolinda */}
-                <div className="p-4 sm:p-5 rounded-2xl bg-[#FAF7F2] border border-[#E0D5C3] flex flex-col sm:flex-row items-center justify-between gap-5 shadow-xs">
-                  <div className="flex items-center gap-4">
-                    <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden border-2 border-white shadow-md shrink-0 bg-black/10">
-                      <img
-                        src={currentSiteInfo.storyImageUrl || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80"}
-                        alt="Foto da História da Nonna Deolinda"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).src = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80";
-                        }}
-                      />
+                <div className="p-4 sm:p-5 rounded-2xl bg-[#FAF7F2] border border-[#E0D5C3] space-y-4 shadow-xs">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-5">
+                    <div className="flex items-center gap-4">
+                      <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden border-2 border-white shadow-md shrink-0 bg-black/10">
+                        <img
+                          src={currentSiteInfo.storyImageUrl || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80"}
+                          alt="Foto da História da Nonna Deolinda"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).src = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80";
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-xs font-bold uppercase tracking-wider text-[#181513] block">
+                          Foto da História da Nonna Deolinda
+                        </span>
+                        <p className="text-xs text-[#5C554E]">
+                          Imagem que ilustra a tradição e a história da casa na seção "História".
+                        </p>
+                        <p className="text-[11px] text-[#C24D2C]">
+                          Carregue de qualquer dispositivo (otimizada automaticamente para nuvem) ou informe uma URL externa.
+                        </p>
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <span className="text-xs font-bold uppercase tracking-wider text-[#181513] block">
-                        Foto da História da Nonna Deolinda
-                      </span>
-                      <p className="text-xs text-[#5C554E]">
-                        Imagem que ilustra a tradição e a história da casa na seção "História".
-                      </p>
-                      <p className="text-[11px] text-[#C24D2C]">
-                        Carregue uma imagem do seu dispositivo ou informe uma URL externa.
-                      </p>
+
+                    <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto shrink-0">
+                      <label className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-colors">
+                        {isProcessingStoryImage ? (
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Upload className="w-4 h-4" />
+                        )}
+                        <span>{isProcessingStoryImage ? 'Otimizando...' : 'Carregar Foto'}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setIsProcessingStoryImage(true);
+                              try {
+                                const compressed = await compressImageForFirestore(file, 360000);
+                                if (compressed) {
+                                  handleUpdateSiteInfoField('storyImageUrl', compressed);
+                                }
+                              } catch {
+                                setSiteInfoNotice({
+                                  type: 'error',
+                                  text: 'Erro ao processar a foto selecionada.'
+                                });
+                              } finally {
+                                setIsProcessingStoryImage(false);
+                                e.target.value = '';
+                              }
+                            }
+                          }}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowStoryUrlInput((prev) => !prev)}
+                        className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl bg-white hover:bg-gray-50 border border-[#E0D5C3] text-xs font-semibold text-[#181513] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <ImageIcon className="w-3.5 h-3.5 text-[#C24D2C]" />
+                        <span>URL Externa</span>
+                      </button>
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto shrink-0">
-                    <label className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-colors">
-                      <Upload className="w-4 h-4" />
-                      <span>Carregar Foto</span>
+                  {showStoryUrlInput && (
+                    <div className="pt-2 border-t border-[#E0D5C3]/70 flex flex-col sm:flex-row gap-2">
                       <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                              const base64 = event.target?.result as string;
-                              if (base64) {
-                                handleUpdateSiteInfoField('storyImageUrl', base64);
-                              }
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
+                        type="url"
+                        value={currentSiteInfo.storyImageUrl || ''}
+                        onChange={(e) => handleUpdateSiteInfoField('storyImageUrl', e.target.value)}
+                        placeholder="https://exemplo.com/foto-historia.jpg"
+                        className="flex-1 px-3.5 py-2 rounded-xl bg-white border border-[#E0D5C3] text-xs text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30"
                       />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const url = window.prompt('Insira o link direto (URL) da foto da história:', currentSiteInfo.storyImageUrl || '');
-                        if (url && url.trim()) {
-                          handleUpdateSiteInfoField('storyImageUrl', url.trim());
-                        }
-                      }}
-                      className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl bg-white hover:bg-gray-50 border border-[#E0D5C3] text-xs font-semibold text-[#181513] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <ImageIcon className="w-3.5 h-3.5 text-[#C24D2C]" />
-                      <span>URL Externa</span>
-                    </button>
-                  </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowStoryUrlInput(false)}
+                        className="px-3.5 py-2 rounded-xl bg-[#181513] text-white text-xs font-bold cursor-pointer"
+                      >
+                        Aplicar URL
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -2965,21 +3057,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               type="file"
               accept="image/*"
               className="hidden"
-              onChange={(e) => {
+              onChange={async (e) => {
                 if (e.target.files && e.target.files[0]) {
                   const file = e.target.files[0];
                   if (!file.type.startsWith('image/')) {
                     setEmblemNotice({ type: 'error', text: 'Selecione um arquivo de imagem válido (PNG, JPG, WebP ou SVG).' });
                     return;
                   }
-                  const reader = new FileReader();
-                  reader.onload = (ev) => {
-                    const result = ev.target?.result as string;
-                    setEmblemPreview(result);
-                    setEmblemBase64(result);
-                    setEmblemNotice({ type: 'success', text: 'Imagem carregada! Clique em "Salvar Imagem Anexa" para aplicar.' });
-                  };
-                  reader.readAsDataURL(file);
+                  try {
+                    const compressed = await compressBrandImageForFirestore(file, 380000);
+                    setEmblemPreview(compressed);
+                    setEmblemBase64(compressed);
+                    setEmblemNotice({ type: 'success', text: 'Imagem carregada e otimizada! Clique em "Salvar Imagem Anexa" para aplicar.' });
+                  } catch {
+                    setEmblemNotice({ type: 'error', text: 'Erro ao processar a imagem selecionada.' });
+                  } finally {
+                    e.target.value = '';
+                  }
                 }
               }}
             />
@@ -3186,7 +3280,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     onDragEnter={(e) => { e.preventDefault(); setDragEmblemActive(true); }}
                     onDragLeave={(e) => { e.preventDefault(); setDragEmblemActive(false); }}
                     onDragOver={(e) => { e.preventDefault(); }}
-                    onDrop={(e) => {
+                    onDrop={async (e) => {
                       e.preventDefault();
                       setDragEmblemActive(false);
                       if (e.dataTransfer.files && e.dataTransfer.files[0]) {
@@ -3195,14 +3289,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           setEmblemNotice({ type: 'error', text: 'Selecione um arquivo de imagem válido (PNG, JPG, WebP ou SVG).' });
                           return;
                         }
-                        const reader = new FileReader();
-                        reader.onload = (ev) => {
-                          const result = ev.target?.result as string;
-                          setEmblemPreview(result);
-                          setEmblemBase64(result);
-                          setEmblemNotice({ type: 'success', text: 'Imagem carregada! Clique em "Salvar Imagem Anexa" para aplicar.' });
-                        };
-                        reader.readAsDataURL(file);
+                        try {
+                          const compressed = await compressBrandImageForFirestore(file, 380000);
+                          setEmblemPreview(compressed);
+                          setEmblemBase64(compressed);
+                          setEmblemNotice({ type: 'success', text: 'Imagem carregada e otimizada! Clique em "Salvar Imagem Anexa" para aplicar.' });
+                        } catch {
+                          setEmblemNotice({ type: 'error', text: 'Erro ao processar a imagem selecionada.' });
+                        }
                       }
                     }}
                     className={`border-2 border-dashed rounded-3xl p-6 sm:p-8 text-center transition-all flex flex-col items-center justify-center gap-3 cursor-pointer ${
@@ -4166,23 +4260,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   onChange={async (e) => {
                     if (e.target.files && e.target.files[0]) {
                       const file = e.target.files[0];
+                      setIsProcessingItemImage(true);
+                      setItemFormError(null);
                       try {
-                        const compressed = await compressImageFile(file, 640, 640, 0.70);
+                        // Compress cleanly for portable Cloud Firestore storage across ALL devices (< 420KB)
+                        const compressed = await compressImageForFirestore(file, 420000);
                         setItemFormData(prev => ({ ...prev, image: compressed }));
-                        // Immediately offload to static storage on backend
-                        const currentId = editingItem ? editingItem.id : `item-${Date.now()}`;
-                        const staticUrl = await uploadMenuImageToServer(compressed, currentId);
-                        if (staticUrl && staticUrl.startsWith('/menu_images/')) {
-                          setItemFormData(prev => ({ ...prev, image: staticUrl }));
-                        }
                       } catch (err) {
-                        console.warn('Fallback to standard file reading:', err);
-                        const reader = new FileReader();
-                        reader.onload = (ev) => {
-                          const res = ev.target?.result as string;
-                          setItemFormData(prev => ({ ...prev, image: res }));
-                        };
-                        reader.readAsDataURL(file);
+                        console.warn('Erro ao processar foto do prato:', err);
+                        setItemFormError('Não foi possível processar a imagem selecionada. Tente outra foto ou informe um link.');
+                      } finally {
+                        setIsProcessingItemImage(false);
+                        e.target.value = '';
                       }
                     }
                   }}
@@ -4193,16 +4282,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     type="url"
                     value={itemFormData.image}
                     onChange={(e) => setItemFormData({ ...itemFormData, image: e.target.value })}
-                    placeholder="URL da imagem (https://...)"
+                    placeholder="URL da imagem (https://...) ou clique em Upload Foto"
                     className="flex-1 px-3.5 py-2 rounded-xl bg-white border border-[#E0D5C3] text-xs focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30"
                   />
                   <button
                     type="button"
+                    disabled={isProcessingItemImage}
                     onClick={() => itemImageInputRef.current?.click()}
-                    className="px-3 py-2 rounded-xl bg-[#181513] hover:bg-black text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                    className="px-3 py-2 rounded-xl bg-[#181513] hover:bg-black disabled:opacity-60 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
                   >
-                    <Upload className="w-3.5 h-3.5 text-[#E5A93C]" />
-                    <span>Upload Foto</span>
+                    {isProcessingItemImage ? (
+                      <RefreshCw className="w-3.5 h-3.5 text-[#E5A93C] animate-spin" />
+                    ) : (
+                      <Upload className="w-3.5 h-3.5 text-[#E5A93C]" />
+                    )}
+                    <span>{isProcessingItemImage ? 'Otimizando...' : 'Upload Foto'}</span>
                   </button>
                 </div>
 

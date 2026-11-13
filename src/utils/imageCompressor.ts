@@ -167,3 +167,78 @@ export async function compressImageForFirestore(
   return result;
 }
 
+/**
+ * Compresses logos, emblems, and brand assets while preserving SVG and PNG transparency
+ * when possible, and guarantees the output fits safely inside Cloud Firestore (< 380KB).
+ */
+export async function compressBrandImageForFirestore(
+  source: File | string,
+  maxBytes = 380000
+): Promise<string> {
+  const readAsDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve((e.target?.result as string) || '');
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const rawDataUrl = typeof source === 'string' ? source : await readAsDataUrl(source);
+  if (!rawDataUrl || !rawDataUrl.startsWith('data:image/')) {
+    return rawDataUrl;
+  }
+
+  // Keep compact SVG or already-small images directly
+  if (rawDataUrl.startsWith('data:image/svg+xml') && rawDataUrl.length <= maxBytes) {
+    return rawDataUrl;
+  }
+  if (rawDataUrl.length <= maxBytes) {
+    return rawDataUrl;
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = async () => {
+      const tryDimensions = [460, 360, 280, 220];
+      for (const maxDim of tryDimensions) {
+        let width = img.naturalWidth || img.width || maxDim;
+        let height = img.naturalHeight || img.height || maxDim;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.max(1, Math.round((height * maxDim) / width));
+            width = maxDim;
+          } else {
+            width = Math.max(1, Math.round((width * maxDim) / height));
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) break;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, width, height);
+
+        try {
+          const pngUrl = canvas.toDataURL('image/png');
+          if (pngUrl.length <= maxBytes) {
+            resolve(pngUrl);
+            return;
+          }
+        } catch {
+          // Ignore and try smaller or JPEG fallback
+        }
+      }
+
+      // Fallback to high-efficiency JPEG compression if PNG remains too large
+      const jpegFallback = compressImageElementToDataUrl(img, maxBytes);
+      resolve(jpegFallback || rawDataUrl);
+    };
+    img.onerror = () => resolve(rawDataUrl);
+    img.src = rawDataUrl;
+  });
+}
+
+

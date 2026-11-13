@@ -17,6 +17,7 @@ import firebaseConfig from '../../firebase-applet-config.json';
 import { Order, Reservation, OrderStatus, MenuItem, SocialPost, SiteInfo, MenuCategory } from '../types';
 import { MENU_ITEMS } from '../data/menuData';
 import { safeFetchJson } from '../utils/safeFetch';
+import { compressImageForFirestore, compressBrandImageForFirestore } from '../utils/imageCompressor';
 
 // Initialize Firebase App instance
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
@@ -50,15 +51,22 @@ testFirestoreConnection().catch(() => {});
  * Broadcasts in real-time across all connected devices and browsers.
  */
 export async function saveLogoToFirestore(logoUrl: string | null): Promise<void> {
+  let finalLogoUrl = logoUrl;
+  if (finalLogoUrl && finalLogoUrl.startsWith('data:image/')) {
+    try {
+      finalLogoUrl = await compressBrandImageForFirestore(finalLogoUrl, 380000);
+    } catch {}
+  }
+
   try {
     const brandDocRef = doc(db, 'settings', 'brand');
     await setDoc(brandDocRef, {
-      logoUrl: logoUrl || null,
+      logoUrl: finalLogoUrl || null,
       updatedAt: new Date().toISOString(),
       type: 'logo',
       _serverTimestamp: serverTimestamp()
     }, { merge: true });
-    console.log('[Firestore] Brand logo saved to Cloud Firestore successfully:', logoUrl ? 'Custom Logo' : 'Reset to Default');
+    console.log('[Firestore] Brand logo saved to Cloud Firestore successfully:', finalLogoUrl ? 'Custom Logo' : 'Reset to Default');
   } catch (error: any) {
     console.warn('[Firestore] Notice while saving logo to Firestore, utilizing server sync:', error?.message || error);
   }
@@ -68,15 +76,15 @@ export async function saveLogoToFirestore(logoUrl: string | null): Promise<void>
     await fetch('/api/settings/logo', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ logoUrl })
+      body: JSON.stringify({ logoUrl: finalLogoUrl })
     });
   } catch (backendErr) {
     console.warn('[Backend] Logo sync fallback:', backendErr);
   }
 
   try {
-    if (logoUrl) {
-      localStorage.setItem('deolinda_custom_logo', logoUrl);
+    if (finalLogoUrl) {
+      localStorage.setItem('deolinda_custom_logo', finalLogoUrl);
     } else {
       localStorage.removeItem('deolinda_custom_logo');
     }
@@ -140,15 +148,22 @@ export function subscribeToLogo(
  * Placed next to header logo and below hero logo in the main page.
  */
 export async function saveEmblemToFirestore(emblemUrl: string | null, enabled: boolean = true): Promise<void> {
+  let finalEmblemUrl = emblemUrl;
+  if (finalEmblemUrl && finalEmblemUrl.startsWith('data:image/')) {
+    try {
+      finalEmblemUrl = await compressBrandImageForFirestore(finalEmblemUrl, 380000);
+    } catch {}
+  }
+
   try {
     const brandDocRef = doc(db, 'settings', 'brand');
     await setDoc(brandDocRef, {
-      emblemUrl: emblemUrl || null,
+      emblemUrl: finalEmblemUrl || null,
       emblemEnabled: enabled,
       emblemUpdatedAt: new Date().toISOString(),
       _serverTimestamp: serverTimestamp()
     }, { merge: true });
-    console.log('[Firestore] Brand emblem saved to Cloud Firestore:', emblemUrl ? 'Custom Emblem' : 'Removed');
+    console.log('[Firestore] Brand emblem saved to Cloud Firestore:', finalEmblemUrl ? 'Custom Emblem' : 'Removed');
   } catch (error: any) {
     console.warn('[Firestore] Notice while saving emblem to Firestore, utilizing server sync:', error?.message || error);
   }
@@ -158,15 +173,15 @@ export async function saveEmblemToFirestore(emblemUrl: string | null, enabled: b
     await fetch('/api/settings/emblem', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ emblemUrl, enabled })
+      body: JSON.stringify({ emblemUrl: finalEmblemUrl, enabled })
     });
   } catch (backendErr) {
     console.warn('[Backend] Emblem sync fallback:', backendErr);
   }
 
   try {
-    if (emblemUrl) {
-      localStorage.setItem('deolinda_custom_emblem', emblemUrl);
+    if (finalEmblemUrl) {
+      localStorage.setItem('deolinda_custom_emblem', finalEmblemUrl);
     } else {
       localStorage.removeItem('deolinda_custom_emblem');
     }
@@ -479,6 +494,13 @@ export function sanitizeMenuItemForFirestore(item: MenuItem): Record<string, any
 export async function saveSingleMenuItemToFirestore(item: MenuItem): Promise<MenuItem> {
   let sanitizedItem = sanitizeMenuItemForFirestore(item);
 
+  // Ensure any uploaded base64 image is compressed cleanly (< 420KB) so Cloud Firestore stores it portably across all devices
+  if (typeof sanitizedItem.image === 'string' && sanitizedItem.image.startsWith('data:image/')) {
+    try {
+      sanitizedItem.image = await compressImageForFirestore(sanitizedItem.image, 420000);
+    } catch {}
+  }
+
   // 1. Immediately update localStorage for instant offline and memory availability
   try {
     const local = localStorage.getItem('deolinda_custom_menu_items');
@@ -490,9 +512,9 @@ export async function saveSingleMenuItemToFirestore(item: MenuItem): Promise<Men
       list = [sanitizedItem as any, ...list];
     }
     localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(list));
-  } catch (err) {}
+  } catch {}
 
-  // 2. Synchronize with backend API (zero quota limits, file-backed, instant)
+  // 2. Synchronize with backend API (keeps portable URLs intact)
   try {
     const data = await safeFetchJson<{ item?: MenuItem }>('/api/settings/menu-item', {
       method: 'POST',
@@ -500,24 +522,18 @@ export async function saveSingleMenuItemToFirestore(item: MenuItem): Promise<Men
       body: JSON.stringify({ item: sanitizedItem })
     });
     if (data && data.item) {
-      sanitizedItem = sanitizeMenuItemForFirestore(data.item);
-        try {
-          const local = localStorage.getItem('deolinda_custom_menu_items');
-          if (local) {
-            let list: MenuItem[] = JSON.parse(local);
-            const idx = list.findIndex(it => it.id === sanitizedItem.id);
-            if (idx !== -1) {
-              list[idx] = sanitizedItem as any;
-              localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(list));
-            }
-          }
-        } catch {}
+      const serverSanitized = sanitizeMenuItemForFirestore(data.item);
+      // Preserve portable data URL if server somehow stripped it
+      if (sanitizedItem.image.startsWith('data:image/') && !serverSanitized.image.startsWith('data:image/')) {
+        serverSanitized.image = sanitizedItem.image;
       }
+      sanitizedItem = serverSanitized;
+    }
   } catch (backendErr) {
     console.warn('[Backend] Menu item save notice:', backendErr);
   }
 
-  // 3. Persist to Cloud Firestore (individual document) with a fast 2-second timeout
+  // 3. Persist to Cloud Firestore (individual document) with generous 15-second timeout for mobile/photo uploads
   try {
     const itemDocRef = doc(db, 'menu_items', sanitizedItem.id);
     const firestorePromise = setDoc(itemDocRef, {
@@ -527,7 +543,7 @@ export async function saveSingleMenuItemToFirestore(item: MenuItem): Promise<Men
     }, { merge: true });
 
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Firestore write timeout')), 2000)
+      setTimeout(() => reject(new Error('Firestore write timeout')), 15000)
     );
 
     await Promise.race([firestorePromise, timeoutPromise]);
@@ -615,12 +631,12 @@ export async function deleteSingleMenuItemFromFirestore(itemId: string): Promise
     console.warn('[Backend] Menu item delete notice:', backendErr);
   }
 
-  // 3. Delete from Cloud Firestore with a 2-second timeout
+  // 3. Delete from Cloud Firestore with a 15-second timeout
   try {
     const itemDocRef = doc(db, 'menu_items', itemId);
     const deletePromise = deleteDoc(itemDocRef);
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Firestore delete timeout')), 2000)
+      setTimeout(() => reject(new Error('Firestore delete timeout')), 15000)
     );
     await Promise.race([deletePromise, timeoutPromise]);
     console.log(`[Firestore] Menu item (${itemId}) deleted from Cloud Firestore successfully.`);
@@ -635,14 +651,62 @@ export async function deleteSingleMenuItemFromFirestore(itemId: string): Promise
   }
 }
 
+const migratedMenuItemIds = new Set<string>();
+
 /**
- * Saves the full menu items collection to Cloud Firestore, backend, and localStorage.
- * Does not write 40+ individual documents on every call to avoid exhausting the 20,000 daily write quota.
+ * Migrates a locally-cached `/menu_images/...` photo (from the uploading device's browser cache)
+ * into a portable compressed base64 Cloud Firestore document in `menu_items/{item.id}` so all other devices see it.
+ */
+export async function migrateCachedMenuImageToFirestore(
+  item: MenuItem,
+  portableDataUrl: string
+): Promise<void> {
+  if (!item?.id || !portableDataUrl || !portableDataUrl.startsWith('data:image/')) {
+    return;
+  }
+  if (migratedMenuItemIds.has(item.id)) {
+    return;
+  }
+  migratedMenuItemIds.add(item.id);
+
+  try {
+    const cleanItem = sanitizeMenuItemForFirestore({ ...item, image: portableDataUrl });
+    const itemDocRef = doc(db, 'menu_items', cleanItem.id);
+    await setDoc(
+      itemDocRef,
+      {
+        ...cleanItem,
+        _migratedFromCache: true,
+        updatedAt: new Date().toISOString(),
+        _serverTimestamp: serverTimestamp()
+      },
+      { merge: true }
+    );
+    console.log(`[Firestore] Migrated cached menu image "${cleanItem.id}" to Cloud Firestore for all devices.`);
+  } catch (error: any) {
+    migratedMenuItemIds.delete(item.id);
+    console.warn('[Firestore] Notice migrating cached menu photo:', error?.message || error);
+  }
+}
+
+/**
+ * Saves the full menu items collection to Cloud Firestore (`menu_items` individual docs + lightweight settings),
+ * Express backend, and localStorage. Used for bulk operations like restoring defaults or category ID updates.
  */
 export async function saveMenuItemsToFirestore(items: MenuItem[]): Promise<void> {
-  const sanitizedItems = items.map(sanitizeMenuItemForFirestore);
+  const sanitizedItems = await Promise.all(
+    items.map(async (item) => {
+      const clean = sanitizeMenuItemForFirestore(item);
+      if (typeof clean.image === 'string' && clean.image.startsWith('data:image/')) {
+        try {
+          clean.image = await compressImageForFirestore(clean.image, 420000);
+        } catch {}
+      }
+      return clean;
+    })
+  );
 
-  // 1. Update localStorage immediately (guaranteed local availability)
+  // 1. Update localStorage immediately (safe against quota limits)
   try {
     localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(sanitizedItems));
   } catch (localErr) {
@@ -660,25 +724,48 @@ export async function saveMenuItemsToFirestore(items: MenuItem[]): Promise<void>
     console.warn('[Backend] Menu save notice:', backendErr);
   }
 
-  // 3. Attempt unified document write in background with 2s timeout
+  // 3. Synchronize individual `menu_items/{id}` docs in Cloud Firestore so ALL devices update reliably
   try {
+    const menuColRef = collection(db, 'menu_items');
+    const existingSnap = await getDocs(menuColRef);
+    const keepIds = new Set(sanitizedItems.map((it) => it.id));
+
+    const deletePromises: Promise<void>[] = [];
+    existingSnap.forEach((docSnap) => {
+      if (!keepIds.has(docSnap.id)) {
+        deletePromises.push(deleteDoc(doc(db, 'menu_items', docSnap.id)));
+      }
+    });
+    if (deletePromises.length > 0) {
+      await Promise.all(deletePromises);
+    }
+
+    await Promise.all(
+      sanitizedItems.map((sanitized) =>
+        setDoc(
+          doc(db, 'menu_items', sanitized.id),
+          {
+            ...sanitized,
+            updatedAt: new Date().toISOString(),
+            _serverTimestamp: serverTimestamp()
+          },
+          { merge: true }
+        )
+      )
+    );
+
     const jsonStr = JSON.stringify(sanitizedItems);
-    if (jsonStr.length < 800000) {
+    if (jsonStr.length < 750000) {
       const menuDocRef = doc(db, 'settings', 'menu');
-      const writePromise = setDoc(menuDocRef, {
+      await setDoc(menuDocRef, {
         items: sanitizedItems,
         updatedAt: new Date().toISOString(),
         type: 'menu_items',
         _serverTimestamp: serverTimestamp()
       }, { merge: true });
-
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Firestore write timeout')), 2000)
-      );
-      await Promise.race([writePromise, timeoutPromise]);
     }
   } catch (error: any) {
-    // Non-blocking notice
+    console.warn('[Firestore] Bulk menu sync notice:', error?.message || error);
   }
 }
 
@@ -1128,14 +1215,39 @@ export function subscribeToGalleryPosts(
   }
 }
 
+function stripUndefinedDeep<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => stripUndefinedDeep(item)) as unknown as T;
+  }
+  if (value && typeof value === 'object') {
+    const out: Record<string, any> = {};
+    for (const [k, v] of Object.entries(value as Record<string, any>)) {
+      if (v !== undefined) {
+        out[k] = stripUndefinedDeep(v);
+      }
+    }
+    return out as T;
+  }
+  return value;
+}
+
 /**
  * Saves the full site information and text content to Cloud Firestore, backend, and localStorage.
  */
 export async function saveSiteInfoToFirestore(siteInfo: SiteInfo): Promise<void> {
+  const cleanInfo = stripUndefinedDeep({ ...siteInfo });
+
+  // Compress uploaded story image cleanly so settings/site_info stays well under Firestore's 1MB limit
+  if (typeof cleanInfo.storyImageUrl === 'string' && cleanInfo.storyImageUrl.startsWith('data:image/')) {
+    try {
+      cleanInfo.storyImageUrl = await compressImageForFirestore(cleanInfo.storyImageUrl, 360000);
+    } catch {}
+  }
+
   try {
     const siteDocRef = doc(db, 'settings', 'site_info');
     await setDoc(siteDocRef, {
-      siteInfo,
+      siteInfo: cleanInfo,
       updatedAt: new Date().toISOString(),
       type: 'site_info',
       _serverTimestamp: serverTimestamp()
@@ -1150,7 +1262,7 @@ export async function saveSiteInfoToFirestore(siteInfo: SiteInfo): Promise<void>
     await fetch('/api/settings/site-info', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ siteInfo })
+      body: JSON.stringify({ siteInfo: cleanInfo })
     });
   } catch (e) {
     console.warn('[Backend] Site info save error:', e);
@@ -1158,7 +1270,7 @@ export async function saveSiteInfoToFirestore(siteInfo: SiteInfo): Promise<void>
 
   // Local storage fallback
   try {
-    localStorage.setItem('deolinda_custom_site_info', JSON.stringify(siteInfo));
+    localStorage.setItem('deolinda_custom_site_info', JSON.stringify(cleanInfo));
   } catch {}
 }
 
@@ -1470,18 +1582,14 @@ export function enqueueMenuItemSave(item: MenuItem): MenuItem {
     localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(list));
   } catch {}
 
-  // 2. Enqueue background persistence
+  // 2. Enqueue background persistence (compress image for portable Cloud Firestore storage across all devices)
   saveQueue.enqueue({
     id: `menu-item-${sanitized.id}`,
     type: 'menu_item_save',
     execute: async () => {
-      // If base64 image, convert to static file on server
       if (sanitized.image && sanitized.image.startsWith('data:image/')) {
         try {
-          const staticUrl = await uploadMenuImageToServer(sanitized.image, sanitized.id);
-          if (staticUrl && staticUrl.startsWith('/menu_images/')) {
-            sanitized.image = staticUrl;
-          }
+          sanitized.image = await compressImageForFirestore(sanitized.image, 420000);
         } catch {}
       }
       await saveSingleMenuItemToFirestore(sanitized);

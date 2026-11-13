@@ -474,28 +474,43 @@ export default function App() {
     };
   }, []);
 
-  const handleOptimisticMenuItemsUpdated = (updatedItems: MenuItem[]) => {
+  const handleOptimisticMenuItemsUpdated = (
+    updatedItems: MenuItem[],
+    options?: { skipCloudBatch?: boolean }
+  ) => {
     setMenuItems(updatedItems);
     try {
       localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(updatedItems));
     } catch {}
-    enqueueMenuItemsBatchSave(updatedItems);
+    if (!options?.skipCloudBatch) {
+      enqueueMenuItemsBatchSave(updatedItems);
+    }
   };
 
-  const handleOptimisticMenuCategoriesUpdated = (updatedCategories: MenuCategory[]) => {
+  const handleOptimisticMenuCategoriesUpdated = (
+    updatedCategories: MenuCategory[],
+    options?: { skipCloudSync?: boolean }
+  ) => {
     setMenuCategories(updatedCategories);
     try {
       localStorage.setItem('deolinda_custom_menu_categories', JSON.stringify(updatedCategories));
     } catch {}
-    enqueueMenuCategoriesSave(updatedCategories);
+    if (!options?.skipCloudSync) {
+      enqueueMenuCategoriesSave(updatedCategories);
+    }
   };
 
-  const handleOptimisticSiteInfoUpdated = (updatedInfo: SiteInfo) => {
+  const handleOptimisticSiteInfoUpdated = (
+    updatedInfo: SiteInfo,
+    options?: { skipCloudSync?: boolean }
+  ) => {
     setSiteInfo(updatedInfo);
     try {
       localStorage.setItem('deolinda_custom_site_info', JSON.stringify(updatedInfo));
     } catch {}
-    enqueueSiteInfoSave(updatedInfo);
+    if (!options?.skipCloudSync) {
+      enqueueSiteInfoSave(updatedInfo);
+    }
   };
 
   const handleOptimisticSocialPostsUpdated = (updatedPosts: SocialPost[]) => {
