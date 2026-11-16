@@ -36,7 +36,6 @@ import {
   Save,
   FileText,
   BookOpen,
-  Wheat,
   Info,
   ExternalLink,
   SlidersHorizontal,
@@ -878,7 +877,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   }, [siteInfo]);
 
-  const [siteInfoCategory, setSiteInfoCategory] = useState<'contact' | 'hero' | 'fermentation' | 'story' | 'hours'>('contact');
+  const [siteInfoCategory, setSiteInfoCategory] = useState<'contact' | 'hero' | 'story' | 'hours'>('contact');
   const [siteInfoNotice, setSiteInfoNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isSavingSiteInfo, setIsSavingSiteInfo] = useState(false);
   const [isProcessingStoryImage, setIsProcessingStoryImage] = useState(false);
@@ -2075,9 +2074,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="bg-white rounded-3xl p-3 border border-[#E0D5C3] shadow-xs flex items-center gap-2 overflow-x-auto scrollbar-none">
               {[
                 { id: 'contact', label: '📞 Contatos & Localização', icon: Phone },
-                { id: 'hero', label: '🍕 Cabeçalho & Destaques', icon: Sparkles },
-                { id: 'fermentation', label: '🌾 Fermentação Lenta 72h', icon: Wheat },
-                { id: 'story', label: '📜 História da Nonna', icon: BookOpen },
+                { id: 'hero', label: '🍕 Informações de Início', icon: Sparkles },
+                { id: 'story', label: '📜 Nossa Tradição', icon: BookOpen },
                 { id: 'hours', label: '⏰ Horários, Ambiente & Rodapé', icon: Clock }
               ].map((subCat) => {
                 const IconComponent = subCat.icon;
@@ -2378,46 +2376,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             )}
 
-            {/* Sub-Category 2: Cabeçalho & Destaques (Hero) */}
+            {/* Sub-Category 2: Informações de Início */}
             {siteInfoCategory === 'hero' && (
               <div className="bg-white rounded-3xl p-6 border border-[#E0D5C3] shadow-xs space-y-6">
                 <div>
                   <h5 className="font-serif-italian text-lg font-bold text-[#181513] mb-1">
-                    Cabeçalho Principal & Cartões de Destaque (Hero)
+                    Informações de Início
                   </h5>
                   <p className="text-xs text-[#5C554E]">
-                    Textos e argumentos principais visíveis logo no topo da página inicial.
+                    Subtítulo principal exibido na página inicial do site.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 gap-5">
                   <div>
-                    <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
-                      Badge Superior do Topo
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSiteInfo.heroBadge}
-                      onChange={(e) => handleUpdateSiteInfoField('heroBadge', e.target.value)}
-                      placeholder="Ex: Tradição Napoletana Desde 1924"
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
-                      Sub-badge de Destaque
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSiteInfo.heroSubBadge}
-                      onChange={(e) => handleUpdateSiteInfoField('heroSubBadge', e.target.value)}
-                      placeholder="Ex: Pizzaria Napoletana"
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
                     <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
                       Subtítulo Principal do Hero
                     </label>
@@ -2429,32 +2401,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
                     />
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
-                      Texto do Botão Cardápio (CTA 1)
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSiteInfo.heroCtaMenuText}
-                      onChange={(e) => handleUpdateSiteInfoField('heroCtaMenuText', e.target.value)}
-                      placeholder="Explorar Cardápio"
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
-                      Texto do Botão WhatsApp (CTA 2)
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSiteInfo.heroCtaWhatsappText}
-                      onChange={(e) => handleUpdateSiteInfoField('heroCtaWhatsappText', e.target.value)}
-                      placeholder="WhatsApp (11) 91533-1853"
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
-                    />
-                  </div>
                 </div>
 
                 <div className="pt-4 border-t border-[#F0EAE1] flex justify-end">
@@ -2465,198 +2411,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     className="px-6 py-2.5 rounded-2xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
                   >
                     <Save className="w-4 h-4 text-[#E5A93C]" />
-                    <span>Salvar Textos do Hero</span>
+                    <span>Salvar Informações de Início</span>
                   </button>
                 </div>
               </div>
             )}
 
-            {/* Sub-Category 3: Processo de Fermentação Lenta */}
-            {siteInfoCategory === 'fermentation' && (
-              <div className="bg-white rounded-3xl p-6 border border-[#E0D5C3] shadow-xs space-y-6">
-                <div>
-                  <h5 className="font-serif-italian text-lg font-bold text-[#181513] mb-1">
-                    Processo de Fermentação & Ingredientes Tradicionais
-                  </h5>
-                  <p className="text-xs text-[#5C554E]">
-                    Altere o badge, títulos e o detalhamento das 4 etapas de preparo da massa napolitana.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
-                      Badge da Seção
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSiteInfo.fermentationBadge}
-                      onChange={(e) => handleUpdateSiteInfoField('fermentationBadge', e.target.value)}
-                      placeholder="Processo & Tradição Napolitana"
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
-                      Título da Seção
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSiteInfo.fermentationTitle}
-                      onChange={(e) => handleUpdateSiteInfoField('fermentationTitle', e.target.value)}
-                      placeholder="O Segredo das 72 Horas de Fermentação Lenta"
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513]"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
-                      Subtítulo / Descrição da Seção
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={currentSiteInfo.fermentationSubtitle}
-                      onChange={(e) => handleUpdateSiteInfoField('fermentationSubtitle', e.target.value)}
-                      placeholder="Nossa massa não é apenas feita; ela é maturada pacientemente..."
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513]"
-                    />
-                  </div>
-                </div>
-
-                {/* 4 Steps */}
-                <div className="space-y-4 pt-4 border-t border-[#F0EAE1]">
-                  <h6 className="font-bold text-xs uppercase tracking-wider text-[#181513]">
-                    As Etapas do Processo de Maturação
-                  </h6>
-
-                  {/* Step 1 */}
-                  <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E0D5C3] space-y-3">
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <div className="flex-1">
-                        <label className="block text-[11px] font-bold text-[#181513] uppercase mb-1">Título da Etapa 1</label>
-                        <input
-                          type="text"
-                          value={currentSiteInfo.fermentationStep1Title}
-                          onChange={(e) => handleUpdateSiteInfoField('fermentationStep1Title', e.target.value)}
-                          className="w-full px-3 py-1.5 rounded-lg bg-white border border-[#E0D5C3] text-xs font-bold"
-                        />
-                      </div>
-                      <div className="w-full sm:w-36">
-                        <label className="block text-[11px] font-bold text-[#181513] uppercase mb-1">Tempo / Duração</label>
-                        <input
-                          type="text"
-                          value={currentSiteInfo.fermentationStep1Time}
-                          onChange={(e) => handleUpdateSiteInfoField('fermentationStep1Time', e.target.value)}
-                          placeholder="Hora 0"
-                          className="w-full px-3 py-1.5 rounded-lg bg-white border border-[#E0D5C3] text-xs"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-bold text-[#181513] uppercase mb-1">Descrição</label>
-                      <textarea
-                        rows={2}
-                        value={currentSiteInfo.fermentationStep1Desc}
-                        onChange={(e) => handleUpdateSiteInfoField('fermentationStep1Desc', e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-lg bg-white border border-[#E0D5C3] text-xs"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Step 2 (Maturação) */}
-                  <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E0D5C3] space-y-3">
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <div className="flex-1">
-                        <label className="block text-[11px] font-bold text-[#181513] uppercase mb-1">Título da Etapa 2 (Maturação)</label>
-                        <input
-                          type="text"
-                          value={currentSiteInfo.fermentationStep3Title}
-                          onChange={(e) => handleUpdateSiteInfoField('fermentationStep3Title', e.target.value)}
-                          className="w-full px-3 py-1.5 rounded-lg bg-white border border-[#E0D5C3] text-xs font-bold"
-                        />
-                      </div>
-                      <div className="w-full sm:w-36">
-                        <label className="block text-[11px] font-bold text-[#181513] uppercase mb-1">Tempo / Duração</label>
-                        <input
-                          type="text"
-                          value={currentSiteInfo.fermentationStep3Time}
-                          onChange={(e) => handleUpdateSiteInfoField('fermentationStep3Time', e.target.value)}
-                          placeholder="Hora 24 a 72"
-                          className="w-full px-3 py-1.5 rounded-lg bg-white border border-[#E0D5C3] text-xs"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-bold text-[#181513] uppercase mb-1">Descrição</label>
-                      <textarea
-                        rows={2}
-                        value={currentSiteInfo.fermentationStep3Desc}
-                        onChange={(e) => handleUpdateSiteInfoField('fermentationStep3Desc', e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-lg bg-white border border-[#E0D5C3] text-xs"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Step 3 (Forno / Cocção) */}
-                  <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E0D5C3] space-y-3">
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <div className="flex-1">
-                        <label className="block text-[11px] font-bold text-[#181513] uppercase mb-1">Título da Etapa 3 (Cocção a 430°C)</label>
-                        <input
-                          type="text"
-                          value={currentSiteInfo.fermentationStep4Title}
-                          onChange={(e) => handleUpdateSiteInfoField('fermentationStep4Title', e.target.value)}
-                          placeholder="3. Cocção a 430°C em 90 Segundos"
-                          className="w-full px-3 py-1.5 rounded-lg bg-white border border-[#E0D5C3] text-xs font-bold"
-                        />
-                      </div>
-                      <div className="w-full sm:w-36">
-                        <label className="block text-[11px] font-bold text-[#181513] uppercase mb-1">Tempo / Duração</label>
-                        <input
-                          type="text"
-                          value={currentSiteInfo.fermentationStep4Time}
-                          onChange={(e) => handleUpdateSiteInfoField('fermentationStep4Time', e.target.value)}
-                          placeholder="60 a 90 Segundos"
-                          className="w-full px-3 py-1.5 rounded-lg bg-white border border-[#E0D5C3] text-xs"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-bold text-[#181513] uppercase mb-1">Descrição</label>
-                      <textarea
-                        rows={2}
-                        value={currentSiteInfo.fermentationStep4Desc}
-                        onChange={(e) => handleUpdateSiteInfoField('fermentationStep4Desc', e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-lg bg-white border border-[#E0D5C3] text-xs"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-[#F0EAE1] flex justify-end">
-                  <button
-                    type="button"
-                    onClick={handleSaveSiteInfo}
-                    disabled={isSavingSiteInfo}
-                    className="px-6 py-2.5 rounded-2xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
-                  >
-                    <Save className="w-4 h-4 text-[#E5A93C]" />
-                    <span>Salvar Fermentação</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Sub-Category 4: História & Tradição da Nonna Deolinda */}
+            {/* Sub-Category 3: Nossa Tradição */}
             {siteInfoCategory === 'story' && (
               <div className="bg-white rounded-3xl p-6 border border-[#E0D5C3] shadow-xs space-y-6">
                 <div>
                   <h5 className="font-serif-italian text-lg font-bold text-[#181513] mb-1">
-                    História, Legado Familiar & Nonna Deolinda
+                    Nossa Tradição
                   </h5>
                   <p className="text-xs text-[#5C554E]">
-                    Narrativa da família, origem em Nápoles, foto ilustrativa e travessia para o Brasil.
+                    Foto ilustrativa, subtítulo e narrativa da tradição da casa.
                   </p>
                 </div>
 
@@ -2753,32 +2522,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
-                      Badge da Seção História
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSiteInfo.storyBadge}
-                      onChange={(e) => handleUpdateSiteInfoField('storyBadge', e.target.value)}
-                      placeholder="Nossa História • Desde 1924"
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
-                      Título da Seção História
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSiteInfo.storyTitle}
-                      onChange={(e) => handleUpdateSiteInfoField('storyTitle', e.target.value)}
-                      placeholder="Uma Tradição que Atravessou o Mediterrâneo"
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513]"
-                    />
-                  </div>
-
                   <div className="md:col-span-2">
                     <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
                       Subtítulo da Seção História
@@ -2814,32 +2557,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       value={currentSiteInfo.storyParagraph2}
                       onChange={(e) => handleUpdateSiteInfoField('storyParagraph2', e.target.value)}
                       placeholder="Quando a família decidiu atravessar o Atlântico rumo ao Brasil..."
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
-                      Frase Marcante / Citação da Nonna
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={currentSiteInfo.storyQuote}
-                      onChange={(e) => handleUpdateSiteInfoField('storyQuote', e.target.value)}
-                      placeholder="A pizza napoletana não é só comida, è un atto d'amore..."
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
-                      Autor da Citação
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSiteInfo.storyQuoteAuthor}
-                      onChange={(e) => handleUpdateSiteInfoField('storyQuoteAuthor', e.target.value)}
-                      placeholder="Nonna Deolinda — Matriarca & Pizzaiola (1902-1988)"
                       className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513]"
                     />
                   </div>
@@ -2978,32 +2695,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                   <div>
                     <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
-                      Informações de Valet / Estacionamento
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSiteInfo.valetInfo}
-                      onChange={(e) => handleUpdateSiteInfoField('valetInfo', e.target.value)}
-                      placeholder="Serviço de Valet cortesia na porta e convênio com estacionamento ao lado."
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513]"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
-                      Informações do Ambiente & Forno
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSiteInfo.environmentInfo}
-                      onChange={(e) => handleUpdateSiteInfoField('environmentInfo', e.target.value)}
-                      placeholder="Salão principal com ar condicionado e Jardim do Forno a Lenha ao ar livre pet-friendly."
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
                       Texto de Copyright do Rodapé
                     </label>
                     <input
@@ -3011,19 +2702,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       value={currentSiteInfo.footerCopyright}
                       onChange={(e) => handleUpdateSiteInfoField('footerCopyright', e.target.value)}
                       placeholder="Deolinda Pizzaria Napoletana. Fatta con amore, lievito madre e farina pura."
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
-                      Associação / Certificação no Rodapé
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSiteInfo.footerAssociationText}
-                      onChange={(e) => handleUpdateSiteInfoField('footerAssociationText', e.target.value)}
-                      placeholder="Opcional (deixe em branco para ocultar)"
                       className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513]"
                     />
                   </div>
