@@ -6,8 +6,6 @@ import {
   Lock,
   MapPin
 } from 'lucide-react';
-import toniaepLogo from '../assets/images/toniaep_creator_logo.png';
-import { TONIAEP_CREATOR_LOGO_BASE64 } from '../assets/images/creatorLogoData';
 import { SiteInfo } from '../types';
 
 interface FooterProps {
@@ -119,9 +117,9 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo, customLog
             </button>
           </div>
 
-          {/* Lado Direito: Criado por ToniAep (Transparente / Translúcido) */}
+          {/* Lado Direito: Criado por TonIAep (Texto com link) */}
           <div className="order-1 md:order-3 w-full sm:w-auto flex justify-center md:justify-end">
-            <div className="bg-transparent rounded-xl px-2.5 py-1 flex items-center justify-center gap-2 hover:bg-black/[0.03] transition-colors">
+            <div className="bg-transparent rounded-xl px-2.5 py-1 flex items-center justify-center gap-1.5">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-[#7A7067] font-cinzel">
                 Criado por
               </span>
@@ -129,23 +127,10 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo, customLog
                 href="https://toniaepprojetos.com/"
                 target="_blank"
                 rel="noopener noreferrer"
-                title="Visitar ToniAep Projetos (Criando Inovação)"
-                className="footer-logo relative group inline-flex items-center justify-center p-1 rounded-lg bg-transparent hover:bg-black/[0.04] transition-all cursor-pointer max-w-[140px]"
+                title="Visitar TonIAep Projetos"
+                className="text-xs font-bold tracking-wide text-[#181513] hover:text-[#C24D2C] transition-colors underline-offset-4 hover:underline"
               >
-                <img 
-                  src={toniaepLogo || TONIAEP_CREATOR_LOGO_BASE64} 
-                  onError={(e) => {
-                    const target = e.currentTarget as HTMLImageElement;
-                    if (target.src !== TONIAEP_CREATOR_LOGO_BASE64) {
-                      target.src = TONIAEP_CREATOR_LOGO_BASE64;
-                    }
-                  }}
-                  alt="ToniAep - Criando Inovação" 
-                  referrerPolicy="no-referrer"
-                  loading="eager"
-                  decoding="sync"
-                  className="w-full max-w-[140px] h-auto object-contain drop-shadow-[0_2px_10px_rgba(0,180,255,0.35)] transition-transform duration-300 group-hover:scale-105"
-                />
+                TonIAep
               </a>
             </div>
           </div>

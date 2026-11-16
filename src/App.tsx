@@ -4,6 +4,7 @@ import { Hero } from './components/Hero';
 import { MenuSection } from './components/MenuSection';
 import { StorySection } from './components/StorySection';
 import { SocialFeedSection } from './components/SocialFeedSection';
+import { ContactSection } from './components/ContactSection';
 import { LocationSection } from './components/LocationSection';
 import { CartDrawer } from './components/CartDrawer';
 import { AdminDashboard } from './components/AdminDashboard';
@@ -939,8 +940,10 @@ export default function App() {
               siteInfo={siteInfo}
               onNavigate={handleNavigate}
             />
-            {/* Galeria de Fotos e Momentos da Pizzaria na Página Inicial */}
+            {/* Galeria de Fotos e Momentos da Pizzaria (acima do Fale Conosco) */}
             <SocialFeedSection posts={socialPosts} />
+            {/* Fale Conosco (trocado de posição com a Galeria de Fotos) */}
+            <ContactSection siteInfo={siteInfo} />
           </div>
         )}
       </main>
