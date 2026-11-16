@@ -36,7 +36,13 @@ export const APP_ROUTES: RouteConfig[] = [
     id: 'localizacao',
     path: '/localizacao',
     title: 'Localização & Horários de Atendimento | Deolinda Pizzaria Napoletana',
-    aliases: ['/localização', '/contato', '/onde-estamos', '/horarios', '/horários', '/endereco', '/endereço', '/onde-nos-encontrar']
+    aliases: ['/localização', '/onde-estamos', '/horarios', '/horários', '/endereco', '/endereço', '/onde-nos-encontrar']
+  },
+  {
+    id: 'contato',
+    path: '/fale-conosco',
+    title: 'Fale Conosco | Deolinda Pizzaria Napoletana',
+    aliases: ['/contato', '/faleconosco', '/mensagem']
   },
   {
     id: 'admin',

@@ -18,10 +18,18 @@ interface NavbarProps {
 const HEADER_LETTERING_LOGO = '/assets/aistudio/Gemini_Generated_Image_spqd4gspqd4gspqd-removebg-preview_18fa875b.png';
 
 export const Navbar: React.FC<NavbarProps> = ({
+  siteInfo,
   activeSection,
   onNavigate
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
+
+  const rawWhatsAppDigits = (siteInfo?.whatsappNumber || '5511915331853').replace(/\D/g, '');
+  const whatsappDigits =
+    rawWhatsAppDigits.length === 10 || rawWhatsAppDigits.length === 11
+      ? `55${rawWhatsAppDigits}`
+      : rawWhatsAppDigits || '5511915331853';
+  const reservationWhatsAppUrl = `https://wa.me/${whatsappDigits}?text=${encodeURIComponent('Quero reservar uma mesa.')}`;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -101,7 +109,18 @@ export const Navbar: React.FC<NavbarProps> = ({
               Cardápio
             </button>
 
-            {/* 3. Nossa Tradição */}
+            {/* 3. Reservas (WhatsApp direto) */}
+            <a
+              href={reservationWhatsAppUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Reservar mesa pelo WhatsApp"
+              className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full whitespace-nowrap transition-all cursor-pointer font-cinzel uppercase text-[11px] sm:text-xs tracking-wider shrink-0 text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold"
+            >
+              Reservas
+            </a>
+
+            {/* 4. Nossa Tradição */}
             <button
               onClick={() => handleNavClick('historia', '/historia')}
               className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full whitespace-nowrap transition-all cursor-pointer font-cinzel uppercase text-[11px] sm:text-xs tracking-wider shrink-0 ${
@@ -113,7 +132,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               Nossa Tradição
             </button>
 
-            {/* 4. Localização & Horários */}
+            {/* 5. Localização & Horários */}
             <button
               onClick={() => handleNavClick('localizacao', '/localizacao')}
               className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full whitespace-nowrap transition-all cursor-pointer font-cinzel uppercase text-[11px] sm:text-xs tracking-wider shrink-0 ${
@@ -124,35 +143,47 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               Localização & Horários
             </button>
+
+            {/* 6. Fale Conosco */}
+            <button
+              onClick={() => handleNavClick('contato', '/fale-conosco')}
+              className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full whitespace-nowrap transition-all cursor-pointer font-cinzel uppercase text-[11px] sm:text-xs tracking-wider shrink-0 ${
+                activeSection === 'contato'
+                  ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold shadow-2xs border border-[#E0D5C3]'
+                  : 'text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold'
+              }`}
+            >
+              Fale Conosco
+            </button>
           </nav>
         </div>
 
-        {/* Desktop Navigation: Faixa tricolor + Asa esquerda + Logo centralizado (lettering) + Asa direita + Faixa tricolor */}
+        {/* Desktop Navigation: Faixa tricolor + Asa esquerda (3) + Logo centralizado + Asa direita (3) + Faixa tricolor */}
         <nav className="hidden lg:flex w-full items-center justify-between text-sm py-1">
           {/* Faixa Tricolor Esquerda */}
-          <TricolorBands direction="left" theme="light" className="w-12 xl:w-20 shrink-0" size="sm" />
+          <TricolorBands direction="left" theme="light" className="w-8 xl:w-14 shrink-0" size="sm" />
 
-          {/* Asa Esquerda de Menus - Separação ampliada */}
-          <div className="flex items-center gap-8 xl:gap-14 2xl:gap-20 flex-1 justify-end pr-8 xl:pr-14">
+          {/* Asa Esquerda de Menus */}
+          <div className="flex items-center gap-1.5 xl:gap-4 2xl:gap-7 flex-1 justify-end pr-3 xl:pr-8">
             {/* 1. Início */}
             <button
               onClick={() => handleNavClick('hero', '/')}
               title="Ir para a Página Inicial"
               aria-label="Página Inicial"
-              className={`px-7 py-2.5 sm:px-8 rounded-full whitespace-nowrap transition-all cursor-pointer flex items-center gap-2.5 font-cinzel uppercase text-xs sm:text-[13px] tracking-wider ${
+              className={`px-3 xl:px-5 2xl:px-6 py-2 rounded-full whitespace-nowrap shrink-0 transition-all cursor-pointer flex items-center gap-1.5 xl:gap-2 font-cinzel uppercase text-[11px] xl:text-xs tracking-wide xl:tracking-wider ${
                 activeSection === 'hero'
                   ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold shadow-xs border border-[#E0D5C3]'
                   : 'text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold'
               }`}
             >
-              <Home className="w-4 h-4 text-[#C24D2C]" />
+              <Home className="w-3.5 h-3.5 xl:w-4 xl:h-4 text-[#C24D2C]" />
               <span>Início</span>
             </button>
 
             {/* 2. Cardápio */}
             <button
               onClick={() => handleNavClick('cardapio', '/cardapio')}
-              className={`px-7 py-2.5 sm:px-8 rounded-full whitespace-nowrap transition-all cursor-pointer font-cinzel uppercase text-xs sm:text-[13px] tracking-wider ${
+              className={`px-3 xl:px-5 2xl:px-6 py-2 rounded-full whitespace-nowrap shrink-0 transition-all cursor-pointer font-cinzel uppercase text-[11px] xl:text-xs tracking-wide xl:tracking-wider ${
                 activeSection === 'cardapio'
                   ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold shadow-xs border border-[#E0D5C3]'
                   : 'text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold'
@@ -160,19 +191,30 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               Cardápio
             </button>
+
+            {/* 3. Reservas (WhatsApp direto) */}
+            <a
+              href={reservationWhatsAppUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Reservar mesa pelo WhatsApp"
+              className="px-3 xl:px-5 2xl:px-6 py-2 rounded-full whitespace-nowrap shrink-0 transition-all cursor-pointer font-cinzel uppercase text-[11px] xl:text-xs tracking-wide xl:tracking-wider text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold"
+            >
+              Reservas
+            </a>
           </div>
 
           {/* LOGO CENTRALIZADO NO CABEÇALHO (Lettering anexo exclusivo, 100% transparente) */}
-          <div className="shrink-0 px-4 xl:px-8">
+          <div className="shrink-0 px-2 xl:px-5">
             {renderHeaderLogotype()}
           </div>
 
-          {/* Asa Direita de Menus - Separação ampliada */}
-          <div className="flex items-center gap-8 xl:gap-14 2xl:gap-20 flex-1 justify-start pl-8 xl:pl-14">
-            {/* 3. Nossa Tradição */}
+          {/* Asa Direita de Menus */}
+          <div className="flex items-center gap-1.5 xl:gap-4 2xl:gap-7 flex-1 justify-start pl-3 xl:pl-8">
+            {/* 4. Nossa Tradição */}
             <button
               onClick={() => handleNavClick('historia', '/historia')}
-              className={`px-7 py-2.5 sm:px-8 rounded-full whitespace-nowrap transition-all cursor-pointer font-cinzel uppercase text-xs sm:text-[13px] tracking-wider ${
+              className={`px-3 xl:px-5 2xl:px-6 py-2 rounded-full whitespace-nowrap shrink-0 transition-all cursor-pointer font-cinzel uppercase text-[11px] xl:text-xs tracking-wide xl:tracking-wider ${
                 activeSection === 'historia'
                   ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold shadow-xs border border-[#E0D5C3]'
                   : 'text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold'
@@ -181,10 +223,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               Nossa Tradição
             </button>
 
-            {/* 4. Localização & Horários */}
+            {/* 5. Localização & Horários */}
             <button
               onClick={() => handleNavClick('localizacao', '/localizacao')}
-              className={`px-7 py-2.5 sm:px-8 rounded-full whitespace-nowrap transition-all cursor-pointer font-cinzel uppercase text-xs sm:text-[13px] tracking-wider ${
+              className={`px-3 xl:px-5 2xl:px-6 py-2 rounded-full whitespace-nowrap shrink-0 transition-all cursor-pointer font-cinzel uppercase text-[11px] xl:text-xs tracking-wide xl:tracking-wider ${
                 activeSection === 'localizacao'
                   ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold shadow-xs border border-[#E0D5C3]'
                   : 'text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold'
@@ -192,10 +234,22 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               Localização & Horários
             </button>
+
+            {/* 6. Fale Conosco */}
+            <button
+              onClick={() => handleNavClick('contato', '/fale-conosco')}
+              className={`px-3 xl:px-5 2xl:px-6 py-2 rounded-full whitespace-nowrap shrink-0 transition-all cursor-pointer font-cinzel uppercase text-[11px] xl:text-xs tracking-wide xl:tracking-wider ${
+                activeSection === 'contato'
+                  ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold shadow-xs border border-[#E0D5C3]'
+                  : 'text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold'
+              }`}
+            >
+              Fale Conosco
+            </button>
           </div>
 
           {/* Faixa Tricolor Direita */}
-          <TricolorBands direction="right" theme="light" className="w-12 xl:w-20 shrink-0" size="sm" />
+          <TricolorBands direction="right" theme="light" className="w-8 xl:w-14 shrink-0" size="sm" />
         </nav>
       </div>
     </header>

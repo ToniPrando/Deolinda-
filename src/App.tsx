@@ -930,6 +930,13 @@ export default function App() {
           </div>
         )}
 
+        {/* Página 6: Fale Conosco (/fale-conosco) */}
+        {activeSection === 'contato' && (
+          <div className="animate-fade-in">
+            <ContactSection siteInfo={siteInfo} />
+          </div>
+        )}
+
         {/* Página Inicial: Home (/) */}
         {activeSection === 'hero' && (
           <div className="animate-fade-in">
@@ -940,10 +947,8 @@ export default function App() {
               siteInfo={siteInfo}
               onNavigate={handleNavigate}
             />
-            {/* Galeria de Fotos e Momentos da Pizzaria (acima do Fale Conosco) */}
+            {/* Galeria de Fotos e Momentos da Pizzaria */}
             <SocialFeedSection posts={socialPosts} />
-            {/* Fale Conosco (trocado de posição com a Galeria de Fotos) */}
-            <ContactSection siteInfo={siteInfo} />
           </div>
         )}
       </main>

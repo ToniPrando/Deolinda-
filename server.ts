@@ -1035,6 +1035,7 @@ async function startServer() {
       "/historia", "/história", "/hist%C3%B3ria", "/hist%c3%b3ria",
       "/galeria",
       "/localizacao", "/localização", "/localiza%C3%A7%C3%A3o", "/localiza%c3%a7%c3%a3o",
+      "/fale-conosco", "/contato",
       "/admin"
     ];
 
