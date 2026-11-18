@@ -1,11 +1,85 @@
-import { MenuItem, LoyaltyReward, MenuCategory } from "../types";
+import { MenuItem, LoyaltyReward, MenuCategory, CategoryType } from "../types";
+
+export const MODERN_PIZZA_CATEGORY_ID = "napolitane_moderne";
+export const MODERN_PIZZA_CATEGORY_LABEL = "Pizzas Napolitanas Moderna";
 
 export const DEFAULT_MENU_CATEGORIES: MenuCategory[] = [
-  { id: "tradizionali", label: "Pizzas Tradicionais", icon: "🍕" },
-  { id: "speciali", label: "Pizzas Especiais", icon: "✨" },
+  { id: MODERN_PIZZA_CATEGORY_ID, label: MODERN_PIZZA_CATEGORY_LABEL, icon: "🍕" },
   { id: "dolci", label: "Sobremesas", icon: "🍰" },
   { id: "bevande", label: "Bebidas", icon: "🍷" }
 ];
+
+export function normalizeMenuItemCategory(category?: string): CategoryType {
+  const raw = String(category || "").trim().toLowerCase();
+  if (
+    !raw ||
+    raw === "tradizionali" ||
+    raw === "speciali" ||
+    raw === "pizzas tradicionais" ||
+    raw === "pizzas especiais" ||
+    raw === MODERN_PIZZA_CATEGORY_ID ||
+    raw === "pizzas napolitanas moderna"
+  ) {
+    return MODERN_PIZZA_CATEGORY_ID;
+  }
+  return category as CategoryType;
+}
+
+export function normalizeMenuItems(items: MenuItem[]): MenuItem[] {
+  if (!Array.isArray(items)) return [];
+  return items.map((item) => ({
+    ...item,
+    category: normalizeMenuItemCategory(item.category)
+  }));
+}
+
+export function normalizeMenuCategories(categories: MenuCategory[]): MenuCategory[] {
+  if (!Array.isArray(categories) || categories.length === 0) {
+    return DEFAULT_MENU_CATEGORIES;
+  }
+
+  const normalized: MenuCategory[] = [];
+  let hasModernPizza = false;
+
+  for (const cat of categories) {
+    if (!cat) continue;
+    const idLower = String(cat.id || "").trim().toLowerCase();
+    const labelLower = String(cat.label || "").trim().toLowerCase();
+
+    if (idLower === "antipasti" || labelLower === "entradas & aperitivos") {
+      continue;
+    }
+
+    const isLegacyOrModernPizza =
+      idLower === "tradizionali" ||
+      idLower === "speciali" ||
+      idLower === MODERN_PIZZA_CATEGORY_ID ||
+      labelLower === "pizzas tradicionais" ||
+      labelLower === "pizzas especiais" ||
+      labelLower === "pizzas napolitanas moderna";
+
+    if (isLegacyOrModernPizza) {
+      if (!hasModernPizza) {
+        normalized.push({
+          id: MODERN_PIZZA_CATEGORY_ID,
+          label: MODERN_PIZZA_CATEGORY_LABEL,
+          icon: cat.icon || "🍕"
+        });
+        hasModernPizza = true;
+      }
+      continue;
+    }
+
+    if (idLower === "bevande") {
+      normalized.push({ ...cat, label: "Bebidas" });
+      continue;
+    }
+
+    normalized.push(cat);
+  }
+
+  return normalized.length > 0 ? normalized : DEFAULT_MENU_CATEGORIES;
+}
 
 export const MENU_ITEMS: MenuItem[] = [
   {
@@ -21,7 +95,7 @@ export const MENU_ITEMS: MenuItem[] = [
     "pointsEarned": 65,
     "price": 65,
     "updatedAt": "2026-11-03T16:31:37.656Z",
-    "category": "tradizionali",
+    "category": "napolitane_moderne",
     "_serverTimestamp": {
       "type": "firestore/timestamp/1.0",
       "seconds": 1793723497,
@@ -44,7 +118,7 @@ export const MENU_ITEMS: MenuItem[] = [
     "description": "Cremoso Queijo Brie, Intenso Queijo Gorgonzolla, \nPêras e Favo de Mel.",
     "id": "item-1793658245021",
     "updatedAt": "2026-11-03T16:31:37.656Z",
-    "category": "tradizionali",
+    "category": "napolitane_moderne",
     "pointsToRedeem": 390,
     "_serverTimestamp": {
       "type": "firestore/timestamp/1.0",
@@ -65,7 +139,7 @@ export const MENU_ITEMS: MenuItem[] = [
     "tags": [],
     "description": "Mozarella Fior D'latte do lacticínio Fior D'italia, \nTomate pelati San Marzano e manjericão.",
     "price": 60,
-    "category": "tradizionali",
+    "category": "napolitane_moderne",
     "pointsToRedeem": 360,
     "ingredients": [
       "Ingredientes frescos da casa"
@@ -83,7 +157,7 @@ export const MENU_ITEMS: MenuItem[] = [
     "image": "/menu_images/item-1793732389388.jpg",
     "description": "Tomate pelati San Marzano, confit de alho, ervas \nfrecas e manjericão.",
     "pointsEarned": 60,
-    "category": "tradizionali",
+    "category": "napolitane_moderne",
     "pointsToRedeem": 360,
     "isPopular": false,
     "price": 60,
@@ -115,7 +189,7 @@ export const MENU_ITEMS: MenuItem[] = [
     "image": "/menu_images/item-1793732328548.jpg",
     "price": 65,
     "tags": [],
-    "category": "tradizionali",
+    "category": "napolitane_moderne",
     "pointsToRedeem": 390
   },
   {
@@ -123,7 +197,7 @@ export const MENU_ITEMS: MenuItem[] = [
     "image": "/menu_images/item-1793732250442.jpg",
     "isPopular": false,
     "price": 65,
-    "category": "tradizionali",
+    "category": "napolitane_moderne",
     "pointsToRedeem": 390,
     "pointsEarned": 65,
     "name": "ROSE IN ITALIA",
@@ -153,7 +227,7 @@ export const MENU_ITEMS: MenuItem[] = [
     "pointsToRedeem": 390,
     "price": 65,
     "image": "/menu_images/item-1793658314659.jpg",
-    "category": "tradizionali",
+    "category": "napolitane_moderne",
     "name": "SICÍLIA",
     "isAvailable": true,
     "ingredients": [
@@ -181,7 +255,7 @@ export const MENU_ITEMS: MenuItem[] = [
     "price": 65,
     "id": "item-1793724294044",
     "description": "Mozarella Fior D'latte do lacticínio Fior D'italia , \npresunto cru italiano, rúcula selvática, azeite e \nGrana Padano.",
-    "category": "tradizionali",
+    "category": "napolitane_moderne",
     "updatedAt": "2026-11-03T16:47:34.302Z"
   },
   {
@@ -191,7 +265,7 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
     "isAvailable": true,
     "isPopular": false,
-    "category": "speciali",
+    "category": "napolitane_moderne",
     "price": 55,
     "pointsEarned": 55,
     "pointsToRedeem": 330,
@@ -217,7 +291,7 @@ export const MENU_ITEMS: MenuItem[] = [
     },
     "image": "/menu_images/item-1793658008343.jpg",
     "name": "CALÁBRIA PICCOLO",
-    "category": "speciali",
+    "category": "napolitane_moderne",
     "isAvailable": true,
     "ingredients": [
       "Ingredientes frescos da casa"
@@ -244,7 +318,7 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
     "isAvailable": true,
     "price": 65,
-    "category": "speciali",
+    "category": "napolitane_moderne",
     "pointsEarned": 65,
     "isPopular": false,
     "image": "/menu_images/item-1793658171530.jpg",

@@ -15,7 +15,7 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { Order, Reservation, OrderStatus, MenuItem, SocialPost, SiteInfo, MenuCategory } from '../types';
-import { MENU_ITEMS } from '../data/menuData';
+import { MENU_ITEMS, normalizeMenuItemCategory, normalizeMenuCategories } from '../data/menuData';
 import { safeFetchJson } from '../utils/safeFetch';
 import { compressImageForFirestore, compressBrandImageForFirestore } from '../utils/imageCompressor';
 
@@ -455,7 +455,7 @@ export function sanitizeMenuItemForFirestore(item: MenuItem): Record<string, any
   const cleanItem: Record<string, any> = {
     id: String(item.id || `item-${Date.now()}`),
     name: String(item.name || '').trim(),
-    category: String(item.category || 'tradizionali'),
+    category: normalizeMenuItemCategory(item.category),
     price: Number(item.price || 0),
     description: String(item.description || '').trim(),
     ingredients: Array.isArray(item.ingredients)
@@ -808,10 +808,11 @@ export function subscribeToMenuItems(
     
     // Sort priority order for standard pizzeria categories
     const categoryOrder: Record<string, number> = {
+      'napolitane_moderne': 1,
       'tradizionali': 1,
-      'speciali': 2,
-      'dolci': 3,
-      'bevande': 4
+      'speciali': 1,
+      'dolci': 2,
+      'bevande': 3
     };
 
     const processSnapshot = (snapshot: any) => {
@@ -824,7 +825,7 @@ export function subscribeToMenuItems(
               id: String(docSnap.id || it.id || `item-${Date.now()}`),
               name: String(it.name || ''),
               italianName: it.italianName ? String(it.italianName) : undefined,
-              category: (it.category || 'tradizionali') as any,
+              category: normalizeMenuItemCategory(it.category),
               price: Number(it.price || 0),
               description: String(it.description || ''),
               ingredients: Array.isArray(it.ingredients) ? it.ingredients : [],
@@ -1049,9 +1050,35 @@ export function subscribeToGalleryPosts(
   let activeIds: string[] | null = null;
   let hasCollectionSnap = false;
   let hasManifestSnap = false;
+  let collectionErrored = false;
+  let manifestErrored = false;
+  let syncedServerCache = false;
+
+  const isDefaultSeedGallery = (list: SocialPost[]): boolean => {
+    if (!Array.isArray(list) || list.length === 0) return true;
+    const defaultIds = new Set(['post-1', 'post-2', 'post-3', 'post-4', 'post-5', 'post-6', 'post-7', 'post-8']);
+    return list.length <= 8 && list.every((p) => defaultIds.has(p.id) && !p.imageUrl?.startsWith('data:image/'));
+  };
+
+  const getCachedLocalPosts = (): SocialPost[] => {
+    try {
+      const saved = localStorage.getItem('deolinda_custom_gallery_posts') || localStorage.getItem('deolinda_custom_social_posts');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [];
+  };
 
   const emitMergedPosts = () => {
-    if (!hasCollectionSnap && !hasManifestSnap) return;
+    const bothDone = (hasCollectionSnap || collectionErrored) && (hasManifestSnap || manifestErrored);
+
+    // Wait for both listeners before emitting when manifest is in collection mode so base64 docs aren't briefly empty
+    if (!bothDone) {
+      if (!hasCollectionSnap && hasManifestSnap && useCollectionMode) return;
+      if (!hasCollectionSnap && !hasManifestSnap) return;
+    }
 
     let result: SocialPost[] = [];
 
@@ -1068,11 +1095,14 @@ export function subscribeToGalleryPosts(
         if (fromCol && fromCol.imageUrl) {
           result.push(fromCol);
           seen.add(id);
-        } else if (fromLegacy) {
+        } else if (fromLegacy && fromLegacy.imageUrl) {
           result.push(fromLegacy);
           seen.add(id);
         } else if (fromCol) {
           result.push(fromCol);
+          seen.add(id);
+        } else if (fromLegacy) {
+          result.push(fromLegacy);
           seen.add(id);
         }
       }
@@ -1085,7 +1115,6 @@ export function subscribeToGalleryPosts(
       });
     } else if (legacyPosts.length > 0) {
       // Transition mode: merge any migrated `gallery_posts` docs over legacy `settings/gallery`
-      const legacyIds = new Set<string>();
       const extraDocs: SocialPost[] = [];
 
       collectionDocsMap.forEach((docPost, id) => {
@@ -1095,7 +1124,6 @@ export function subscribeToGalleryPosts(
       });
 
       const mergedLegacy = legacyPosts.map((lp) => {
-        legacyIds.add(lp.id);
         const migrated = collectionDocsMap.get(lp.id);
         if (migrated && migrated.imageUrl) {
           return {
@@ -1123,19 +1151,42 @@ export function subscribeToGalleryPosts(
       } catch {
         // Ignore localStorage quota exceeded when many photos are stored in Firestore
       }
+      // Keep Express backend cache synchronized with real Firestore gallery posts
+      if (!syncedServerCache && !isDefaultSeedGallery(result)) {
+        syncedServerCache = true;
+        fetch('/api/settings/gallery', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ posts: result })
+        }).catch(() => {});
+      }
       return;
     }
 
-    // Fallback to backend API if Firestore has no gallery posts yet
-    if (hasCollectionSnap && hasManifestSnap) {
+    // Only fall back to backend API when both listeners finished, and NEVER overwrite custom localStorage with default seed posts on Firestore errors
+    if (bothDone) {
+      const cachedLocal = getCachedLocalPosts();
+      const anyErrored = collectionErrored || manifestErrored;
+
       safeFetchJson<{ posts?: SocialPost[] }>('/api/settings/gallery').then((data) => {
-        if (data && Array.isArray(data.posts) && data.posts.length > 0) {
-          onUpdate(data.posts);
-          try {
-            const jsonStr = JSON.stringify(data.posts);
-            localStorage.setItem('deolinda_custom_social_posts', jsonStr);
-            localStorage.setItem('deolinda_custom_gallery_posts', jsonStr);
-          } catch {}
+        const serverPosts = data && Array.isArray(data.posts) ? data.posts : [];
+        if (cachedLocal.length > 0 && (!isDefaultSeedGallery(cachedLocal) || anyErrored)) {
+          if (serverPosts.length > 0 && !isDefaultSeedGallery(serverPosts)) {
+            onUpdate(serverPosts);
+          } else {
+            onUpdate(cachedLocal);
+          }
+          return;
+        }
+        if (serverPosts.length > 0) {
+          onUpdate(serverPosts);
+          if (!anyErrored) {
+            try {
+              const jsonStr = JSON.stringify(serverPosts);
+              localStorage.setItem('deolinda_custom_social_posts', jsonStr);
+              localStorage.setItem('deolinda_custom_gallery_posts', jsonStr);
+            } catch {}
+          }
         }
       });
     }
@@ -1168,11 +1219,12 @@ export function subscribeToGalleryPosts(
         });
         collectionDocsMap = nextMap;
         hasCollectionSnap = true;
+        collectionErrored = false;
         emitMergedPosts();
       },
       (err) => {
         console.warn('[Firestore] gallery_posts collection subscription notice:', err?.message || err);
-        hasCollectionSnap = true;
+        collectionErrored = true;
         emitMergedPosts();
       }
     );
@@ -1191,11 +1243,12 @@ export function subscribeToGalleryPosts(
           legacyPosts = [];
         }
         hasManifestSnap = true;
+        manifestErrored = false;
         emitMergedPosts();
       },
       (err) => {
         console.warn('[Firestore] Gallery manifest subscription notice:', err?.message || err);
-        hasManifestSnap = true;
+        manifestErrored = true;
         emitMergedPosts();
       }
     );
@@ -1206,11 +1259,16 @@ export function subscribeToGalleryPosts(
     };
   } catch (err) {
     console.warn('[Firestore] Gallery subscribe error:', err);
-    safeFetchJson<{ posts?: SocialPost[] }>('/api/settings/gallery').then((data) => {
-      if (data && Array.isArray(data.posts) && data.posts.length > 0) {
-        onUpdate(data.posts);
-      }
-    });
+    const cachedLocal = getCachedLocalPosts();
+    if (cachedLocal.length > 0 && !isDefaultSeedGallery(cachedLocal)) {
+      onUpdate(cachedLocal);
+    } else {
+      safeFetchJson<{ posts?: SocialPost[] }>('/api/settings/gallery').then((data) => {
+        if (data && Array.isArray(data.posts) && data.posts.length > 0) {
+          onUpdate(data.posts);
+        }
+      });
+    }
     return () => {};
   }
 }
@@ -1349,9 +1407,7 @@ export function subscribeToMenuCategories(
       if (snap.exists()) {
         const data = snap.data();
         if (data && Array.isArray(data.categories)) {
-          const normalized = data.categories
-            .filter((c: any) => c && c.id !== 'antipasti' && c.label !== 'Entradas & Aperitivos')
-            .map((c: any) => c.id === 'bevande' ? { ...c, label: 'Bebidas' } : c);
+          const normalized = normalizeMenuCategories(data.categories);
           onUpdate(normalized);
           try {
             localStorage.setItem('deolinda_custom_menu_categories', JSON.stringify(normalized));

@@ -7,7 +7,7 @@ import {
   Wine
 } from 'lucide-react';
 import { MenuItem, CategoryType, CartItem, CustomerUser, MenuCategory, SiteInfo } from '../types';
-import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES } from '../data/menuData';
+import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES, normalizeMenuCategories, normalizeMenuItemCategory } from '../data/menuData';
 import { compressImageElementToDataUrl } from '../utils/imageCompressor';
 import { migrateCachedMenuImageToFirestore } from '../services/firebaseService';
 
@@ -66,7 +66,9 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
   }, [viewingItem, isCategoryMenuOpen]);
 
   const categories: { id: CategoryType | 'all'; label: string; icon: string }[] = useMemo(() => {
-    const list = menuCategories && menuCategories.length > 0 ? menuCategories : DEFAULT_MENU_CATEGORIES;
+    const list = menuCategories && menuCategories.length > 0
+      ? normalizeMenuCategories(menuCategories)
+      : DEFAULT_MENU_CATEGORIES;
     return [
       { id: 'all', label: 'Todo o Cardápio', icon: '🍽️' },
       ...list.map(c => ({
@@ -81,7 +83,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
 
   const filteredItems = useMemo(() => {
     return currentItems.filter((item) => {
-      const itemCat = String(item.category || '').trim().toLowerCase();
+      const itemCat = String(normalizeMenuItemCategory(item.category) || '').trim().toLowerCase();
       const filterCat = String(selectedCategory).trim().toLowerCase();
       const matchCategory = selectedCategory === 'all' || itemCat === filterCat;
       const matchQuery = 
@@ -128,11 +130,14 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
   };
 
   const getCategoryLabel = (catId: string) => {
-    const found = categories.find(c => c.id === catId);
+    const normalizedId = normalizeMenuItemCategory(catId);
+    const found = categories.find(c => c.id === normalizedId || c.id === catId);
     if (found) return found.label;
-    switch (catId) {
-      case 'tradizionali': return 'Pizzas Tradicionais';
-      case 'speciali': return 'Pizzas Especiais';
+    switch (normalizedId) {
+      case 'napolitane_moderne':
+      case 'tradizionali':
+      case 'speciali':
+        return 'Pizzas Napolitanas Moderna';
       case 'dolci': return 'Sobremesas';
       case 'bevande': return 'Bebidas';
       default: return 'Cardápio';

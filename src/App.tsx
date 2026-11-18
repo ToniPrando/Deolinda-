@@ -13,7 +13,7 @@ import { OrderTrackingModal } from './components/OrderTrackingModal';
 import { LogoUploadModal } from './components/LogoUploadModal';
 import { Footer } from './components/Footer';
 import { CartItem, Order, Reservation, OrderStatus, CustomerUser, MenuItem, SocialPost, SiteInfo, MenuCategory } from './types';
-import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES } from './data/menuData';
+import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES, normalizeMenuItems, normalizeMenuCategories } from './data/menuData';
 import { SOCIAL_POSTS } from './data/socialData';
 import { DEFAULT_SITE_INFO } from './data/siteInfoData';
 import { 
@@ -68,7 +68,7 @@ export default function App() {
       const saved = localStorage.getItem('deolinda_custom_menu_items');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return normalizeMenuItems(parsed);
       }
     } catch {}
     return MENU_ITEMS;
@@ -81,10 +81,7 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const cleaned = parsed
-            .filter((c: any) => c && c.id !== 'antipasti' && c.label !== 'Entradas & Aperitivos')
-            .map((c: any) => c.id === 'bevande' ? { ...c, label: 'Bebidas' } : c);
-          if (cleaned.length > 0) return cleaned;
+          return normalizeMenuCategories(parsed);
         }
       }
     } catch {}
@@ -366,14 +363,15 @@ export default function App() {
     // 2. Fetch menu items from backend API
     safeFetchJson<{ items?: MenuItem[] }>('/api/settings/menu').then(data => {
       if (data && Array.isArray(data.items) && data.items.length > 0) {
+        const normalizedItems = normalizeMenuItems(data.items);
         setMenuItems(prev => {
-          if (prev.length > (data.items?.length || 0) && prev !== MENU_ITEMS) {
+          if (prev.length > normalizedItems.length && prev !== MENU_ITEMS) {
             return prev;
           }
-          return data.items || prev;
+          return normalizedItems;
         });
         try {
-          localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(data.items));
+          localStorage.setItem('deolinda_custom_menu_items', JSON.stringify(normalizedItems));
         } catch {}
       }
     });
@@ -381,23 +379,30 @@ export default function App() {
     // 3. Subscribe to Firestore menu items in real-time
     const unsubMenu = subscribeToMenuItems((items) => {
       if (items && items.length > 0) {
-        setMenuItems(items);
+        setMenuItems(normalizeMenuItems(items));
       }
     });
 
-    // 4. Fetch gallery posts from backend API
+    // 4. Fetch gallery posts from backend API (never overwrite custom cached/Firestore posts with default seed posts)
     safeFetchJson<{ posts?: SocialPost[] }>('/api/settings/gallery').then(data => {
       if (data && Array.isArray(data.posts) && data.posts.length > 0) {
+        const defaultIds = new Set(['post-1', 'post-2', 'post-3', 'post-4', 'post-5', 'post-6', 'post-7', 'post-8']);
+        const apiIsDefaultSeed =
+          data.posts.length <= 8 &&
+          data.posts.every(p => defaultIds.has(p.id) && !p.imageUrl?.startsWith('data:image/'));
+
         setSocialPosts(prev => {
-          // Prefer Firestore real-time posts if they already contain portable data URLs
-          const prevHasDataUrls = prev.some(p => p.imageUrl?.startsWith('data:image/'));
-          const apiHasDataUrls = data.posts!.some(p => p.imageUrl?.startsWith('data:image/'));
-          if (prevHasDataUrls && !apiHasDataUrls) return prev;
+          const prevIsDefaultSeed =
+            prev.length <= 8 &&
+            prev.every(p => defaultIds.has(p.id) && !p.imageUrl?.startsWith('data:image/'));
+          if (!prevIsDefaultSeed && apiIsDefaultSeed) return prev;
+          try {
+            const jsonStr = JSON.stringify(data.posts);
+            localStorage.setItem('deolinda_custom_social_posts', jsonStr);
+            localStorage.setItem('deolinda_custom_gallery_posts', jsonStr);
+          } catch {}
           return data.posts!;
         });
-        try {
-          localStorage.setItem('deolinda_custom_social_posts', JSON.stringify(data.posts));
-        } catch {}
       }
     });
 
@@ -433,9 +438,7 @@ export default function App() {
     // 8. Fetch menu categories from backend API
     safeFetchJson<{ categories?: MenuCategory[] }>('/api/settings/categories').then(data => {
       if (data && Array.isArray(data.categories) && data.categories.length > 0) {
-        const cleaned = data.categories
-          .filter((c: any) => c && c.id !== 'antipasti' && c.label !== 'Entradas & Aperitivos')
-          .map((c: any) => c.id === 'bevande' ? { ...c, label: 'Bebidas' } : c);
+        const cleaned = normalizeMenuCategories(data.categories);
         setMenuCategories(cleaned);
         try {
           localStorage.setItem('deolinda_custom_menu_categories', JSON.stringify(cleaned));
@@ -446,10 +449,7 @@ export default function App() {
     // 9. Subscribe to Firestore menu categories in real-time
     const unsubCategories = subscribeToMenuCategories((cats) => {
       if (cats && cats.length > 0) {
-        const cleaned = cats
-          .filter((c: any) => c && c.id !== 'antipasti' && c.label !== 'Entradas & Aperitivos')
-          .map((c: any) => c.id === 'bevande' ? { ...c, label: 'Bebidas' } : c);
-        setMenuCategories(cleaned);
+        setMenuCategories(normalizeMenuCategories(cats));
       }
     });
 

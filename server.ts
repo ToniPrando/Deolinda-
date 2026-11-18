@@ -598,7 +598,14 @@ app.post("/api/settings/emblem", (req, res) => {
 // Custom Menu Items API (Adicionar, Editar e Excluir itens do cardápio)
 app.get("/api/settings/menu", (_req, res) => {
   try {
-    res.json({ items: (db as any).menuItems || null });
+    const rawItems = (db as any).menuItems;
+    const normalizedItems = Array.isArray(rawItems)
+      ? rawItems.map((it: any) => ({
+          ...it,
+          category: normalizeServerItemCategory(it?.category)
+        }))
+      : null;
+    res.json({ items: normalizedItems });
   } catch (error: any) {
     res.json({ items: null });
   }
@@ -735,22 +742,63 @@ app.post("/api/settings/gallery", (req, res) => {
 
 // Custom Menu Categories API (Botões do Cardápio)
 const DEFAULT_SERVER_CATEGORIES = [
-  { id: "tradizionali", label: "Pizzas Tradicionais", icon: "🍕" },
-  { id: "speciali", label: "Pizzas Especiais", icon: "✨" },
+  { id: "napolitane_moderne", label: "Pizzas Napolitanas Moderna", icon: "🍕" },
   { id: "dolci", label: "Sobremesas", icon: "🍰" },
   { id: "bevande", label: "Bebidas", icon: "🍷" }
 ];
 
+function normalizeServerItemCategory(category: any): string {
+  const raw = String(category || "").trim().toLowerCase();
+  if (
+    !raw ||
+    raw === "tradizionali" ||
+    raw === "speciali" ||
+    raw === "pizzas tradicionais" ||
+    raw === "pizzas especiais" ||
+    raw === "napolitane_moderne" ||
+    raw === "pizzas napolitanas moderna"
+  ) {
+    return "napolitane_moderne";
+  }
+  return String(category);
+}
+
+function normalizeServerCategories(cats: any[]): any[] {
+  if (!Array.isArray(cats) || cats.length === 0) return DEFAULT_SERVER_CATEGORIES;
+  const out: any[] = [];
+  let hasModern = false;
+  for (const c of cats) {
+    if (!c) continue;
+    const idLower = String(c.id || "").trim().toLowerCase();
+    const labelLower = String(c.label || "").trim().toLowerCase();
+    if (idLower === "antipasti" || labelLower === "entradas & aperitivos") continue;
+    if (
+      idLower === "tradizionali" ||
+      idLower === "speciali" ||
+      idLower === "napolitane_moderne" ||
+      labelLower === "pizzas tradicionais" ||
+      labelLower === "pizzas especiais" ||
+      labelLower === "pizzas napolitanas moderna"
+    ) {
+      if (!hasModern) {
+        out.push({ id: "napolitane_moderne", label: "Pizzas Napolitanas Moderna", icon: c.icon || "🍕" });
+        hasModern = true;
+      }
+      continue;
+    }
+    if (idLower === "bevande") {
+      out.push({ ...c, label: "Bebidas" });
+      continue;
+    }
+    out.push(c);
+  }
+  return out.length > 0 ? out : DEFAULT_SERVER_CATEGORIES;
+}
+
 app.get("/api/settings/categories", (_req, res) => {
   try {
     let cats = (db as any).menuCategories;
-    if (Array.isArray(cats) && cats.length > 0) {
-      cats = cats
-        .filter((c: any) => c && c.id !== 'antipasti' && c.label !== 'Entradas & Aperitivos')
-        .map((c: any) => c.id === 'bevande' ? { ...c, label: 'Bebidas' } : c);
-    } else {
-      cats = DEFAULT_SERVER_CATEGORIES;
-    }
+    cats = normalizeServerCategories(cats);
     (db as any).menuCategories = cats;
     res.json({ categories: cats });
   } catch (error: any) {
@@ -762,9 +810,7 @@ app.post("/api/settings/categories", (req, res) => {
   try {
     const { categories } = req.body;
     if (Array.isArray(categories)) {
-      const sanitizedCats = categories
-        .filter((c: any) => c && c.id !== 'antipasti' && c.label !== 'Entradas & Aperitivos')
-        .map((c: any) => c.id === 'bevande' ? { ...c, label: 'Bebidas' } : c);
+      const sanitizedCats = normalizeServerCategories(categories);
       (db as any).menuCategories = sanitizedCats;
       saveDatabase();
       return res.json({ success: true, count: sanitizedCats.length, categories: sanitizedCats });

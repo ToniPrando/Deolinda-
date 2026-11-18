@@ -48,7 +48,7 @@ import {
   ShieldCheck,
   Mail
 } from 'lucide-react';
-import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES } from '../data/menuData';
+import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES, normalizeMenuItems, normalizeMenuCategories, normalizeMenuItemCategory } from '../data/menuData';
 import { SOCIAL_POSTS } from '../data/socialData';
 import { DEFAULT_SITE_INFO } from '../data/siteInfoData';
 import { MenuItem, CategoryType, SocialPost, SiteInfo, MenuCategory } from '../types';
@@ -147,12 +147,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // MENU ITEMS STATE & CONTROLS
   // ==========================================
   const [currentMenuItems, setCurrentMenuItems] = useState<MenuItem[]>(() => {
-    if (menuItems && menuItems.length > 0) return menuItems;
+    if (menuItems && menuItems.length > 0) return normalizeMenuItems(menuItems);
     try {
       const saved = localStorage.getItem('deolinda_custom_menu_items');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return normalizeMenuItems(parsed);
       }
     } catch {}
     return MENU_ITEMS;
@@ -160,7 +160,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   useEffect(() => {
     if (menuItems && menuItems.length > 0) {
-      setCurrentMenuItems(menuItems);
+      setCurrentMenuItems(normalizeMenuItems(menuItems));
     }
   }, [menuItems]);
 
@@ -173,12 +173,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // MENU CATEGORIES (BOTÕES DO CARDÁPIO) STATE
   // ==========================================
   const [currentCategories, setCurrentCategories] = useState<MenuCategory[]>(() => {
-    if (menuCategories && menuCategories.length > 0) return menuCategories;
+    if (menuCategories && menuCategories.length > 0) return normalizeMenuCategories(menuCategories);
     try {
       const saved = localStorage.getItem('deolinda_custom_menu_categories');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return normalizeMenuCategories(parsed);
       }
     } catch {}
     return DEFAULT_MENU_CATEGORIES;
@@ -186,7 +186,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   useEffect(() => {
     if (menuCategories && menuCategories.length > 0) {
-      setCurrentCategories(menuCategories);
+      setCurrentCategories(normalizeMenuCategories(menuCategories));
     }
   }, [menuCategories]);
 
@@ -224,13 +224,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const getCategoryNameInPortuguese = (category: string) => {
-    const found = currentCategories.find(c => c.id === category);
+    const normalizedId = normalizeMenuItemCategory(category);
+    const found = currentCategories.find(c => c.id === normalizedId || c.id === category);
     if (found) return found.label;
-    switch (category) {
+    switch (normalizedId) {
+      case 'napolitane_moderne':
       case 'tradizionali':
-        return 'Pizzas Tradicionais';
       case 'speciali':
-        return 'Pizzas Especiais';
+        return 'Pizzas Napolitanas Moderna';
       case 'dolci':
         return 'Sobremesas';
       case 'bevande':
@@ -408,7 +409,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [itemFormData, setItemFormData] = useState({
     name: '',
     italianName: '',
-    category: 'tradizionali' as CategoryType,
+    category: 'napolitane_moderne' as CategoryType,
     price: 'R$ 0,00',
     description: '',
     ingredientsStr: '',
@@ -453,7 +454,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setItemFormData({
       name: '',
       italianName: '',
-      category: (selectedCategoryFilter !== 'all' ? selectedCategoryFilter : 'tradizionali') as CategoryType,
+      category: (selectedCategoryFilter !== 'all' ? selectedCategoryFilter : 'napolitane_moderne') as CategoryType,
       price: 'R$ 0,00',
       description: '',
       ingredientsStr: '',
@@ -3446,7 +3447,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="p-3.5 rounded-2xl bg-[#E5A93C]/10 border border-[#E5A93C]/30 text-xs text-[#5C554E] flex items-start gap-2.5">
                 <Info className="w-4 h-4 text-[#8C5E14] shrink-0 mt-0.5" />
                 <p>
-                  Estes botões aparecem no topo da página de cardápio do site para os clientes escolherem os tipos de produtos (ex: Pizzas Tradicionais, Especiais, Bebidas, etc.).
+                  Estes botões aparecem no topo da página de cardápio do site para os clientes escolherem os tipos de produtos (ex: Pizzas Napolitanas Moderna, Sobremesas, Bebidas, etc.).
                 </p>
               </div>
 
@@ -3495,7 +3496,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       required
                       value={categoryFormData.label}
                       onChange={(e) => setCategoryFormData({ ...categoryFormData, label: e.target.value })}
-                      placeholder="Ex: Pizzas Especiais, Calzones, Vinhos"
+                      placeholder="Ex: Pizzas Napolitanas Moderna, Calzones, Vinhos"
                       className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-xs sm:text-sm text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
                     />
                   </div>

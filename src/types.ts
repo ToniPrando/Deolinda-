@@ -1,4 +1,4 @@
-export type CategoryType = 'tradizionali' | 'speciali' | 'antipasti' | 'dolci' | 'bevande' | (string & {});
+export type CategoryType = 'napolitane_moderne' | 'tradizionali' | 'speciali' | 'antipasti' | 'dolci' | 'bevande' | (string & {});
 
 export interface MenuCategory {
   id: string;

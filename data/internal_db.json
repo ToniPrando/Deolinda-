@@ -251,7 +251,7 @@
       "pointsEarned": 65,
       "price": 65,
       "updatedAt": "2026-11-03T16:31:37.656Z",
-      "category": "tradizionali",
+      "category": "napolitane_moderne",
       "_serverTimestamp": {
         "type": "firestore/timestamp/1.0",
         "seconds": 1793723497,
@@ -274,7 +274,7 @@
       "description": "Cremoso Queijo Brie, Intenso Queijo Gorgonzolla, \nPêras e Favo de Mel.",
       "id": "item-1793658245021",
       "updatedAt": "2026-11-03T16:31:37.656Z",
-      "category": "tradizionali",
+      "category": "napolitane_moderne",
       "pointsToRedeem": 390,
       "_serverTimestamp": {
         "type": "firestore/timestamp/1.0",
@@ -295,7 +295,7 @@
       "tags": [],
       "description": "Mozarella Fior D'latte do lacticínio Fior D'italia, \nTomate pelati San Marzano e manjericão.",
       "price": 60,
-      "category": "tradizionali",
+      "category": "napolitane_moderne",
       "pointsToRedeem": 360,
       "ingredients": [
         "Ingredientes frescos da casa"
@@ -313,7 +313,7 @@
       "image": "/menu_images/item-1793732389388.jpg",
       "description": "Tomate pelati San Marzano, confit de alho, ervas \nfrecas e manjericão.",
       "pointsEarned": 60,
-      "category": "tradizionali",
+      "category": "napolitane_moderne",
       "pointsToRedeem": 360,
       "isPopular": false,
       "price": 60,
@@ -345,7 +345,7 @@
       "image": "/menu_images/item-1793732328548.jpg",
       "price": 65,
       "tags": [],
-      "category": "tradizionali",
+      "category": "napolitane_moderne",
       "pointsToRedeem": 390
     },
     {
@@ -353,7 +353,7 @@
       "image": "/menu_images/item-1793732250442.jpg",
       "isPopular": false,
       "price": 65,
-      "category": "tradizionali",
+      "category": "napolitane_moderne",
       "pointsToRedeem": 390,
       "pointsEarned": 65,
       "name": "ROSE IN ITALIA",
@@ -383,7 +383,7 @@
       "pointsToRedeem": 390,
       "price": 65,
       "image": "/menu_images/item-1793658314659.jpg",
-      "category": "tradizionali",
+      "category": "napolitane_moderne",
       "name": "SICÍLIA",
       "isAvailable": true,
       "ingredients": [
@@ -411,7 +411,7 @@
       "price": 65,
       "id": "item-1793724294044",
       "description": "Mozarella Fior D'latte do lacticínio Fior D'italia , \npresunto cru italiano, rúcula selvática, azeite e \nGrana Padano.",
-      "category": "tradizionali",
+      "category": "napolitane_moderne",
       "updatedAt": "2026-11-03T16:47:34.302Z"
     },
     {
@@ -421,7 +421,7 @@
       ],
       "isAvailable": true,
       "isPopular": false,
-      "category": "speciali",
+      "category": "napolitane_moderne",
       "price": 55,
       "pointsEarned": 55,
       "pointsToRedeem": 330,
@@ -447,7 +447,7 @@
       },
       "image": "/menu_images/item-1793658008343.jpg",
       "name": "CALÁBRIA PICCOLO",
-      "category": "speciali",
+      "category": "napolitane_moderne",
       "isAvailable": true,
       "ingredients": [
         "Ingredientes frescos da casa"
@@ -474,7 +474,7 @@
       ],
       "isAvailable": true,
       "price": 65,
-      "category": "speciali",
+      "category": "napolitane_moderne",
       "pointsEarned": 65,
       "isPopular": false,
       "image": "/menu_images/item-1793658171530.jpg",
@@ -725,14 +725,9 @@
   ],
   "menuCategories": [
     {
-      "id": "tradizionali",
-      "label": "Pizzas Tradicionais",
+      "id": "napolitane_moderne",
+      "label": "Pizzas Napolitanas Moderna",
       "icon": "🍕"
-    },
-    {
-      "id": "speciali",
-      "label": "Pizzas Especiais",
-      "icon": "✨"
     },
     {
       "id": "dolci",
