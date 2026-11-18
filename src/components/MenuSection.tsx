@@ -140,6 +140,8 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
         return 'Pizzas Napolitanas Moderna';
       case 'dolci': return 'Sobremesas';
       case 'bevande': return 'Bebidas';
+      case 'bebidas_sem_alcool': return 'Bebidas sem Alcool';
+      case 'cervejas': return 'Cervejas';
       default: return 'Cardápio';
     }
   };

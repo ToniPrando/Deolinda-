@@ -15,7 +15,7 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { Order, Reservation, OrderStatus, MenuItem, SocialPost, SiteInfo, MenuCategory } from '../types';
-import { MENU_ITEMS, normalizeMenuItemCategory, normalizeMenuCategories } from '../data/menuData';
+import { MENU_ITEMS, normalizeMenuItemCategory, ensureAdditionalDrinkCategories } from '../data/menuData';
 import { safeFetchJson } from '../utils/safeFetch';
 import { compressImageForFirestore, compressBrandImageForFirestore } from '../utils/imageCompressor';
 
@@ -812,7 +812,9 @@ export function subscribeToMenuItems(
       'tradizionali': 1,
       'speciali': 1,
       'dolci': 2,
-      'bevande': 3
+      'bevande': 3,
+      'bebidas_sem_alcool': 4,
+      'cervejas': 5
     };
 
     const processSnapshot = (snapshot: any) => {
@@ -1407,7 +1409,7 @@ export function subscribeToMenuCategories(
       if (snap.exists()) {
         const data = snap.data();
         if (data && Array.isArray(data.categories)) {
-          const normalized = normalizeMenuCategories(data.categories);
+          const normalized = ensureAdditionalDrinkCategories(data.categories);
           onUpdate(normalized);
           try {
             localStorage.setItem('deolinda_custom_menu_categories', JSON.stringify(normalized));

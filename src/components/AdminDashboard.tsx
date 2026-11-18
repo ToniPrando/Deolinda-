@@ -48,7 +48,7 @@ import {
   ShieldCheck,
   Mail
 } from 'lucide-react';
-import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES, normalizeMenuItems, normalizeMenuCategories, normalizeMenuItemCategory } from '../data/menuData';
+import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES, normalizeMenuItems, ensureAdditionalDrinkCategories, normalizeMenuItemCategory } from '../data/menuData';
 import { SOCIAL_POSTS } from '../data/socialData';
 import { DEFAULT_SITE_INFO } from '../data/siteInfoData';
 import { MenuItem, CategoryType, SocialPost, SiteInfo, MenuCategory } from '../types';
@@ -173,12 +173,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // MENU CATEGORIES (BOTÕES DO CARDÁPIO) STATE
   // ==========================================
   const [currentCategories, setCurrentCategories] = useState<MenuCategory[]>(() => {
-    if (menuCategories && menuCategories.length > 0) return normalizeMenuCategories(menuCategories);
+    if (menuCategories && menuCategories.length > 0) return ensureAdditionalDrinkCategories(menuCategories);
     try {
       const saved = localStorage.getItem('deolinda_custom_menu_categories');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return normalizeMenuCategories(parsed);
+        if (Array.isArray(parsed) && parsed.length > 0) return ensureAdditionalDrinkCategories(parsed);
       }
     } catch {}
     return DEFAULT_MENU_CATEGORIES;
@@ -186,7 +186,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   useEffect(() => {
     if (menuCategories && menuCategories.length > 0) {
-      setCurrentCategories(normalizeMenuCategories(menuCategories));
+      setCurrentCategories(ensureAdditionalDrinkCategories(menuCategories));
     }
   }, [menuCategories]);
 
@@ -236,6 +236,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         return 'Sobremesas';
       case 'bevande':
         return 'Bebidas';
+      case 'bebidas_sem_alcool':
+        return 'Bebidas sem Alcool';
+      case 'cervejas':
+        return 'Cervejas';
       default:
         return category;
     }

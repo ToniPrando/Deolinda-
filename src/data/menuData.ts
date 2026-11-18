@@ -6,7 +6,9 @@ export const MODERN_PIZZA_CATEGORY_LABEL = "Pizzas Napolitanas Moderna";
 export const DEFAULT_MENU_CATEGORIES: MenuCategory[] = [
   { id: MODERN_PIZZA_CATEGORY_ID, label: MODERN_PIZZA_CATEGORY_LABEL, icon: "🍕" },
   { id: "dolci", label: "Sobremesas", icon: "🍰" },
-  { id: "bevande", label: "Bebidas", icon: "🍷" }
+  { id: "bevande", label: "Bebidas", icon: "🍷" },
+  { id: "bebidas_sem_alcool", label: "Bebidas sem Alcool", icon: "🥤" },
+  { id: "cervejas", label: "Cervejas", icon: "🍺" }
 ];
 
 export function normalizeMenuItemCategory(category?: string): CategoryType {
@@ -79,6 +81,40 @@ export function normalizeMenuCategories(categories: MenuCategory[]): MenuCategor
   }
 
   return normalized.length > 0 ? normalized : DEFAULT_MENU_CATEGORIES;
+}
+
+export function ensureAdditionalDrinkCategories(categories: MenuCategory[]): MenuCategory[] {
+  const base = normalizeMenuCategories(categories);
+  const result = [...base];
+
+  let alreadyMigrated = false;
+  try {
+    alreadyMigrated = typeof window !== "undefined" && localStorage.getItem("deolinda_added_drink_cats_v1") === "true";
+  } catch {}
+
+  const hasNonAlcoholic = result.some(
+    (c) => c.id === "bebidas_sem_alcool" || c.label.trim().toLowerCase() === "bebidas sem alcool" || c.label.trim().toLowerCase() === "bebidas sem álcool"
+  );
+  const hasBeers = result.some(
+    (c) => c.id === "cervejas" || c.label.trim().toLowerCase() === "cervejas"
+  );
+
+  if (!alreadyMigrated) {
+    if (!hasNonAlcoholic) {
+      result.push({ id: "bebidas_sem_alcool", label: "Bebidas sem Alcool", icon: "🥤" });
+    }
+    if (!hasBeers) {
+      result.push({ id: "cervejas", label: "Cervejas", icon: "🍺" });
+    }
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("deolinda_added_drink_cats_v1", "true");
+        localStorage.setItem("deolinda_custom_menu_categories", JSON.stringify(result));
+      }
+    } catch {}
+  }
+
+  return result;
 }
 
 export const MENU_ITEMS: MenuItem[] = [

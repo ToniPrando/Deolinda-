@@ -744,7 +744,9 @@ app.post("/api/settings/gallery", (req, res) => {
 const DEFAULT_SERVER_CATEGORIES = [
   { id: "napolitane_moderne", label: "Pizzas Napolitanas Moderna", icon: "🍕" },
   { id: "dolci", label: "Sobremesas", icon: "🍰" },
-  { id: "bevande", label: "Bebidas", icon: "🍷" }
+  { id: "bevande", label: "Bebidas", icon: "🍷" },
+  { id: "bebidas_sem_alcool", label: "Bebidas sem Alcool", icon: "🥤" },
+  { id: "cervejas", label: "Cervejas", icon: "🍺" }
 ];
 
 function normalizeServerItemCategory(category: any): string {

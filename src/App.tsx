@@ -13,7 +13,7 @@ import { OrderTrackingModal } from './components/OrderTrackingModal';
 import { LogoUploadModal } from './components/LogoUploadModal';
 import { Footer } from './components/Footer';
 import { CartItem, Order, Reservation, OrderStatus, CustomerUser, MenuItem, SocialPost, SiteInfo, MenuCategory } from './types';
-import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES, normalizeMenuItems, normalizeMenuCategories } from './data/menuData';
+import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES, normalizeMenuItems, ensureAdditionalDrinkCategories } from './data/menuData';
 import { SOCIAL_POSTS } from './data/socialData';
 import { DEFAULT_SITE_INFO } from './data/siteInfoData';
 import { 
@@ -81,7 +81,7 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return normalizeMenuCategories(parsed);
+          return ensureAdditionalDrinkCategories(parsed);
         }
       }
     } catch {}
@@ -438,7 +438,7 @@ export default function App() {
     // 8. Fetch menu categories from backend API
     safeFetchJson<{ categories?: MenuCategory[] }>('/api/settings/categories').then(data => {
       if (data && Array.isArray(data.categories) && data.categories.length > 0) {
-        const cleaned = normalizeMenuCategories(data.categories);
+        const cleaned = ensureAdditionalDrinkCategories(data.categories);
         setMenuCategories(cleaned);
         try {
           localStorage.setItem('deolinda_custom_menu_categories', JSON.stringify(cleaned));
@@ -449,7 +449,7 @@ export default function App() {
     // 9. Subscribe to Firestore menu categories in real-time
     const unsubCategories = subscribeToMenuCategories((cats) => {
       if (cats && cats.length > 0) {
-        setMenuCategories(normalizeMenuCategories(cats));
+        setMenuCategories(ensureAdditionalDrinkCategories(cats));
       }
     });
 

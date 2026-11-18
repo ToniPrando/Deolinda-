@@ -738,6 +738,16 @@
       "id": "bevande",
       "label": "Bebidas",
       "icon": "🍷"
+    },
+    {
+      "id": "bebidas_sem_alcool",
+      "label": "Bebidas sem Alcool",
+      "icon": "🥤"
+    },
+    {
+      "id": "cervejas",
+      "label": "Cervejas",
+      "icon": "🍺"
     }
   ],
   "customLogo": null,
