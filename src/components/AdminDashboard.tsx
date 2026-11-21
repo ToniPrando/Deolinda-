@@ -164,7 +164,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   }, [menuItems]);
 
-  const [isMaximized, setIsMaximized] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(true);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsMaximized(true);
+    }
+  }, [isOpen]);
   const [menuSearch, setMenuSearch] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<CategoryType | 'all'>('all');
   const [menuNotice, setMenuNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
