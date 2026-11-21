@@ -3,20 +3,19 @@ import {
   Instagram, 
   Send, 
   Facebook,
-  Lock,
   MapPin
 } from 'lucide-react';
 import { SiteInfo } from '../types';
 
 interface FooterProps {
   onOpenReservation?: () => void;
-  onOpenAdmin: () => void;
+  onOpenAdmin?: () => void;
   siteInfo?: SiteInfo;
   customLogoUrl?: string | null;
   onNavigate?: (id: string, pathOverride?: string) => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo, customLogoUrl }) => {
+export const Footer: React.FC<FooterProps> = ({ siteInfo, customLogoUrl }) => {
   return (
     <footer className="site-footer bg-white text-[#181513] border-t border-[#EADFCF] pt-10 pb-8">
       <div className="footer-content w-full max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -103,18 +102,6 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin, siteInfo, customLog
             <span>
               © {new Date().getFullYear()} Deolinda Pizzaria Napoletana. Fatta con amore
             </span>
-          </div>
-
-          {/* Centro: Cadeado Admin Único */}
-          <div className="flex items-center justify-center order-3 md:order-2">
-            <button
-              onClick={onOpenAdmin}
-              className="text-[#A89F95] hover:text-[#C24D2C] transition-colors p-1.5 rounded-md hover:bg-[#FAF7F2] cursor-pointer flex items-center justify-center"
-              title="Área Restrita (Administrador)"
-              aria-label="Área Restrita"
-            >
-              <Lock className="w-3.5 h-3.5" />
-            </button>
           </div>
 
           {/* Lado Direito: Criado por TonIAep (Texto com link) */}

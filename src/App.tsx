@@ -45,7 +45,7 @@ export default function App() {
       const pathname = window.location.pathname;
       const hash = window.location.hash;
       const route = getRouteByPath(pathname) || (hash ? getRouteByPath(hash) : undefined);
-      if (route) return route.id;
+      if (route && route.id !== 'admin') return route.id;
     }
     return 'hero';
   });
@@ -782,9 +782,15 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const isAdminRouteLocation = (pathname: string, hash: string) => {
+    const cleanPath = (pathname || '/').toLowerCase().replace(/\/+$/, '') || '/';
+    const cleanHash = (hash || '').toLowerCase().replace(/\/+$/, '');
+    return cleanPath === '/admin' || cleanHash === '#admin' || cleanHash === '#/admin';
+  };
+
   const handleOpenAdminAuth = () => {
     setIsAdminAuthOpen(true);
-    if (window.location.pathname !== '/admin') {
+    if (!isAdminRouteLocation(window.location.pathname, window.location.hash)) {
       window.history.pushState({ section: 'admin' }, '', '/admin');
     }
     document.title = 'Área do Administrador | Deolinda Pizzaria Napoletana';
@@ -793,7 +799,7 @@ export default function App() {
   const handleAdminAuthSuccess = () => {
     setIsAdminAuthOpen(false);
     setIsAdminOpen(true);
-    if (window.location.pathname !== '/admin') {
+    if (!isAdminRouteLocation(window.location.pathname, window.location.hash)) {
       window.history.pushState({ section: 'admin' }, '', '/admin');
     }
     document.title = 'Painel do Administrador | Deolinda Pizzaria Napoletana';
@@ -801,9 +807,10 @@ export default function App() {
 
   const handleCloseAdminAuth = () => {
     setIsAdminAuthOpen(false);
-    if (!isAdminOpen && window.location.pathname === '/admin') {
-      const route = getRouteById(activeSection);
-      window.history.pushState({ section: activeSection }, '', route ? route.path : '/');
+    if (!isAdminOpen && isAdminRouteLocation(window.location.pathname, window.location.hash)) {
+      const safeSection = activeSection === 'admin' ? 'hero' : activeSection;
+      const route = getRouteById(safeSection);
+      window.history.pushState({ section: safeSection }, '', route ? route.path : '/');
       document.title = route ? route.title : 'Deolinda Pizzaria Napoletana | Fermentação Lenta & Tradição';
     }
   };
@@ -815,10 +822,11 @@ export default function App() {
       sessionStorage.removeItem('deolinda_admin_authenticated');
       localStorage.removeItem('deolinda_admin_authenticated');
     } catch {}
-    const route = getRouteById(activeSection);
+    const safeSection = activeSection === 'admin' ? 'hero' : activeSection;
+    const route = getRouteById(safeSection);
     const targetPath = route ? route.path : '/';
-    if (window.location.pathname === '/admin') {
-      window.history.pushState({ section: activeSection }, '', targetPath);
+    if (isAdminRouteLocation(window.location.pathname, window.location.hash)) {
+      window.history.pushState({ section: safeSection }, '', targetPath);
     }
     document.title = route ? route.title : 'Deolinda Pizzaria Napoletana | Fermentação Lenta & Tradição';
   };
@@ -829,14 +837,14 @@ export default function App() {
       const currentPath = window.location.pathname;
       const currentHash = window.location.hash;
 
-      if (currentPath === '/admin' || currentHash === '#admin' || currentHash === '#/admin') {
+      if (isAdminRouteLocation(currentPath, currentHash)) {
         setIsAdminAuthOpen(true);
         document.title = 'Área do Administrador | Deolinda Pizzaria Napoletana';
         return;
       }
 
       const route = getRouteByPath(currentPath) || (currentHash ? getRouteByPath(currentHash) : undefined);
-      if (route) {
+      if (route && route.id !== 'admin') {
         setActiveSection(route.id);
         document.title = route.title;
       } else {
@@ -851,8 +859,9 @@ export default function App() {
       const currentPath = window.location.pathname;
       const currentHash = window.location.hash;
 
-      if (currentPath === '/admin' || currentHash === '#admin' || currentHash === '#/admin') {
+      if (isAdminRouteLocation(currentPath, currentHash)) {
         setIsAdminAuthOpen(true);
+        document.title = 'Área do Administrador | Deolinda Pizzaria Napoletana';
         return;
       } else {
         setIsAdminOpen(false);
@@ -860,7 +869,7 @@ export default function App() {
       }
 
       const route = getRouteByPath(currentPath) || (currentHash ? getRouteByPath(currentHash) : undefined);
-      if (route) {
+      if (route && route.id !== 'admin') {
         setActiveSection(route.id);
         document.title = route.title;
       } else {
