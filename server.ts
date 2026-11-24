@@ -744,11 +744,8 @@ app.post("/api/settings/gallery", (req, res) => {
 const DEFAULT_SERVER_CATEGORIES = [
   { id: "entrada", label: "Entrada", icon: "🥗" },
   { id: "pizzas_napoletanas", label: "Pizzas Napoletanas", icon: "🍕" },
-  { id: "napolitane_moderne", label: "Pizzas Napolitanas Moderna", icon: "🍕" },
   { id: "dolci", label: "Sobremesas", icon: "🍰" },
-  { id: "bevande", label: "Bebidas", icon: "🍷" },
-  { id: "bebidas_sem_alcool", label: "Bebidas sem Alcool", icon: "🥤" },
-  { id: "cervejas", label: "Cervejas", icon: "🍺" }
+  { id: "bevande", label: "Bebidas", icon: "🍷" }
 ];
 
 function normalizeServerItemCategory(category: any): string {
@@ -760,9 +757,12 @@ function normalizeServerItemCategory(category: any): string {
     raw === "pizzas tradicionais" ||
     raw === "pizzas especiais" ||
     raw === "napolitane_moderne" ||
-    raw === "pizzas napolitanas moderna"
+    raw === "pizzas napolitanas moderna" ||
+    raw === "pizzas napolitanas modernas" ||
+    raw === "pizzas_napoletanas" ||
+    raw === "pizzas napoletanas"
   ) {
-    return "napolitane_moderne";
+    return "pizzas_napoletanas";
   }
   return String(category);
 }
@@ -770,23 +770,36 @@ function normalizeServerItemCategory(category: any): string {
 function normalizeServerCategories(cats: any[]): any[] {
   if (!Array.isArray(cats) || cats.length === 0) return DEFAULT_SERVER_CATEGORIES;
   const out: any[] = [];
-  let hasModern = false;
+  let hasPizzasNapoletanas = false;
   for (const c of cats) {
     if (!c) continue;
     const idLower = String(c.id || "").trim().toLowerCase();
     const labelLower = String(c.label || "").trim().toLowerCase();
-    if (idLower === "antipasti" || labelLower === "entradas & aperitivos") continue;
+    if (
+      idLower === "antipasti" ||
+      labelLower === "entradas & aperitivos" ||
+      idLower === "bebidas_sem_alcool" ||
+      labelLower === "bebidas sem alcool" ||
+      labelLower === "bebidas sem álcool" ||
+      idLower === "cervejas" ||
+      labelLower === "cervejas"
+    ) {
+      continue;
+    }
     if (
       idLower === "tradizionali" ||
       idLower === "speciali" ||
       idLower === "napolitane_moderne" ||
+      idLower === "pizzas_napoletanas" ||
       labelLower === "pizzas tradicionais" ||
       labelLower === "pizzas especiais" ||
-      labelLower === "pizzas napolitanas moderna"
+      labelLower === "pizzas napolitanas moderna" ||
+      labelLower === "pizzas napolitanas modernas" ||
+      labelLower === "pizzas napoletanas"
     ) {
-      if (!hasModern) {
-        out.push({ id: "napolitane_moderne", label: "Pizzas Napolitanas Moderna", icon: c.icon || "🍕" });
-        hasModern = true;
+      if (!hasPizzasNapoletanas) {
+        out.push({ id: "pizzas_napoletanas", label: "Pizzas Napoletanas", icon: c.icon || "🍕" });
+        hasPizzasNapoletanas = true;
       }
       continue;
     }

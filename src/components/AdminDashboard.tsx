@@ -237,19 +237,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       case 'entrada':
         return 'Entrada';
       case 'pizzas_napoletanas':
-        return 'Pizzas Napoletanas';
       case 'napolitane_moderne':
       case 'tradizionali':
       case 'speciali':
-        return 'Pizzas Napolitanas Moderna';
+        return 'Pizzas Napoletanas';
       case 'dolci':
         return 'Sobremesas';
       case 'bevande':
         return 'Bebidas';
-      case 'bebidas_sem_alcool':
-        return 'Bebidas sem Alcool';
-      case 'cervejas':
-        return 'Cervejas';
       default:
         return category;
     }
@@ -423,7 +418,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [itemFormData, setItemFormData] = useState({
     name: '',
     italianName: '',
-    category: 'napolitane_moderne' as CategoryType,
+    category: 'pizzas_napoletanas' as CategoryType,
     price: 'R$ 0,00',
     description: '',
     ingredientsStr: '',
@@ -468,7 +463,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setItemFormData({
       name: '',
       italianName: '',
-      category: (selectedCategoryFilter !== 'all' ? selectedCategoryFilter : 'napolitane_moderne') as CategoryType,
+      category: (selectedCategoryFilter !== 'all' ? selectedCategoryFilter : 'pizzas_napoletanas') as CategoryType,
       price: 'R$ 0,00',
       description: '',
       ingredientsStr: '',
@@ -3461,7 +3456,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="p-3.5 rounded-2xl bg-[#E5A93C]/10 border border-[#E5A93C]/30 text-xs text-[#5C554E] flex items-start gap-2.5">
                 <Info className="w-4 h-4 text-[#8C5E14] shrink-0 mt-0.5" />
                 <p>
-                  Estes botões aparecem no topo da página de cardápio do site para os clientes escolherem os tipos de produtos (ex: Pizzas Napolitanas Moderna, Sobremesas, Bebidas, etc.).
+                  Estes botões aparecem no topo da página de cardápio do site para os clientes escolherem os tipos de produtos (ex: Entrada, Pizzas Napoletanas, Sobremesas, Bebidas).
                 </p>
               </div>
 
@@ -3510,7 +3505,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       required
                       value={categoryFormData.label}
                       onChange={(e) => setCategoryFormData({ ...categoryFormData, label: e.target.value })}
-                      placeholder="Ex: Pizzas Napolitanas Moderna, Calzones, Vinhos"
+                      placeholder="Ex: Entrada, Pizzas Napoletanas, Sobremesas"
                       className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-xs sm:text-sm text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
                     />
                   </div>

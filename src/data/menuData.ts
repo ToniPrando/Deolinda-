@@ -1,16 +1,13 @@
 import { MenuItem, LoyaltyReward, MenuCategory, CategoryType } from "../types";
 
-export const MODERN_PIZZA_CATEGORY_ID = "napolitane_moderne";
-export const MODERN_PIZZA_CATEGORY_LABEL = "Pizzas Napolitanas Moderna";
+export const MODERN_PIZZA_CATEGORY_ID = "pizzas_napoletanas";
+export const MODERN_PIZZA_CATEGORY_LABEL = "Pizzas Napoletanas";
 
 export const DEFAULT_MENU_CATEGORIES: MenuCategory[] = [
   { id: "entrada", label: "Entrada", icon: "🥗" },
   { id: "pizzas_napoletanas", label: "Pizzas Napoletanas", icon: "🍕" },
-  { id: MODERN_PIZZA_CATEGORY_ID, label: MODERN_PIZZA_CATEGORY_LABEL, icon: "🍕" },
   { id: "dolci", label: "Sobremesas", icon: "🍰" },
-  { id: "bevande", label: "Bebidas", icon: "🍷" },
-  { id: "bebidas_sem_alcool", label: "Bebidas sem Alcool", icon: "🥤" },
-  { id: "cervejas", label: "Cervejas", icon: "🍺" }
+  { id: "bevande", label: "Bebidas", icon: "🍷" }
 ];
 
 export function normalizeMenuItemCategory(category?: string): CategoryType {
@@ -21,10 +18,13 @@ export function normalizeMenuItemCategory(category?: string): CategoryType {
     raw === "speciali" ||
     raw === "pizzas tradicionais" ||
     raw === "pizzas especiais" ||
-    raw === MODERN_PIZZA_CATEGORY_ID ||
-    raw === "pizzas napolitanas moderna"
+    raw === "napolitane_moderne" ||
+    raw === "pizzas napolitanas moderna" ||
+    raw === "pizzas napolitanas modernas" ||
+    raw === "pizzas_napoletanas" ||
+    raw === "pizzas napoletanas"
   ) {
-    return MODERN_PIZZA_CATEGORY_ID;
+    return "pizzas_napoletanas";
   }
   return category as CategoryType;
 }
@@ -43,33 +43,44 @@ export function normalizeMenuCategories(categories: MenuCategory[]): MenuCategor
   }
 
   const normalized: MenuCategory[] = [];
-  let hasModernPizza = false;
+  let hasPizzasNapoletanas = false;
 
   for (const cat of categories) {
     if (!cat) continue;
     const idLower = String(cat.id || "").trim().toLowerCase();
     const labelLower = String(cat.label || "").trim().toLowerCase();
 
-    if (idLower === "antipasti" || labelLower === "entradas & aperitivos") {
+    if (
+      idLower === "antipasti" ||
+      labelLower === "entradas & aperitivos" ||
+      idLower === "bebidas_sem_alcool" ||
+      labelLower === "bebidas sem alcool" ||
+      labelLower === "bebidas sem álcool" ||
+      idLower === "cervejas" ||
+      labelLower === "cervejas"
+    ) {
       continue;
     }
 
-    const isLegacyOrModernPizza =
+    const isPizzaCategory =
       idLower === "tradizionali" ||
       idLower === "speciali" ||
-      idLower === MODERN_PIZZA_CATEGORY_ID ||
+      idLower === "napolitane_moderne" ||
+      idLower === "pizzas_napoletanas" ||
       labelLower === "pizzas tradicionais" ||
       labelLower === "pizzas especiais" ||
-      labelLower === "pizzas napolitanas moderna";
+      labelLower === "pizzas napolitanas moderna" ||
+      labelLower === "pizzas napolitanas modernas" ||
+      labelLower === "pizzas napoletanas";
 
-    if (isLegacyOrModernPizza) {
-      if (!hasModernPizza) {
+    if (isPizzaCategory) {
+      if (!hasPizzasNapoletanas) {
         normalized.push({
-          id: MODERN_PIZZA_CATEGORY_ID,
-          label: MODERN_PIZZA_CATEGORY_LABEL,
+          id: "pizzas_napoletanas",
+          label: "Pizzas Napoletanas",
           icon: cat.icon || "🍕"
         });
-        hasModernPizza = true;
+        hasPizzasNapoletanas = true;
       }
       continue;
     }
@@ -89,92 +100,47 @@ export function ensureAdditionalDrinkCategories(categories: MenuCategory[]): Men
   const base = normalizeMenuCategories(categories);
   const result = [...base];
 
-  let alreadyMigratedDrinks = false;
-  let alreadyMigratedEntradaNapoletanas = false;
+  const hasEntrada = result.some(
+    (c) => c.id === "entrada" || c.label.trim().toLowerCase() === "entrada"
+  );
+  if (!hasEntrada) {
+    result.unshift({ id: "entrada", label: "Entrada", icon: "🥗" });
+  }
+
+  const hasPizzasNapoletanas = result.some(
+    (c) =>
+      c.id === "pizzas_napoletanas" ||
+      c.label.trim().toLowerCase() === "pizzas napoletanas" ||
+      c.label.trim().toLowerCase() === "pizzas napolitanas"
+  );
+  if (!hasPizzasNapoletanas) {
+    const entradaIdx = result.findIndex((c) => c.id === "entrada" || c.label.trim().toLowerCase() === "entrada");
+    result.splice(entradaIdx >= 0 ? entradaIdx + 1 : 0, 0, {
+      id: "pizzas_napoletanas",
+      label: "Pizzas Napoletanas",
+      icon: "🍕"
+    });
+  }
+
+  const hasDolci = result.some(
+    (c) => c.id === "dolci" || c.label.trim().toLowerCase() === "sobremesas"
+  );
+  if (!hasDolci) {
+    result.push({ id: "dolci", label: "Sobremesas", icon: "🍰" });
+  }
+
+  const hasBevande = result.some(
+    (c) => c.id === "bevande" || c.label.trim().toLowerCase() === "bebidas"
+  );
+  if (!hasBevande) {
+    result.push({ id: "bevande", label: "Bebidas", icon: "🍷" });
+  }
+
   try {
     if (typeof window !== "undefined") {
-      alreadyMigratedDrinks = localStorage.getItem("deolinda_added_drink_cats_v1") === "true";
-      alreadyMigratedEntradaNapoletanas = localStorage.getItem("deolinda_added_entrada_napoletanas_v2") === "true";
+      localStorage.setItem("deolinda_custom_menu_categories", JSON.stringify(result));
     }
   } catch {}
-
-  let changed = false;
-
-  if (!alreadyMigratedEntradaNapoletanas) {
-    const hasEntrada = result.some(
-      (c) => c.id === "entrada" || c.label.trim().toLowerCase() === "entrada"
-    );
-    if (!hasEntrada) {
-      result.unshift({ id: "entrada", label: "Entrada", icon: "🥗" });
-      changed = true;
-    }
-
-    const hasPizzasNapoletanas = result.some(
-      (c) =>
-        c.id === "pizzas_napoletanas" ||
-        c.label.trim().toLowerCase() === "pizzas napoletanas" ||
-        c.label.trim().toLowerCase() === "pizzas napolitanas"
-    );
-    if (!hasPizzasNapoletanas) {
-      const modernIdx = result.findIndex((c) => c.id === MODERN_PIZZA_CATEGORY_ID);
-      const entradaIdx = result.findIndex((c) => c.id === "entrada" || c.label.trim().toLowerCase() === "entrada");
-      const insertIdx = modernIdx >= 0 ? modernIdx : entradaIdx >= 0 ? entradaIdx + 1 : 0;
-      result.splice(insertIdx, 0, { id: "pizzas_napoletanas", label: "Pizzas Napoletanas", icon: "🍕" });
-      changed = true;
-    }
-
-    const hasDolci = result.some(
-      (c) => c.id === "dolci" || c.label.trim().toLowerCase() === "sobremesas"
-    );
-    if (!hasDolci) {
-      result.push({ id: "dolci", label: "Sobremesas", icon: "🍰" });
-      changed = true;
-    }
-
-    const hasBevande = result.some(
-      (c) => c.id === "bevande" || c.label.trim().toLowerCase() === "bebidas"
-    );
-    if (!hasBevande) {
-      result.push({ id: "bevande", label: "Bebidas", icon: "🍷" });
-      changed = true;
-    }
-
-    try {
-      if (typeof window !== "undefined") {
-        localStorage.setItem("deolinda_added_entrada_napoletanas_v2", "true");
-      }
-    } catch {}
-  }
-
-  if (!alreadyMigratedDrinks) {
-    const hasNonAlcoholic = result.some(
-      (c) => c.id === "bebidas_sem_alcool" || c.label.trim().toLowerCase() === "bebidas sem alcool" || c.label.trim().toLowerCase() === "bebidas sem álcool"
-    );
-    const hasBeers = result.some(
-      (c) => c.id === "cervejas" || c.label.trim().toLowerCase() === "cervejas"
-    );
-    if (!hasNonAlcoholic) {
-      result.push({ id: "bebidas_sem_alcool", label: "Bebidas sem Alcool", icon: "🥤" });
-      changed = true;
-    }
-    if (!hasBeers) {
-      result.push({ id: "cervejas", label: "Cervejas", icon: "🍺" });
-      changed = true;
-    }
-    try {
-      if (typeof window !== "undefined") {
-        localStorage.setItem("deolinda_added_drink_cats_v1", "true");
-      }
-    } catch {}
-  }
-
-  if (changed) {
-    try {
-      if (typeof window !== "undefined") {
-        localStorage.setItem("deolinda_custom_menu_categories", JSON.stringify(result));
-      }
-    } catch {}
-  }
 
   return result;
 }
@@ -193,7 +159,7 @@ export const MENU_ITEMS: MenuItem[] = [
     "pointsEarned": 65,
     "price": 65,
     "updatedAt": "2026-11-03T16:31:37.656Z",
-    "category": "napolitane_moderne",
+    "category": "pizzas_napoletanas",
     "_serverTimestamp": {
       "type": "firestore/timestamp/1.0",
       "seconds": 1793723497,
@@ -216,7 +182,7 @@ export const MENU_ITEMS: MenuItem[] = [
     "description": "Cremoso Queijo Brie, Intenso Queijo Gorgonzolla, \nPêras e Favo de Mel.",
     "id": "item-1793658245021",
     "updatedAt": "2026-11-03T16:31:37.656Z",
-    "category": "napolitane_moderne",
+    "category": "pizzas_napoletanas",
     "pointsToRedeem": 390,
     "_serverTimestamp": {
       "type": "firestore/timestamp/1.0",
@@ -237,7 +203,7 @@ export const MENU_ITEMS: MenuItem[] = [
     "tags": [],
     "description": "Mozarella Fior D'latte do lacticínio Fior D'italia, \nTomate pelati San Marzano e manjericão.",
     "price": 60,
-    "category": "napolitane_moderne",
+    "category": "pizzas_napoletanas",
     "pointsToRedeem": 360,
     "ingredients": [
       "Ingredientes frescos da casa"
@@ -255,7 +221,7 @@ export const MENU_ITEMS: MenuItem[] = [
     "image": "/menu_images/item-1793732389388.jpg",
     "description": "Tomate pelati San Marzano, confit de alho, ervas \nfrecas e manjericão.",
     "pointsEarned": 60,
-    "category": "napolitane_moderne",
+    "category": "pizzas_napoletanas",
     "pointsToRedeem": 360,
     "isPopular": false,
     "price": 60,
@@ -287,7 +253,7 @@ export const MENU_ITEMS: MenuItem[] = [
     "image": "/menu_images/item-1793732328548.jpg",
     "price": 65,
     "tags": [],
-    "category": "napolitane_moderne",
+    "category": "pizzas_napoletanas",
     "pointsToRedeem": 390
   },
   {
@@ -295,7 +261,7 @@ export const MENU_ITEMS: MenuItem[] = [
     "image": "/menu_images/item-1793732250442.jpg",
     "isPopular": false,
     "price": 65,
-    "category": "napolitane_moderne",
+    "category": "pizzas_napoletanas",
     "pointsToRedeem": 390,
     "pointsEarned": 65,
     "name": "ROSE IN ITALIA",
@@ -325,7 +291,7 @@ export const MENU_ITEMS: MenuItem[] = [
     "pointsToRedeem": 390,
     "price": 65,
     "image": "/menu_images/item-1793658314659.jpg",
-    "category": "napolitane_moderne",
+    "category": "pizzas_napoletanas",
     "name": "SICÍLIA",
     "isAvailable": true,
     "ingredients": [
@@ -353,7 +319,7 @@ export const MENU_ITEMS: MenuItem[] = [
     "price": 65,
     "id": "item-1793724294044",
     "description": "Mozarella Fior D'latte do lacticínio Fior D'italia , \npresunto cru italiano, rúcula selvática, azeite e \nGrana Padano.",
-    "category": "napolitane_moderne",
+    "category": "pizzas_napoletanas",
     "updatedAt": "2026-11-03T16:47:34.302Z"
   },
   {
@@ -363,7 +329,7 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
     "isAvailable": true,
     "isPopular": false,
-    "category": "napolitane_moderne",
+    "category": "pizzas_napoletanas",
     "price": 55,
     "pointsEarned": 55,
     "pointsToRedeem": 330,
@@ -389,7 +355,7 @@ export const MENU_ITEMS: MenuItem[] = [
     },
     "image": "/menu_images/item-1793658008343.jpg",
     "name": "CALÁBRIA PICCOLO",
-    "category": "napolitane_moderne",
+    "category": "pizzas_napoletanas",
     "isAvailable": true,
     "ingredients": [
       "Ingredientes frescos da casa"
@@ -416,7 +382,7 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
     "isAvailable": true,
     "price": 65,
-    "category": "napolitane_moderne",
+    "category": "pizzas_napoletanas",
     "pointsEarned": 65,
     "isPopular": false,
     "image": "/menu_images/item-1793658171530.jpg",
