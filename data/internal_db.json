@@ -725,6 +725,16 @@
   ],
   "menuCategories": [
     {
+      "id": "entrada",
+      "label": "Entrada",
+      "icon": "🥗"
+    },
+    {
+      "id": "pizzas_napoletanas",
+      "label": "Pizzas Napoletanas",
+      "icon": "🍕"
+    },
+    {
       "id": "napolitane_moderne",
       "label": "Pizzas Napolitanas Moderna",
       "icon": "🍕"

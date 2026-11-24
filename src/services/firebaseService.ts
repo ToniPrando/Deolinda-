@@ -808,13 +808,15 @@ export function subscribeToMenuItems(
     
     // Sort priority order for standard pizzeria categories
     const categoryOrder: Record<string, number> = {
-      'napolitane_moderne': 1,
-      'tradizionali': 1,
-      'speciali': 1,
-      'dolci': 2,
-      'bevande': 3,
-      'bebidas_sem_alcool': 4,
-      'cervejas': 5
+      'entrada': 0,
+      'pizzas_napoletanas': 1,
+      'napolitane_moderne': 2,
+      'tradizionali': 2,
+      'speciali': 2,
+      'dolci': 3,
+      'bevande': 4,
+      'bebidas_sem_alcool': 5,
+      'cervejas': 6
     };
 
     const processSnapshot = (snapshot: any) => {

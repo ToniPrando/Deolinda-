@@ -4,6 +4,8 @@ export const MODERN_PIZZA_CATEGORY_ID = "napolitane_moderne";
 export const MODERN_PIZZA_CATEGORY_LABEL = "Pizzas Napolitanas Moderna";
 
 export const DEFAULT_MENU_CATEGORIES: MenuCategory[] = [
+  { id: "entrada", label: "Entrada", icon: "🥗" },
+  { id: "pizzas_napoletanas", label: "Pizzas Napoletanas", icon: "🍕" },
   { id: MODERN_PIZZA_CATEGORY_ID, label: MODERN_PIZZA_CATEGORY_LABEL, icon: "🍕" },
   { id: "dolci", label: "Sobremesas", icon: "🍰" },
   { id: "bevande", label: "Bebidas", icon: "🍷" },
@@ -87,28 +89,88 @@ export function ensureAdditionalDrinkCategories(categories: MenuCategory[]): Men
   const base = normalizeMenuCategories(categories);
   const result = [...base];
 
-  let alreadyMigrated = false;
+  let alreadyMigratedDrinks = false;
+  let alreadyMigratedEntradaNapoletanas = false;
   try {
-    alreadyMigrated = typeof window !== "undefined" && localStorage.getItem("deolinda_added_drink_cats_v1") === "true";
+    if (typeof window !== "undefined") {
+      alreadyMigratedDrinks = localStorage.getItem("deolinda_added_drink_cats_v1") === "true";
+      alreadyMigratedEntradaNapoletanas = localStorage.getItem("deolinda_added_entrada_napoletanas_v2") === "true";
+    }
   } catch {}
 
-  const hasNonAlcoholic = result.some(
-    (c) => c.id === "bebidas_sem_alcool" || c.label.trim().toLowerCase() === "bebidas sem alcool" || c.label.trim().toLowerCase() === "bebidas sem álcool"
-  );
-  const hasBeers = result.some(
-    (c) => c.id === "cervejas" || c.label.trim().toLowerCase() === "cervejas"
-  );
+  let changed = false;
 
-  if (!alreadyMigrated) {
+  if (!alreadyMigratedEntradaNapoletanas) {
+    const hasEntrada = result.some(
+      (c) => c.id === "entrada" || c.label.trim().toLowerCase() === "entrada"
+    );
+    if (!hasEntrada) {
+      result.unshift({ id: "entrada", label: "Entrada", icon: "🥗" });
+      changed = true;
+    }
+
+    const hasPizzasNapoletanas = result.some(
+      (c) =>
+        c.id === "pizzas_napoletanas" ||
+        c.label.trim().toLowerCase() === "pizzas napoletanas" ||
+        c.label.trim().toLowerCase() === "pizzas napolitanas"
+    );
+    if (!hasPizzasNapoletanas) {
+      const modernIdx = result.findIndex((c) => c.id === MODERN_PIZZA_CATEGORY_ID);
+      const entradaIdx = result.findIndex((c) => c.id === "entrada" || c.label.trim().toLowerCase() === "entrada");
+      const insertIdx = modernIdx >= 0 ? modernIdx : entradaIdx >= 0 ? entradaIdx + 1 : 0;
+      result.splice(insertIdx, 0, { id: "pizzas_napoletanas", label: "Pizzas Napoletanas", icon: "🍕" });
+      changed = true;
+    }
+
+    const hasDolci = result.some(
+      (c) => c.id === "dolci" || c.label.trim().toLowerCase() === "sobremesas"
+    );
+    if (!hasDolci) {
+      result.push({ id: "dolci", label: "Sobremesas", icon: "🍰" });
+      changed = true;
+    }
+
+    const hasBevande = result.some(
+      (c) => c.id === "bevande" || c.label.trim().toLowerCase() === "bebidas"
+    );
+    if (!hasBevande) {
+      result.push({ id: "bevande", label: "Bebidas", icon: "🍷" });
+      changed = true;
+    }
+
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("deolinda_added_entrada_napoletanas_v2", "true");
+      }
+    } catch {}
+  }
+
+  if (!alreadyMigratedDrinks) {
+    const hasNonAlcoholic = result.some(
+      (c) => c.id === "bebidas_sem_alcool" || c.label.trim().toLowerCase() === "bebidas sem alcool" || c.label.trim().toLowerCase() === "bebidas sem álcool"
+    );
+    const hasBeers = result.some(
+      (c) => c.id === "cervejas" || c.label.trim().toLowerCase() === "cervejas"
+    );
     if (!hasNonAlcoholic) {
       result.push({ id: "bebidas_sem_alcool", label: "Bebidas sem Alcool", icon: "🥤" });
+      changed = true;
     }
     if (!hasBeers) {
       result.push({ id: "cervejas", label: "Cervejas", icon: "🍺" });
+      changed = true;
     }
     try {
       if (typeof window !== "undefined") {
         localStorage.setItem("deolinda_added_drink_cats_v1", "true");
+      }
+    } catch {}
+  }
+
+  if (changed) {
+    try {
+      if (typeof window !== "undefined") {
         localStorage.setItem("deolinda_custom_menu_categories", JSON.stringify(result));
       }
     } catch {}

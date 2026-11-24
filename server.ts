@@ -742,6 +742,8 @@ app.post("/api/settings/gallery", (req, res) => {
 
 // Custom Menu Categories API (Botões do Cardápio)
 const DEFAULT_SERVER_CATEGORIES = [
+  { id: "entrada", label: "Entrada", icon: "🥗" },
+  { id: "pizzas_napoletanas", label: "Pizzas Napoletanas", icon: "🍕" },
   { id: "napolitane_moderne", label: "Pizzas Napolitanas Moderna", icon: "🍕" },
   { id: "dolci", label: "Sobremesas", icon: "🍰" },
   { id: "bevande", label: "Bebidas", icon: "🍷" },

@@ -234,6 +234,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const found = currentCategories.find(c => c.id === normalizedId || c.id === category);
     if (found) return found.label;
     switch (normalizedId) {
+      case 'entrada':
+        return 'Entrada';
+      case 'pizzas_napoletanas':
+        return 'Pizzas Napoletanas';
       case 'napolitane_moderne':
       case 'tradizionali':
       case 'speciali':

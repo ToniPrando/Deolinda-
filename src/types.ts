@@ -1,4 +1,4 @@
-export type CategoryType = 'napolitane_moderne' | 'tradizionali' | 'speciali' | 'antipasti' | 'dolci' | 'bevande' | 'bebidas_sem_alcool' | 'cervejas' | (string & {});
+export type CategoryType = 'entrada' | 'pizzas_napoletanas' | 'napolitane_moderne' | 'tradizionali' | 'speciali' | 'antipasti' | 'dolci' | 'bevande' | 'bebidas_sem_alcool' | 'cervejas' | (string & {});
 
 export interface MenuCategory {
   id: string;
