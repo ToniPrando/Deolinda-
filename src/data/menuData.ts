@@ -4,7 +4,7 @@ export const MODERN_PIZZA_CATEGORY_ID = "pizzas_napoletanas";
 export const MODERN_PIZZA_CATEGORY_LABEL = "Pizzas Napoletanas";
 
 export const DEFAULT_MENU_CATEGORIES: MenuCategory[] = [
-  { id: "entrada", label: "Entrada", icon: "🥗" },
+  { id: "entrada", label: "Entradas", icon: "🥗" },
   { id: "pizzas_napoletanas", label: "Pizzas Napoletanas", icon: "🍕" },
   { id: "dolci", label: "Sobremesas", icon: "🍰" },
   { id: "bevande", label: "Bebidas", icon: "🍷" }
@@ -85,6 +85,11 @@ export function normalizeMenuCategories(categories: MenuCategory[]): MenuCategor
       continue;
     }
 
+    if (idLower === "entrada" || labelLower === "entrada" || labelLower === "entradas") {
+      normalized.push({ ...cat, id: "entrada", label: "Entradas" });
+      continue;
+    }
+
     if (idLower === "bevande") {
       normalized.push({ ...cat, label: "Bebidas" });
       continue;
@@ -101,10 +106,10 @@ export function ensureAdditionalDrinkCategories(categories: MenuCategory[]): Men
   const result = [...base];
 
   const hasEntrada = result.some(
-    (c) => c.id === "entrada" || c.label.trim().toLowerCase() === "entrada"
+    (c) => c.id === "entrada" || c.label.trim().toLowerCase() === "entrada" || c.label.trim().toLowerCase() === "entradas"
   );
   if (!hasEntrada) {
-    result.unshift({ id: "entrada", label: "Entrada", icon: "🥗" });
+    result.unshift({ id: "entrada", label: "Entradas", icon: "🥗" });
   }
 
   const hasPizzasNapoletanas = result.some(
@@ -114,7 +119,7 @@ export function ensureAdditionalDrinkCategories(categories: MenuCategory[]): Men
       c.label.trim().toLowerCase() === "pizzas napolitanas"
   );
   if (!hasPizzasNapoletanas) {
-    const entradaIdx = result.findIndex((c) => c.id === "entrada" || c.label.trim().toLowerCase() === "entrada");
+    const entradaIdx = result.findIndex((c) => c.id === "entrada" || c.label.trim().toLowerCase() === "entrada" || c.label.trim().toLowerCase() === "entradas");
     result.splice(entradaIdx >= 0 ? entradaIdx + 1 : 0, 0, {
       id: "pizzas_napoletanas",
       label: "Pizzas Napoletanas",

@@ -134,7 +134,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
     const found = categories.find(c => c.id === normalizedId || c.id === catId);
     if (found) return found.label;
     switch (normalizedId) {
-      case 'entrada': return 'Entrada';
+      case 'entrada': return 'Entradas';
       case 'pizzas_napoletanas':
       case 'napolitane_moderne':
       case 'tradizionali':

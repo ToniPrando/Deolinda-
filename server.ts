@@ -742,7 +742,7 @@ app.post("/api/settings/gallery", (req, res) => {
 
 // Custom Menu Categories API (Botões do Cardápio)
 const DEFAULT_SERVER_CATEGORIES = [
-  { id: "entrada", label: "Entrada", icon: "🥗" },
+  { id: "entrada", label: "Entradas", icon: "🥗" },
   { id: "pizzas_napoletanas", label: "Pizzas Napoletanas", icon: "🍕" },
   { id: "dolci", label: "Sobremesas", icon: "🍰" },
   { id: "bevande", label: "Bebidas", icon: "🍷" }
@@ -801,6 +801,10 @@ function normalizeServerCategories(cats: any[]): any[] {
         out.push({ id: "pizzas_napoletanas", label: "Pizzas Napoletanas", icon: c.icon || "🍕" });
         hasPizzasNapoletanas = true;
       }
+      continue;
+    }
+    if (idLower === "entrada" || labelLower === "entrada" || labelLower === "entradas") {
+      out.push({ ...c, id: "entrada", label: "Entradas" });
       continue;
     }
     if (idLower === "bevande") {

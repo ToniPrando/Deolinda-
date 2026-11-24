@@ -235,7 +235,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (found) return found.label;
     switch (normalizedId) {
       case 'entrada':
-        return 'Entrada';
+        return 'Entradas';
       case 'pizzas_napoletanas':
       case 'napolitane_moderne':
       case 'tradizionali':
@@ -3456,7 +3456,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="p-3.5 rounded-2xl bg-[#E5A93C]/10 border border-[#E5A93C]/30 text-xs text-[#5C554E] flex items-start gap-2.5">
                 <Info className="w-4 h-4 text-[#8C5E14] shrink-0 mt-0.5" />
                 <p>
-                  Estes botões aparecem no topo da página de cardápio do site para os clientes escolherem os tipos de produtos (ex: Entrada, Pizzas Napoletanas, Sobremesas, Bebidas).
+                  Estes botões aparecem no topo da página de cardápio do site para os clientes escolherem os tipos de produtos (ex: Entradas, Pizzas Napoletanas, Sobremesas, Bebidas).
                 </p>
               </div>
 
@@ -3505,7 +3505,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       required
                       value={categoryFormData.label}
                       onChange={(e) => setCategoryFormData({ ...categoryFormData, label: e.target.value })}
-                      placeholder="Ex: Entrada, Pizzas Napoletanas, Sobremesas"
+                      placeholder="Ex: Entradas, Pizzas Napoletanas, Sobremesas"
                       className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-xs sm:text-sm text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
                     />
                   </div>
