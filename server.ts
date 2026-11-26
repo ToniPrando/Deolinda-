@@ -1204,11 +1204,11 @@ function getServerCategorySortOrder(category: any): number {
       return 0;
     case "pizzas_napoletanas":
       return 1;
+    case "dolci":
+      return 2;
     case "bevande":
     case "bebidas_sem_alcool":
     case "cervejas":
-      return 2;
-    case "dolci":
       return 3;
     default:
       return 4;

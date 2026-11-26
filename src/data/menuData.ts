@@ -40,12 +40,12 @@ export function getMenuCategorySortOrder(category?: string): number {
     case "tradizionali":
     case "speciali":
       return 1; // Depois: Pizzas
+    case "dolci":
+      return 2; // Sobremesas antes das bebidas
     case "bevande":
     case "bebidas_sem_alcool":
     case "cervejas":
-      return 2; // Na sequência: Bebidas
-    case "dolci":
-      return 3; // Sobremesas
+      return 3; // Na sequência: Bebidas
     default:
       return 4;
   }

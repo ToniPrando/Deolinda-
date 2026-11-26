@@ -933,7 +933,7 @@ export function subscribeToMenuItems(
   try {
     const menuColRef = collection(db, 'menu_items');
     
-    // Sort priority order: Entradas -> Pizzas -> Bebidas -> Sobremesas
+    // Sort priority order: Entradas -> Pizzas -> Sobremesas -> Bebidas
     const categoryOrder: Record<string, number> = {
       'entrada': 0,
       'antipasti': 0,
@@ -941,10 +941,10 @@ export function subscribeToMenuItems(
       'napolitane_moderne': 1,
       'tradizionali': 1,
       'speciali': 1,
-      'bevande': 2,
-      'bebidas_sem_alcool': 2,
-      'cervejas': 2,
-      'dolci': 3
+      'dolci': 2,
+      'bevande': 3,
+      'bebidas_sem_alcool': 3,
+      'cervejas': 3
     };
 
     const processSnapshot = (snapshot: any) => {
