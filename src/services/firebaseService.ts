@@ -17,6 +17,7 @@ import firebaseConfig from '../../firebase-applet-config.json';
 import { Order, Reservation, OrderStatus, MenuItem, SocialPost, SiteInfo, MenuCategory } from '../types';
 import { MENU_ITEMS, normalizeMenuItemCategory, ensureAdditionalDrinkCategories } from '../data/menuData';
 import { safeFetchJson } from '../utils/safeFetch';
+import { getAdminAuthHeaders, getAdminAuthToken, notifyAdminUnauthorized, setAdminAuthToken, clearAdminAuthToken } from '../utils/adminSession';
 import { compressImageForFirestore, compressBrandImageForFirestore } from '../utils/imageCompressor';
 
 // Initialize Firebase App instance
@@ -153,9 +154,10 @@ export async function saveLogoToFirestore(logoUrl: string | null): Promise<void>
   try {
     const resp = await fetch('/api/settings/logo', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ logoUrl: finalLogoUrl })
     });
+    if (resp.status === 401) notifyAdminUnauthorized();
     serverSaved = resp.ok;
   } catch (backendErr) {
     console.warn('[Backend] Logo sync fallback:', backendErr);
@@ -266,9 +268,10 @@ export async function saveEmblemToFirestore(emblemUrl: string | null, enabled: b
   try {
     const resp = await fetch('/api/settings/emblem', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ emblemUrl: finalEmblemUrl, enabled })
     });
+    if (resp.status === 401) notifyAdminUnauthorized();
     serverSaved = resp.ok;
   } catch (backendErr) {
     console.warn('[Backend] Emblem sync fallback:', backendErr);
@@ -626,7 +629,7 @@ export async function saveSingleMenuItemToFirestore(item: MenuItem): Promise<Men
   try {
     const data = await safeFetchJson<{ success?: boolean; item?: MenuItem }>('/api/settings/menu-item', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ item: sanitizedItem })
     });
     if (data && (data.item || data.success)) {
@@ -688,7 +691,7 @@ export async function uploadMenuImageToServer(imageBase64: string, itemId?: stri
   try {
     const data = await safeFetchJson<{ imageUrl?: string; url?: string }>('/api/settings/upload-menu-image', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ imageBase64, itemId })
     });
     if (data && (data.imageUrl || data.url)) {
@@ -711,7 +714,7 @@ export async function uploadGalleryImageToServer(imageBase64: string, postId?: s
   try {
     const data = await safeFetchJson<{ imageUrl?: string; url?: string }>('/api/settings/upload-gallery-image', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ imageBase64, postId })
     });
     if (data && (data.imageUrl || data.url)) {
@@ -745,8 +748,10 @@ export async function deleteSingleMenuItemFromFirestore(itemId: string): Promise
   // 2. Delete from backend API
   try {
     const resp = await fetch(`/api/settings/menu-item/${encodeURIComponent(itemId)}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: getAdminAuthHeaders()
     });
+    if (resp.status === 401) notifyAdminUnauthorized();
     serverDeleted = resp.ok;
   } catch (backendErr) {
     console.warn('[Backend] Menu item delete notice:', backendErr);
@@ -824,9 +829,10 @@ export async function saveMenuItemsToFirestore(items: MenuItem[]): Promise<void>
   try {
     const resp = await fetch('/api/settings/menu', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ items: sanitizedItems })
     });
+    if (resp.status === 401) notifyAdminUnauthorized();
     serverSaved = resp.ok;
   } catch (backendErr) {
     console.warn('[Backend] Menu save notice:', backendErr);
@@ -975,12 +981,12 @@ export function subscribeToMenuItems(
         onUpdate(loadedItems);
         safeSetLocalStorage('deolinda_custom_menu_items', JSON.stringify(loadedItems));
 
-        // Mirror Cloud Firestore menu items into server cache once per session so both DBs stay synchronized
-        if (!syncedServerCache && loadedItems.length > 0) {
+        // Mirror Cloud Firestore menu items into server cache only when an admin session is active
+        if (!syncedServerCache && loadedItems.length > 0 && getAdminAuthToken()) {
           syncedServerCache = true;
           fetch('/api/settings/menu', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({ items: loadedItems })
           }).catch(() => {});
         }
@@ -1076,7 +1082,7 @@ export async function saveGalleryPostsToFirestore(posts: SocialPost[]): Promise<
   try {
     const data = await safeFetchJson<{ success?: boolean; posts?: SocialPost[] }>('/api/settings/gallery', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ posts: cleanPosts })
     });
     if (data && (data.success || Array.isArray(data.posts))) {
@@ -1271,12 +1277,12 @@ export function subscribeToGalleryPosts(
       onUpdate(result);
       try { localStorage.removeItem('deolinda_custom_social_posts'); } catch {}
       safeSetLocalStorage('deolinda_custom_gallery_posts', JSON.stringify(result));
-      // Keep Express backend cache synchronized with real Firestore gallery posts
-      if (!syncedServerCache && !isDefaultSeedGallery(result)) {
+      // Keep Express backend cache synchronized only when an admin session is active
+      if (!syncedServerCache && !isDefaultSeedGallery(result) && getAdminAuthToken()) {
         syncedServerCache = true;
         fetch('/api/settings/gallery', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ posts: result })
         }).catch(() => {});
       }
@@ -1443,9 +1449,10 @@ export async function saveSiteInfoToFirestore(siteInfo: SiteInfo): Promise<void>
   try {
     const resp = await fetch('/api/settings/site-info', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ siteInfo: cleanInfo })
     });
+    if (resp.status === 401) notifyAdminUnauthorized();
     serverSaved = resp.ok;
   } catch (e) {
     console.warn('[Backend] Site info save error:', e);
@@ -1519,9 +1526,10 @@ export async function saveMenuCategoriesToFirestore(categories: MenuCategory[]):
   try {
     const resp = await fetch('/api/settings/categories', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ categories })
     });
+    if (resp.status === 401) notifyAdminUnauthorized();
     serverSaved = resp.ok;
   } catch (e) {
     console.warn('[Backend] Menu categories save error:', e);
@@ -1571,105 +1579,82 @@ export function subscribeToMenuCategories(
   }
 }
 
-/**
- * Saves the custom admin password to Cloud Firestore, backend API and localStorage.
- */
-export async function saveAdminPasswordToFirestore(newPassword: string): Promise<void> {
-  const cleanPassword = newPassword.trim();
-  let firestoreSaved = false;
-  let serverSaved = false;
-  let firestoreError: any = null;
+export interface AdminAuthStatus {
+  configured: boolean;
+  requiresSetup: boolean;
+  usesEnvPasscode: boolean;
+}
 
-  try {
-    const authDocRef = doc(db, 'settings', 'admin_auth');
-    await setDocWithTimeout(authDocRef, {
-      adminPassword: cleanPassword,
-      updatedAt: new Date().toISOString(),
-      type: 'admin_auth',
-      _serverTimestamp: serverTimestamp()
-    }, { merge: true });
-    firestoreSaved = true;
-    console.log('[Firestore] Admin password saved successfully to Cloud Firestore.');
-  } catch (error: any) {
-    firestoreError = error;
-    console.warn('[Firestore] Notice while saving admin password to Firestore:', error?.message || error);
+export async function getAdminAuthStatus(): Promise<AdminAuthStatus> {
+  const data = await safeFetchJson<AdminAuthStatus>('/api/auth/admin/status');
+  if (data && typeof data.configured === 'boolean') {
+    return data;
   }
+  return { configured: true, requiresSetup: false, usesEnvPasscode: false };
+}
 
-  // Backup to Express backend API
-  try {
-    const resp = await fetch('/api/settings/admin-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: cleanPassword })
-    });
-    serverSaved = resp.ok;
-  } catch (e) {
-    console.warn('[Backend] Admin password save error:', e);
-  }
-
-  // Local storage fallback
-  safeSetLocalStorage('deolinda_admin_password', cleanPassword);
-
-  recordCloudSyncStatus({
-    firestoreSaved,
-    serverSaved,
-    errorMessage: firestoreError ? (firestoreError?.message || String(firestoreError)) : undefined
+export async function setupAdminPassword(password: string): Promise<{ token: string; expiresAt: string }> {
+  const resp = await fetch('/api/auth/admin/setup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: password.trim() })
   });
-
-  if ((firestoreError && isFatalFirestoreError(firestoreError)) || (!firestoreSaved && !serverSaved)) {
-    throw formatPersistenceError('salvar a senha de acesso', firestoreError);
+  const payload = await resp.json().catch(() => ({}));
+  if (!resp.ok || !payload?.token) {
+    throw new Error(payload?.error || 'Não foi possível definir a senha inicial de administrador.');
   }
+  setAdminAuthToken(payload.token);
+  return { token: payload.token, expiresAt: payload.expiresAt || '' };
 }
 
-/**
- * Gets the custom admin password from Cloud Firestore once.
- */
-export async function getAdminPasswordFromFirestore(): Promise<string | null> {
-  try {
-    const authDocRef = doc(db, 'settings', 'admin_auth');
-    const snap = await getDoc(authDocRef);
-    if (snap.exists()) {
-      const data = snap.data();
-      if (data && typeof data.adminPassword === 'string' && data.adminPassword.trim()) {
-        return data.adminPassword.trim();
-      }
-    }
-  } catch (error) {
-    console.warn('[Firestore] Error getting admin password:', error);
+export async function loginAdminWithPassword(password: string): Promise<{ token: string; expiresAt: string }> {
+  const resp = await fetch('/api/auth/admin/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: password.trim() })
+  });
+  const payload = await resp.json().catch(() => ({}));
+  if (!resp.ok || !payload?.token) {
+    const err: any = new Error(payload?.error || 'Senha incorreta. Acesso restrito a gestores.');
+    err.requiresSetup = Boolean(payload?.requiresSetup);
+    err.status = resp.status;
+    throw err;
   }
-  return null;
+  setAdminAuthToken(payload.token);
+  return { token: payload.token, expiresAt: payload.expiresAt || '' };
 }
 
-/**
- * Subscribes to real-time admin password updates from Cloud Firestore.
- */
-export function subscribeToAdminPassword(
-  onUpdate: (password: string | null) => void
-): () => void {
+export async function logoutAdminSession(): Promise<void> {
+  const token = getAdminAuthToken();
+  clearAdminAuthToken();
+  if (!token) return;
   try {
-    const authDocRef = doc(db, 'settings', 'admin_auth');
-    const unsubscribe = onSnapshot(authDocRef, (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        if (data && typeof data.adminPassword === 'string' && data.adminPassword.trim()) {
-          const pwd = data.adminPassword.trim();
-          onUpdate(pwd);
-          try {
-            localStorage.setItem('deolinda_admin_password', pwd);
-          } catch {}
-          return;
-        }
-      }
-      onUpdate(null);
-    }, (err) => {
-      console.warn('[Firestore] Admin password subscription notice:', err?.message || err);
+    await fetch('/api/auth/admin/logout', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
     });
-
-    return unsubscribe;
-  } catch (err) {
-    console.warn('[Firestore] Admin password subscribe error:', err);
-    return () => {};
+  } catch {
+    // ignore network errors on logout
   }
+}
+
+export async function changeAdminPassword(currentPassword: string, newPassword: string): Promise<void> {
+  const resp = await fetch('/api/auth/admin/change-password', {
+    method: 'POST',
+    headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({
+      currentPassword: currentPassword.trim(),
+      newPassword: newPassword.trim()
+    })
+  });
+  const payload = await resp.json().catch(() => ({}));
+  if (resp.status === 401 && !String(payload?.error || '').toLowerCase().includes('atual')) {
+    notifyAdminUnauthorized();
+  }
+  if (!resp.ok) {
+    throw new Error(payload?.error || 'Não foi possível atualizar a senha administrativa.');
+  }
+  recordCloudSyncStatus({ firestoreSaved: true, serverSaved: true });
 }
 
 // ==========================================

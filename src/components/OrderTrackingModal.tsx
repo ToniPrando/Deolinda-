@@ -90,7 +90,17 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
               }
             }
 
-            setCurrentOrder(updated);
+            setCurrentOrder((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    ...updated,
+                    address: updated.address || prev.address,
+                    phone: updated.phone || prev.phone,
+                    customerName: prev.customerName || updated.customerName
+                  }
+                : updated
+            );
             setLastUpdated(new Date().toLocaleTimeString('pt-BR'));
           }
       } catch {

@@ -1,45 +1,117 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Orders collection: Open for reading and writing so customer devices can place orders
-    // and kitchen/admin devices receive real-time updates and update status
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && !id.matches('.*[/\\\\].*');
+    }
+
+    // Explicitly block any access to legacy admin credential document
+    match /settings/admin_auth {
+      allow read, write: if false;
+    }
+
+    // Startup connectivity check document
+    match /test/connection {
+      allow get: if true;
+      allow list, write: if false;
+    }
+
+    // Orders collection: real-time order creation and kitchen status tracking
     match /orders/{orderId} {
-      allow read, write: if true;
+      allow read: if isValidId(orderId);
+      allow create: if isValidId(orderId)
+                    && request.resource.data.id is string
+                    && request.resource.data.customerName is string
+                    && request.resource.data.customerName.size() >= 1
+                    && request.resource.data.customerName.size() <= 120
+                    && request.resource.data.total is number
+                    && request.resource.data.total >= 0
+                    && request.resource.data.total <= 50000
+                    && request.resource.data.items is list
+                    && request.resource.data.items.size() >= 1
+                    && request.resource.data.items.size() <= 100
+                    && request.resource.data.status in ['received', 'preparing', 'baking', 'out_for_delivery', 'completed', 'cancelled'];
+      allow update: if isValidId(orderId)
+                    && request.resource.data.status in ['received', 'preparing', 'baking', 'out_for_delivery', 'completed', 'cancelled']
+                    && (!('total' in request.resource.data) || (request.resource.data.total is number && request.resource.data.total >= 0 && request.resource.data.total <= 50000));
+      allow delete: if false;
     }
-    
-    // Reservations collection: Open for table booking and status updates
+
+    // Reservations collection: table booking and status updates
     match /reservations/{reservationId} {
-      allow read, write: if true;
+      allow read: if isValidId(reservationId);
+      allow create: if isValidId(reservationId)
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() >= 1
+                    && request.resource.data.name.size() <= 120
+                    && request.resource.data.guests is number
+                    && request.resource.data.guests >= 1
+                    && request.resource.data.guests <= 50
+                    && request.resource.data.status in ['confirmed', 'pending', 'seated', 'cancelled'];
+      allow update: if isValidId(reservationId)
+                    && request.resource.data.status in ['confirmed', 'pending', 'seated', 'cancelled'];
+      allow delete: if false;
     }
 
-    // Messages collection: Contact form / Fale Conosco customer messages
+    // Contact messages collection: Fale Conosco submissions
     match /messages/{messageId} {
-      allow read, write: if true;
+      allow read: if isValidId(messageId);
+      allow create: if isValidId(messageId)
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() >= 1
+                    && request.resource.data.name.size() <= 120
+                    && request.resource.data.message is string
+                    && request.resource.data.message.size() >= 1
+                    && request.resource.data.message.size() <= 5000;
+      allow update: if isValidId(messageId)
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if isValidId(messageId);
     }
 
-    // Mail collection: Firebase Trigger Email extension
+    // Outbound Trigger Email queue: write-only from client, never readable
     match /mail/{mailId} {
-      allow read, write: if true;
+      allow create: if isValidId(mailId)
+                    && request.resource.data.to is list
+                    && request.resource.data.to.size() <= 5
+                    && request.resource.data.message is map;
+      allow read, update, delete: if false;
     }
 
-    // Settings collection: Global branding, logo and emblem synchronized in real-time
+    // Storefront configuration documents (strictly scoped to known public settings IDs)
     match /settings/{settingId} {
-      allow read, write: if true;
+      allow read: if settingId in ['brand', 'menu', 'menu_categories', 'site_info', 'gallery'];
+      allow write: if settingId in ['brand', 'menu', 'menu_categories', 'site_info', 'gallery'];
     }
 
-    // Menu Items collection: Individual menu items persisted and synchronized
+    // Menu Items collection
     match /menu_items/{itemId} {
-      allow read, write: if true;
+      allow read: if isValidId(itemId);
+      allow create, update: if isValidId(itemId)
+                            && request.resource.data.id is string
+                            && request.resource.data.name is string
+                            && request.resource.data.name.size() >= 1
+                            && request.resource.data.name.size() <= 120
+                            && request.resource.data.price is number
+                            && request.resource.data.price >= 0
+                            && request.resource.data.price <= 10000
+                            && request.resource.data.category is string;
+      allow delete: if isValidId(itemId);
     }
 
-    // Gallery Posts collection: Individual gallery photos persisted and synchronized across all devices
+    // Gallery Posts collection
     match /gallery_posts/{postId} {
-      allow read, write: if true;
+      allow read: if isValidId(postId);
+      allow create, update: if isValidId(postId)
+                            && request.resource.data.id is string
+                            && request.resource.data.imageUrl is string
+                            && request.resource.data.imageUrl.size() <= 950000;
+      allow delete: if isValidId(postId);
     }
 
-    // Global match for settings and test connectivity
+    // Default deny for everything else
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }

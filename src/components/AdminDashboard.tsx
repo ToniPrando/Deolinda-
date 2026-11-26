@@ -61,7 +61,7 @@ import {
   saveGalleryPostsToFirestore,
   saveSiteInfoToFirestore,
   saveMenuCategoriesToFirestore,
-  saveAdminPasswordToFirestore,
+  changeAdminPassword,
   getLastCloudSyncStatus,
   ContactMessageRecord,
   subscribeToContactMessages,
@@ -97,8 +97,6 @@ interface AdminDashboardProps {
   onOpenLogoModal?: (initialTab?: 'logo' | 'emblem') => void;
   onEmblemUpdated?: (newEmblemUrl: string | null, enabled?: boolean, options?: { skipCloudSync?: boolean }) => void;
   onLogoUpdated?: (newLogoUrl: string | null, options?: { skipCloudSync?: boolean }) => void;
-  customAdminPassword?: string | null;
-  onAdminPasswordUpdated?: (newPassword: string | null) => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -118,9 +116,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   isEmblemEnabled = true,
   onOpenLogoModal,
   onEmblemUpdated,
-  onLogoUpdated,
-  customAdminPassword,
-  onAdminPasswordUpdated
+  onLogoUpdated
 }) => {
   const [activeTab, setActiveTab] = useState<'menu' | 'gallery' | 'messages' | 'branding' | 'siteInfo' | 'security'>('menu');
   const [isManualSyncing, setIsManualSyncing] = useState(false);
@@ -1237,16 +1233,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // ==========================================
   // ADMIN PASSWORD & ACCESS CONTROL STATE
   // ==========================================
-  const [currentAdminPassword, setCurrentAdminPassword] = useState<string>(() => {
-    return customAdminPassword || localStorage.getItem('deolinda_admin_password') || '';
-  });
-
-  useEffect(() => {
-    if (customAdminPassword !== undefined) {
-      setCurrentAdminPassword(customAdminPassword || '');
-    }
-  }, [customAdminPassword]);
-
   const [currentPasswordInput, setCurrentPasswordInput] = useState('');
   const [newPasswordInput, setNewPasswordInput] = useState('');
   const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
@@ -1255,7 +1241,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordNotice, setPasswordNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
-  const [isConfirmingResetPassword, setIsConfirmingResetPassword] = useState(false);
 
   const handleSaveAdminPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1263,6 +1248,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     const newPwd = newPasswordInput.trim();
     const confirmPwd = confirmPasswordInput.trim();
+    const currentPwd = currentPasswordInput.trim();
+
+    if (!currentPwd) {
+      setPasswordNotice({ type: 'error', text: 'Digite a senha atual para confirmar a alteração.' });
+      return;
+    }
 
     if (newPwd.length < 4) {
       setPasswordNotice({ type: 'error', text: 'A nova senha deve ter pelo menos 4 caracteres ou dígitos.' });
@@ -1274,36 +1265,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       return;
     }
 
-    // If there is an existing custom password, verify current password input
-    const expectedCurrent = (currentAdminPassword || localStorage.getItem('deolinda_admin_password') || '').trim();
-    if (expectedCurrent) {
-      const enteredCurrent = currentPasswordInput.trim();
-      const validDefaults = ['1234', 'admin', 'admin123', 'deolinda'];
-      if (enteredCurrent !== expectedCurrent && !validDefaults.includes(enteredCurrent.toLowerCase())) {
-        setPasswordNotice({ type: 'error', text: 'A senha atual digitada está incorreta.' });
-        return;
-      }
-    }
-
     setIsSavingPassword(true);
-    showSavingToast('Salvando nova senha de acesso no Firestore...');
+    showSavingToast('Atualizando senha criptografada no servidor...');
     try {
-      await saveAdminPasswordToFirestore(newPwd);
-      setCurrentAdminPassword(newPwd);
-      if (onAdminPasswordUpdated) {
-        onAdminPasswordUpdated(newPwd);
-      }
-      try {
-        localStorage.setItem('deolinda_admin_password', newPwd);
-      } catch {}
-
-      showFirestoreOutcomeToast(
-        'Senha da Área ADM atualizada com sucesso no Firestore!',
-        'Senha salva localmente.'
-      );
-      setPasswordNotice({ 
-        type: 'success', 
-        text: 'Senha da Área do Administrador atualizada com sucesso e enviada ao Firestore!' 
+      await changeAdminPassword(currentPwd, newPwd);
+      showToastSuccess('Senha da Área ADM atualizada com sucesso!');
+      setPasswordNotice({
+        type: 'success',
+        text: 'Senha da Área do Administrador atualizada e protegida com criptografia no servidor!'
       });
       setCurrentPasswordInput('');
       setNewPasswordInput('');
@@ -1311,42 +1280,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setTimeout(() => setPasswordNotice(null), 6000);
     } catch (err: any) {
       const errMsg = err?.message || 'Erro ao salvar nova senha. Tente novamente.';
-      setPasswordNotice({ type: 'error', text: errMsg });
-      showToastError(errMsg);
-    } finally {
-      setIsSavingPassword(false);
-    }
-  };
-
-  const handleResetAdminPasswordToDefault = async () => {
-    setIsSavingPassword(true);
-    showSavingToast('Restaurando senha padrão no Firestore...');
-    try {
-      const defaultPwd = '1234';
-      await saveAdminPasswordToFirestore(defaultPwd);
-      setCurrentAdminPassword(defaultPwd);
-      if (onAdminPasswordUpdated) {
-        onAdminPasswordUpdated(defaultPwd);
-      }
-      try {
-        localStorage.setItem('deolinda_admin_password', defaultPwd);
-      } catch {}
-
-      showFirestoreOutcomeToast(
-        'Senha padrão restaurada com sucesso no Firestore!',
-        'Senha restaurada localmente.'
-      );
-      setIsConfirmingResetPassword(false);
-      setPasswordNotice({ 
-        type: 'success', 
-        text: 'Senha restaurada para a padrão ("1234") com sucesso!' 
-      });
-      setCurrentPasswordInput('');
-      setNewPasswordInput('');
-      setConfirmPasswordInput('');
-      setTimeout(() => setPasswordNotice(null), 6000);
-    } catch (err: any) {
-      const errMsg = err?.message || 'Erro ao restaurar senha padrão.';
       setPasswordNotice({ type: 'error', text: errMsg });
       showToastError(errMsg);
     } finally {
@@ -3492,15 +3425,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   {/* Senha Atual */}
                   <div>
                     <label className="block text-xs font-bold text-[#181513] mb-1.5">
-                      Senha Atual {currentAdminPassword ? '(necessária para alteração)' : '(padrão atual: 1234)'}
+                      Senha Atual *
                     </label>
                     <div className="relative">
                       <Lock className="w-4 h-4 text-[#8C827A] absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
                         type={showCurrentPassword ? "text" : "password"}
+                        required
                         value={currentPasswordInput}
                         onChange={(e) => setCurrentPasswordInput(e.target.value)}
-                        placeholder={currentAdminPassword ? "Digite a senha atual" : "Digite 1234 ou deixe em branco se primeira vez"}
+                        placeholder="Digite a senha atual"
                         className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-xs sm:text-sm text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
                       />
                       <button
@@ -3610,80 +3544,45 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <div className="flex justify-between items-center py-1 border-b border-[#E0D5C3]/60">
                       <span className="text-[#5C554E]">Configuração atual:</span>
                       <span className="font-bold text-[#181513]">
-                        {currentAdminPassword ? 'Senha Personalizada Ativa' : 'Senha Padrão (1234)'}
+                        Senha Criptografada Ativa
                       </span>
                     </div>
                     <div className="flex justify-between items-center py-1 border-b border-[#E0D5C3]/60">
                       <span className="text-[#5C554E]">Armazenamento:</span>
                       <span className="font-semibold text-emerald-700 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        <span>Cloud Firestore</span>
+                        <span>Hash Scrypt no Servidor</span>
                       </span>
                     </div>
                     <div className="flex justify-between items-center py-1">
                       <span className="text-[#5C554E]">Sessão ao fechar:</span>
-                      <span className="font-bold text-[#C24D2C]">Bloqueada automaticamente</span>
+                      <span className="font-bold text-[#C24D2C]">Revogada automaticamente</span>
                     </div>
                   </div>
 
                   <div className="space-y-2 text-xs text-[#5C554E] leading-relaxed">
                     <p className="flex items-start gap-1.5">
                       <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                      <span>Quando você fecha a Área do ADM, a sessão é encerrada exigindo digitar a senha novamente.</span>
+                      <span>Quando você fecha a Área do ADM, o token da sessão é encerrado no servidor exigindo senha novamente.</span>
                     </p>
                     <p className="flex items-start gap-1.5">
                       <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                      <span>Sugestões de senhas não são exibidas na tela de login, garantindo total privacidade.</span>
+                      <span>Tentativas consecutivas incorretas são limitadas automaticamente contra ataques de força bruta.</span>
                     </p>
                   </div>
                 </div>
 
-                {/* Reset to Default Card */}
+                {/* Security Policy Card */}
                 <div className="bg-white rounded-3xl p-5 border border-[#E0D5C3] shadow-xs space-y-3">
                   <div className="flex items-center gap-2 text-[#8C827A]">
-                    <RotateCcw className="w-4 h-4 text-[#C24D2C]" />
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
                     <h5 className="font-bold text-xs text-[#181513] uppercase tracking-wider">
-                      Redefinição de Emergência
+                      Segurança de Acesso
                     </h5>
                   </div>
                   <p className="text-xs text-[#5C554E] leading-relaxed">
-                    Precisa voltar à senha inicial da pizzaria? Você pode restaurar a senha padrão de fábrica (<strong>1234</strong>) a qualquer momento.
+                    Por segurança, não existe senha padrão de fábrica compartilhada. Caso deseje definir uma senha fixa de ambiente, configure a variável <code className="px-1.5 py-0.5 rounded bg-[#FAF7F2] border border-[#E0D5C3] font-mono text-[11px]">ADMIN_PASSCODE</code> no painel de Secrets.
                   </p>
-
-                  {isConfirmingResetPassword ? (
-                    <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 space-y-2 animate-in fade-in">
-                      <p className="text-xs font-semibold text-amber-900">
-                        Confirmar redefinição da senha para o padrão "1234"?
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={handleResetAdminPasswordToDefault}
-                          disabled={isSavingPassword}
-                          className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-xs"
-                        >
-                          {isSavingPassword ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                          <span>Sim, Restaurar 1234</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setIsConfirmingResetPassword(false)}
-                          className="px-3 py-1.5 rounded-xl bg-neutral-200 hover:bg-neutral-300 text-neutral-800 text-xs font-semibold transition-colors cursor-pointer"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setIsConfirmingResetPassword(true)}
-                      className="w-full py-2 px-3.5 rounded-xl border border-[#E0D5C3] bg-[#FAF7F2] hover:bg-neutral-100 text-[#5C554E] hover:text-[#181513] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      <span>Restaurar Senha Padrão (1234)</span>
-                    </button>
-                  )}
                 </div>
 
               </div>

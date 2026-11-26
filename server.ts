@@ -1,6 +1,7 @@
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import path from "path";
 import fs from "fs";
+import crypto from "crypto";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import nodemailer from "nodemailer";
@@ -14,21 +15,172 @@ const argPort = portArgIndex !== -1 && process.argv[portArgIndex + 1] ? Number(p
 // Port 8080 is used by nginx in the container and must be avoided.
 const PORT = argPort || (process.env.PORT && process.env.PORT !== "8080" ? Number(process.env.PORT) : 3000);
 
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
+// Process-level resilience against transient async errors under high concurrency
+process.on("unhandledRejection", (reason) => {
+  console.error("[Server] Unhandled promise rejection:", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("[Server] Uncaught exception:", err);
+});
 
-// Enable CORS and disable HTTP caching for all /api endpoints to guarantee real-time cross-device synchronization
+app.disable("x-powered-by");
+// Trust only local container/reverse-proxy hops so arbitrary clients cannot spoof X-Forwarded-For
+app.set("trust proxy", "loopback, linklocal, uniquelocal");
+
+// Security headers for all HTTP responses (X-Frame-Options intentionally omitted for AI Studio iframe compatibility)
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  next();
+});
+
+// Strict origin allowlist CORS for /api
+function isAllowedApiOrigin(originHeader: string, reqHost?: string): boolean {
+  try {
+    const parsed = new URL(originHeader);
+    const host = parsed.host.toLowerCase();
+    const hostname = parsed.hostname.toLowerCase();
+
+    if (reqHost && host === reqHost.toLowerCase()) {
+      return true;
+    }
+
+    if (process.env.APP_URL) {
+      try {
+        const appUrl = new URL(process.env.APP_URL);
+        if (host === appUrl.host.toLowerCase()) {
+          return true;
+        }
+      } catch {
+        // ignore invalid APP_URL
+      }
+    }
+
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+      return parsed.protocol === "http:" || parsed.protocol === "https:";
+    }
+
+    if (
+      parsed.protocol === "https:" &&
+      (hostname.endsWith(".run.app") ||
+        hostname.endsWith(".aistudio.google.com") ||
+        hostname.endsWith(".googleusercontent.com"))
+    ) {
+      return true;
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 app.use("/api", (req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-  res.header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-  res.header("Pragma", "no-cache");
-  res.header("Expires", "0");
+  const origin = typeof req.headers.origin === "string" ? req.headers.origin : "";
+  if (origin) {
+    if (isAllowedApiOrigin(origin, req.headers.host)) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Vary", "Origin");
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, Pragma");
+    } else if (req.method === "OPTIONS") {
+      return res.sendStatus(403);
+    }
+  }
+
+  const isPublicCacheableGet =
+    req.method === "GET" &&
+    (req.path === "/health" || req.path.startsWith("/settings/"));
+
+  if (isPublicCacheableGet) {
+    res.setHeader("Cache-Control", "public, max-age=5, stale-while-revalidate=30");
+  } else {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+  }
+
   if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
+    return res.sendStatus(204);
   }
   next();
+});
+
+// ==========================================
+// BOUNDED SLIDING-WINDOW RATE LIMITER
+// ==========================================
+interface RateLimitBucket {
+  count: number;
+  resetAt: number;
+}
+
+const MAX_RATE_LIMIT_BUCKETS = 5000;
+
+function getClientIp(req: Request): string {
+  return String(req.ip || req.socket?.remoteAddress || "unknown");
+}
+
+function createRateLimiter(options: {
+  windowMs: number;
+  max: number;
+  message: string;
+}) {
+  const buckets = new Map<string, RateLimitBucket>();
+
+  return (req: Request, res: Response, next: NextFunction) => {
+    const now = Date.now();
+    const key = getClientIp(req);
+
+    let bucket = buckets.get(key);
+    if (!bucket || bucket.resetAt <= now) {
+      if (buckets.size >= MAX_RATE_LIMIT_BUCKETS) {
+        // Evict oldest insertion entry to prevent unbounded memory growth
+        const oldestKey = buckets.keys().next().value;
+        if (oldestKey !== undefined) {
+          buckets.delete(oldestKey);
+        }
+      }
+      bucket = { count: 1, resetAt: now + options.windowMs };
+      buckets.set(key, bucket);
+    } else {
+      bucket.count += 1;
+    }
+
+    const remaining = Math.max(0, options.max - bucket.count);
+    res.setHeader("X-RateLimit-Limit", String(options.max));
+    res.setHeader("X-RateLimit-Remaining", String(remaining));
+
+    if (bucket.count > options.max) {
+      const retryAfterSec = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
+      res.setHeader("Retry-After", String(retryAfterSec));
+      return res.status(429).json({
+        error: options.message,
+        retryAfterSeconds: retryAfterSec
+      });
+    }
+
+    next();
+  };
+}
+
+const authRateLimiter = createRateLimiter({
+  windowMs: 60_000,
+  max: 10,
+  message: "Muitas tentativas de autenticação. Aguarde um minuto antes de tentar novamente."
+});
+
+const publicWriteRateLimiter = createRateLimiter({
+  windowMs: 60_000,
+  max: 60,
+  message: "Limite temporário de solicitações atingido. Tente novamente em instantes."
+});
+
+const apiReadRateLimiter = createRateLimiter({
+  windowMs: 60_000,
+  max: 1200,
+  message: "Muitas requisições em sequência. Aguarde alguns segundos."
 });
 
 // ==========================================
@@ -48,7 +200,7 @@ interface InternalDatabase {
   customLogo?: string | null;
   customEmblem?: string | null;
   customEmblemEnabled?: boolean;
-  adminPassword?: string;
+  adminPasswordHash?: string;
   galleryPosts?: any[];
   messages?: any[];
 }
@@ -198,13 +350,215 @@ const initialCustomers = [
   }
 ];
 
-// Initialize DB in memory & filesystem
+// ==========================================
+// PASSWORD HASHING & ADMIN TOKEN AUTH
+// ==========================================
+const ENV_ADMIN_PASSCODE = (process.env.ADMIN_PASSCODE || "").trim();
+const SESSION_SECRET =
+  (process.env.SESSION_SECRET || "").trim() ||
+  crypto.randomBytes(32).toString("hex");
+const ADMIN_TOKEN_TTL_SEC = 8 * 60 * 60; // 8 hours
+const revokedAdminTokenIds = new Set<string>();
+
+function hashPassword(password: string): string {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const derived = crypto.scryptSync(password, salt, 64).toString("hex");
+  return `scrypt:${salt}:${derived}`;
+}
+
+function verifyPasswordHash(password: string, storedHash: string): boolean {
+  try {
+    const parts = storedHash.split(":");
+    if (parts.length !== 3 || parts[0] !== "scrypt") return false;
+    const [, salt, expectedHex] = parts;
+    if (!salt || !expectedHex) return false;
+    const derived = crypto.scryptSync(password, salt, 64);
+    const expectedBuf = Buffer.from(expectedHex, "hex");
+    if (derived.length !== expectedBuf.length) return false;
+    return crypto.timingSafeEqual(derived, expectedBuf);
+  } catch {
+    return false;
+  }
+}
+
+function timingSafeStringEqual(a: string, b: string): boolean {
+  const hashA = crypto.createHash("sha256").update(a, "utf8").digest();
+  const hashB = crypto.createHash("sha256").update(b, "utf8").digest();
+  return crypto.timingSafeEqual(hashA, hashB);
+}
+
+interface AdminTokenPayload {
+  role: "admin";
+  iat: number;
+  exp: number;
+  jti: string;
+}
+
+function issueAdminToken(): { token: string; expiresAt: string } {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const payload: AdminTokenPayload = {
+    role: "admin",
+    iat: nowSec,
+    exp: nowSec + ADMIN_TOKEN_TTL_SEC,
+    jti: crypto.randomBytes(12).toString("hex")
+  };
+  const payloadB64 = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+  const sigB64 = crypto
+    .createHmac("sha256", SESSION_SECRET)
+    .update(payloadB64)
+    .digest("base64url");
+  return {
+    token: `${payloadB64}.${sigB64}`,
+    expiresAt: new Date(payload.exp * 1000).toISOString()
+  };
+}
+
+function verifyAdminToken(token: string): AdminTokenPayload | null {
+  try {
+    if (!token || typeof token !== "string") return null;
+    const dotIdx = token.indexOf(".");
+    if (dotIdx <= 0) return null;
+    const payloadB64 = token.slice(0, dotIdx);
+    const sigB64 = token.slice(dotIdx + 1);
+    if (!payloadB64 || !sigB64) return null;
+
+    const expectedSig = crypto
+      .createHmac("sha256", SESSION_SECRET)
+      .update(payloadB64)
+      .digest();
+    const providedSig = Buffer.from(sigB64, "base64url");
+    if (expectedSig.length !== providedSig.length) return null;
+    if (!crypto.timingSafeEqual(expectedSig, providedSig)) return null;
+
+    const payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8")) as AdminTokenPayload;
+    if (!payload || payload.role !== "admin" || typeof payload.exp !== "number" || typeof payload.jti !== "string") {
+      return null;
+    }
+    if (payload.exp <= Math.floor(Date.now() / 1000)) {
+      return null;
+    }
+    if (revokedAdminTokenIds.has(payload.jti)) {
+      return null;
+    }
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function extractBearerToken(req: Request): string | null {
+  const authHeader = req.headers.authorization;
+  if (typeof authHeader !== "string") return null;
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+  return match ? match[1].trim() : null;
+}
+
+function getValidAdminSession(req: Request): AdminTokenPayload | null {
+  const token = extractBearerToken(req);
+  return token ? verifyAdminToken(token) : null;
+}
+
+function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  const session = getValidAdminSession(req);
+  if (!session) {
+    return res.status(401).json({
+      error: "Autenticação administrativa necessária."
+    });
+  }
+  (req as any).adminSession = session;
+  next();
+}
+
+// ==========================================
+// NON-BLOCKING ATOMIC DB PERSISTENCE & CACHE
+// ==========================================
 let db: InternalDatabase = {
   orders: [...initialOrders],
   reservations: [...initialReservations],
   customers: [...initialCustomers],
   logs: []
 };
+
+let isDbWriting = false;
+let isDbDirty = false;
+const publicSettingsCache = new Map<string, string>();
+
+function invalidateSettingsCache(key?: string) {
+  if (key) {
+    publicSettingsCache.delete(key);
+  } else {
+    publicSettingsCache.clear();
+  }
+}
+
+async function flushDatabaseWriteQueue(): Promise<void> {
+  if (isDbWriting) return;
+  isDbWriting = true;
+  try {
+    while (isDbDirty) {
+      isDbDirty = false;
+      const snapshot = JSON.stringify(db, null, 2);
+      await fs.promises.mkdir(DATA_DIR, { recursive: true });
+      const tmpFile = `${DB_FILE}.${process.pid}.tmp`;
+      await fs.promises.writeFile(tmpFile, snapshot, "utf-8");
+      await fs.promises.rename(tmpFile, DB_FILE);
+    }
+  } catch (err) {
+    console.error("[Internal DB] Failed async atomic database save:", err);
+  } finally {
+    isDbWriting = false;
+    if (isDbDirty) {
+      void flushDatabaseWriteQueue();
+    }
+  }
+}
+
+function saveDatabase() {
+  isDbDirty = true;
+  void flushDatabaseWriteQueue();
+}
+
+function sanitizeCustomerRecordForStorage(c: any): any {
+  if (!c || typeof c !== "object") return c;
+  const copy: Record<string, any> = {};
+  const allowedFields = [
+    "id",
+    "name",
+    "email",
+    "phone",
+    "cpf",
+    "address",
+    "neighborhood",
+    "city",
+    "cep",
+    "complement",
+    "isGoogleAuth",
+    "googleId",
+    "avatarUrl",
+    "createdAt",
+    "loyaltyPoints",
+    "tier",
+    "memberCode",
+    "totalOrdersCount",
+    "passwordHash"
+  ];
+  for (const field of allowedFields) {
+    if (c[field] !== undefined) {
+      copy[field] = c[field];
+    }
+  }
+  if (typeof c.password === "string" && c.password.trim() && !copy.passwordHash) {
+    copy.passwordHash = hashPassword(c.password.trim());
+  }
+  return copy;
+}
+
+function toPublicCustomer(c: any): Record<string, any> {
+  const safe = { ...c };
+  delete safe.password;
+  delete safe.passwordHash;
+  return safe;
+}
 
 function initDatabase() {
   try {
@@ -216,10 +570,28 @@ function initDatabase() {
       const raw = fs.readFileSync(DB_FILE, "utf-8");
       const parsed = JSON.parse(raw);
       if (parsed) {
+        let needsMigrationSave = false;
+        let adminPasswordHash = typeof parsed.adminPasswordHash === "string" ? parsed.adminPasswordHash : undefined;
+
+        if (typeof parsed.adminPassword === "string" && parsed.adminPassword.trim()) {
+          if (!adminPasswordHash) {
+            adminPasswordHash = hashPassword(parsed.adminPassword.trim());
+          }
+          needsMigrationSave = true;
+        }
+
+        const rawCustomers = Array.isArray(parsed.customers) ? parsed.customers : [...initialCustomers];
+        const migratedCustomers = rawCustomers.map((c: any) => {
+          if (c && typeof c.password === "string") {
+            needsMigrationSave = true;
+          }
+          return sanitizeCustomerRecordForStorage(c);
+        });
+
         db = {
           orders: Array.isArray(parsed.orders) ? parsed.orders : [...initialOrders],
           reservations: Array.isArray(parsed.reservations) ? parsed.reservations : [...initialReservations],
-          customers: Array.isArray(parsed.customers) ? parsed.customers : [...initialCustomers],
+          customers: migratedCustomers,
           logs: Array.isArray(parsed.logs) ? parsed.logs : [],
           menuItems: Array.isArray(parsed.menuItems) ? parsed.menuItems : undefined,
           menuCategories: Array.isArray(parsed.menuCategories) ? parsed.menuCategories : undefined,
@@ -227,31 +599,22 @@ function initDatabase() {
           customLogo: parsed.customLogo !== undefined ? parsed.customLogo : null,
           customEmblem: parsed.customEmblem !== undefined ? parsed.customEmblem : null,
           customEmblemEnabled: parsed.customEmblemEnabled !== undefined ? parsed.customEmblemEnabled : true,
-          adminPassword: parsed.adminPassword || undefined,
+          adminPasswordHash,
           galleryPosts: Array.isArray(parsed.galleryPosts) ? parsed.galleryPosts : undefined,
           messages: Array.isArray(parsed.messages) ? parsed.messages : []
         };
+        if (needsMigrationSave) {
+          saveDatabase();
+        }
         console.log(`[Internal DB] Loaded database from file with ${db.orders.length} orders, ${db.reservations.length} reservations, ${db.customers.length} customers, ${db.menuItems ? db.menuItems.length : 0} custom menu items.`);
         return;
       }
     }
 
-    // Write initial database
-    saveDatabase();
+    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), "utf-8");
     console.log("[Internal DB] Initialized new file-backed database.");
   } catch (err) {
     console.error("[Internal DB] Error initializing database file:", err);
-  }
-}
-
-function saveDatabase() {
-  try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), "utf-8");
-  } catch (err) {
-    console.error("[Internal DB] Failed to save database file:", err);
   }
 }
 
@@ -278,23 +641,170 @@ function getAIClient(): GoogleGenAI | null {
 }
 
 // ==========================================
+// SELECTIVE BODY PARSING & AUTH ORDERING
+// ==========================================
+const defaultJsonParser = express.json({ limit: "256kb" });
+const defaultUrlParser = express.urlencoded({ limit: "256kb", extended: true });
+const largeMediaJsonParser = express.json({ limit: "8mb" });
+
+const LARGE_MEDIA_POST_PATHS = new Set([
+  "/api/settings/logo",
+  "/api/settings/emblem",
+  "/api/settings/upload-menu-image",
+  "/api/settings/upload-gallery-image",
+  "/api/settings/menu",
+  "/api/settings/menu-item",
+  "/api/settings/gallery"
+]);
+
+app.use(defaultUrlParser);
+app.use((req, res, next) => {
+  if (req.method === "POST" && LARGE_MEDIA_POST_PATHS.has(req.path)) {
+    // Reject unauthenticated media/menu uploads BEFORE buffering/parsing large payloads
+    return requireAdmin(req, res, () => {
+      largeMediaJsonParser(req, res, next);
+    });
+  }
+  return defaultJsonParser(req, res, next);
+});
+
+app.use("/api", (req, res, next) => {
+  if (req.method === "GET") {
+    return apiReadRateLimiter(req, res, next);
+  }
+  return next();
+});
+
+// ==========================================
 // API ROUTES (Internal Database Integrated)
 // ==========================================
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
     restaurant: "Deolinda Pizzaria Napoletana",
-    database: "Internal JSON Store Active",
-    ordersCount: db.orders.length,
-    reservationsCount: db.reservations.length,
-    customersCount: db.customers.length
+    database: "Internal JSON Store Active"
+  });
+});
+
+// ==========================================
+// ADMIN AUTHENTICATION ROUTES (Scrypt + HMAC)
+// ==========================================
+app.get("/api/auth/admin/status", (_req, res) => {
+  const usesEnvPasscode = Boolean(ENV_ADMIN_PASSCODE);
+  const configured = usesEnvPasscode || Boolean(db.adminPasswordHash);
+  res.json({
+    configured,
+    requiresSetup: !configured,
+    usesEnvPasscode
+  });
+});
+
+app.post("/api/auth/admin/setup", authRateLimiter, (req, res) => {
+  if (ENV_ADMIN_PASSCODE || db.adminPasswordHash) {
+    return res.status(409).json({
+      error: "A senha de administrador já foi configurada."
+    });
+  }
+
+  const password = typeof req.body?.password === "string" ? req.body.password.trim() : "";
+  if (password.length < 4 || password.length > 128) {
+    return res.status(400).json({
+      error: "A senha inicial deve conter entre 4 e 128 caracteres."
+    });
+  }
+
+  db.adminPasswordHash = hashPassword(password);
+  logDatabaseEvent("ADMIN_PASSWORD_CONFIGURED", { mode: "first_run_setup" });
+  saveDatabase();
+
+  const { token, expiresAt } = issueAdminToken();
+  return res.status(201).json({
+    success: true,
+    token,
+    expiresAt
+  });
+});
+
+app.post("/api/auth/admin/login", authRateLimiter, (req, res) => {
+  const password = typeof req.body?.password === "string" ? req.body.password.trim() : "";
+  if (!password || password.length > 128) {
+    return res.status(400).json({ error: "Informe a senha de acesso." });
+  }
+
+  if (!ENV_ADMIN_PASSCODE && !db.adminPasswordHash) {
+    return res.status(428).json({
+      error: "Configure a senha de administrador inicial antes de entrar.",
+      requiresSetup: true
+    });
+  }
+
+  const valid = ENV_ADMIN_PASSCODE
+    ? timingSafeStringEqual(password, ENV_ADMIN_PASSCODE)
+    : Boolean(db.adminPasswordHash && verifyPasswordHash(password, db.adminPasswordHash));
+
+  if (!valid) {
+    return res.status(401).json({
+      error: "Senha incorreta. Acesso restrito a gestores."
+    });
+  }
+
+  const { token, expiresAt } = issueAdminToken();
+  return res.json({
+    success: true,
+    token,
+    expiresAt
+  });
+});
+
+app.post("/api/auth/admin/logout", requireAdmin, (req, res) => {
+  const session = (req as any).adminSession as AdminTokenPayload | undefined;
+  if (session?.jti) {
+    if (revokedAdminTokenIds.size >= 5000) {
+      revokedAdminTokenIds.clear();
+    }
+    revokedAdminTokenIds.add(session.jti);
+  }
+  return res.json({ success: true });
+});
+
+app.post("/api/auth/admin/change-password", authRateLimiter, requireAdmin, (req, res) => {
+  if (ENV_ADMIN_PASSCODE) {
+    return res.status(400).json({
+      error: "A senha é controlada pela variável de ambiente ADMIN_PASSCODE."
+    });
+  }
+
+  const currentPassword = typeof req.body?.currentPassword === "string" ? req.body.currentPassword.trim() : "";
+  const newPassword = typeof req.body?.newPassword === "string" ? req.body.newPassword.trim() : "";
+
+  if (newPassword.length < 4 || newPassword.length > 128) {
+    return res.status(400).json({
+      error: "A nova senha deve conter entre 4 e 128 caracteres."
+    });
+  }
+
+  if (db.adminPasswordHash) {
+    if (!currentPassword || !verifyPasswordHash(currentPassword, db.adminPasswordHash)) {
+      return res.status(401).json({
+        error: "A senha atual digitada está incorreta."
+      });
+    }
+  }
+
+  db.adminPasswordHash = hashPassword(newPassword);
+  logDatabaseEvent("ADMIN_PASSWORD_CHANGED");
+  saveDatabase();
+
+  return res.json({
+    success: true,
+    message: "Senha administrativa atualizada com sucesso."
   });
 });
 
 // ==========================================
 // CONTACT FORM API - PERSISTÊNCIA & ENVIO
 // ==========================================
-app.post(["/api/contact", "/api/contact/"], async (req, res) => {
+app.post(["/api/contact", "/api/contact/"], publicWriteRateLimiter, async (req, res) => {
   try {
     const { name, email, phone, subject, message, website } = req.body || {};
 
@@ -457,12 +967,12 @@ app.post(["/api/contact", "/api/contact/"], async (req, res) => {
   }
 });
 
-// Messages API (Para consulta e gestão de mensagens recebidas)
-app.get("/api/messages", (_req, res) => {
+// Messages API (Protected admin management of contact messages)
+app.get("/api/messages", requireAdmin, (_req, res) => {
   res.json({ messages: db.messages || [] });
 });
 
-app.patch("/api/messages/:id/read", (req, res) => {
+app.patch("/api/messages/:id/read", requireAdmin, (req, res) => {
   const { id } = req.params;
   if (Array.isArray(db.messages)) {
     const msg = db.messages.find((m) => m.id === id);
@@ -475,7 +985,7 @@ app.patch("/api/messages/:id/read", (req, res) => {
   return res.status(404).json({ error: "Mensagem não encontrada" });
 });
 
-app.delete("/api/messages/:id", (req, res) => {
+app.delete("/api/messages/:id", requireAdmin, (req, res) => {
   const { id } = req.params;
   if (Array.isArray(db.messages)) {
     db.messages = db.messages.filter((m) => m.id !== id);
@@ -485,258 +995,356 @@ app.delete("/api/messages/:id", (req, res) => {
   return res.json({ success: true });
 });
 
-// Database stats & export
-app.get("/api/db/stats", (_req, res) => {
+// Database stats (Admin-only, no internal filesystem paths exposed)
+app.get("/api/db/stats", requireAdmin, (_req, res) => {
   res.json({
     ordersCount: db.orders.length,
     reservationsCount: db.reservations.length,
     customersCount: db.customers.length,
-    lastLogs: db.logs.slice(0, 10),
-    storageFile: DB_FILE
+    lastLogs: db.logs.slice(0, 10)
   });
 });
+
+// Safe image validation & path-confined disk storage helpers
+const ALLOWED_IMAGE_MIMES = new Set(["png", "jpeg", "jpg", "webp", "gif"]);
+const MAX_UPLOAD_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB decoded binary limit
+
+function sanitizeUploadId(rawId: unknown, fallbackPrefix: string): string {
+  const cleaned = String(rawId || "")
+    .replace(/[^a-zA-Z0-9_-]/g, "")
+    .slice(0, 64);
+  return cleaned || `${fallbackPrefix}_${Date.now()}`;
+}
+
+function isSafeImageReference(url: string): boolean {
+  const trimmed = url.trim();
+  if (!trimmed || trimmed.length > 2_000_000) return false;
+  if (/^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=\s]+$/i.test(trimmed)) {
+    return true;
+  }
+  if (/^\/[a-zA-Z0-9_./-]+(\?[a-zA-Z0-9_=&-]+)?$/.test(trimmed) && !trimmed.includes("..")) {
+    return true;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+async function saveSafeImageAsset(
+  imageBase64: string,
+  targetDir: string,
+  filenameBase: string
+): Promise<{ filename: string }> {
+  const match = imageBase64.match(/^data:image\/([a-zA-Z0-9]+);base64,([A-Za-z0-9+/=\s]+)$/);
+  if (!match) {
+    throw Object.assign(new Error("Formato de imagem base64 inválido."), { statusCode: 400 });
+  }
+
+  const rawExt = match[1].toLowerCase();
+  if (!ALLOWED_IMAGE_MIMES.has(rawExt)) {
+    throw Object.assign(new Error("Tipo de imagem não permitido. Use PNG, JPG, WebP ou GIF."), { statusCode: 400 });
+  }
+
+  const buffer = Buffer.from(match[2], "base64");
+  if (buffer.length === 0 || buffer.length > MAX_UPLOAD_IMAGE_BYTES) {
+    throw Object.assign(new Error("Tamanho da imagem excede o limite de 5MB."), { statusCode: 413 });
+  }
+
+  const ext = rawExt === "jpeg" ? "jpg" : rawExt;
+  const safeBase = sanitizeUploadId(filenameBase, "asset");
+  const filename = `${safeBase}.${ext}`;
+
+  const resolvedDir = path.resolve(targetDir);
+  await fs.promises.mkdir(resolvedDir, { recursive: true });
+  const resolvedPath = path.resolve(resolvedDir, filename);
+  if (!resolvedPath.startsWith(resolvedDir + path.sep)) {
+    throw Object.assign(new Error("Caminho de destino inválido."), { statusCode: 400 });
+  }
+
+  await fs.promises.writeFile(resolvedPath, buffer);
+  return { filename };
+}
+
+function sendCachedJson(res: Response, cacheKey: string, computePayload: () => unknown) {
+  let serialized = publicSettingsCache.get(cacheKey);
+  if (!serialized) {
+    serialized = JSON.stringify(computePayload());
+    publicSettingsCache.set(cacheKey, serialized);
+  }
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  return res.status(200).send(serialized);
+}
 
 // Custom Header Logo API
 app.get("/api/settings/logo", (_req, res) => {
   try {
-    res.json({ logoUrl: (db as any).customLogo || null });
-  } catch (error: any) {
-    res.json({ logoUrl: null });
+    return sendCachedJson(res, "logo", () => ({ logoUrl: db.customLogo || null }));
+  } catch {
+    return res.json({ logoUrl: null });
   }
 });
 
-app.post("/api/settings/logo", (req, res) => {
+app.post("/api/settings/logo", requireAdmin, async (req, res) => {
   try {
-    const { imageBase64, logoUrl } = req.body;
+    const { imageBase64, logoUrl } = req.body || {};
 
-    if (imageBase64) {
-      const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
-      const buffer = Buffer.from(base64Data, "base64");
-      const filename = `deolinda_custom_logo.png`;
-      const targetPath = path.join(process.cwd(), "public", filename);
-      fs.writeFileSync(targetPath, buffer);
-
+    if (typeof imageBase64 === "string" && imageBase64.trim()) {
+      const normalizedBase64 = imageBase64.startsWith("data:image/")
+        ? imageBase64
+        : `data:image/png;base64,${imageBase64}`;
+      const { filename } = await saveSafeImageAsset(
+        normalizedBase64,
+        path.join(process.cwd(), "public"),
+        "deolinda_custom_logo"
+      );
       const publicUrl = `/${filename}?v=${Date.now()}`;
-      (db as any).customLogo = publicUrl;
+      db.customLogo = publicUrl;
+      invalidateSettingsCache("logo");
       saveDatabase();
       return res.json({ success: true, logoUrl: publicUrl });
-    } else if (logoUrl) {
-      (db as any).customLogo = logoUrl;
+    } else if (typeof logoUrl === "string" && logoUrl.trim()) {
+      if (!isSafeImageReference(logoUrl)) {
+        return res.status(400).json({ error: "URL de imagem inválida." });
+      }
+      db.customLogo = logoUrl.trim();
+      invalidateSettingsCache("logo");
       saveDatabase();
-      return res.json({ success: true, logoUrl });
+      return res.json({ success: true, logoUrl: db.customLogo });
     } else {
-      (db as any).customLogo = null;
+      db.customLogo = null;
+      invalidateSettingsCache("logo");
       saveDatabase();
       return res.json({ success: true, logoUrl: null });
     }
   } catch (error: any) {
-    console.error("Error saving custom logo:", error);
-    res.status(500).json({ error: error.message || "Failed to save logo" });
+    const status = typeof error?.statusCode === "number" ? error.statusCode : 500;
+    if (status >= 500) console.error("Error saving custom logo:", error);
+    return res.status(status).json({ error: status < 500 ? error.message : "Erro ao salvar logotipo." });
   }
 });
 
-// Custom Attached Emblem / Lettering API (Ao lado do logo do cabeçalho e embaixo do logo na página principal)
+// Custom Attached Emblem / Lettering API
 app.get("/api/settings/emblem", (_req, res) => {
   try {
-    res.json({
-      emblemUrl: (db as any).customEmblem || null,
-      emblemEnabled: (db as any).customEmblemEnabled !== false
-    });
-  } catch (error: any) {
-    res.json({ emblemUrl: null, emblemEnabled: true });
+    return sendCachedJson(res, "emblem", () => ({
+      emblemUrl: db.customEmblem || null,
+      emblemEnabled: db.customEmblemEnabled !== false
+    }));
+  } catch {
+    return res.json({ emblemUrl: null, emblemEnabled: true });
   }
 });
 
-app.post("/api/settings/emblem", (req, res) => {
+app.post("/api/settings/emblem", requireAdmin, async (req, res) => {
   try {
-    const { imageBase64, emblemUrl, enabled } = req.body;
+    const { imageBase64, emblemUrl, enabled } = req.body || {};
 
     if (enabled !== undefined) {
-      (db as any).customEmblemEnabled = Boolean(enabled);
+      db.customEmblemEnabled = Boolean(enabled);
     }
 
-    if (imageBase64) {
-      const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
-      const buffer = Buffer.from(base64Data, "base64");
-      const filename = `deolinda_custom_emblem.png`;
-      const targetPath = path.join(process.cwd(), "public", filename);
-      fs.writeFileSync(targetPath, buffer);
-
+    if (typeof imageBase64 === "string" && imageBase64.trim()) {
+      const normalizedBase64 = imageBase64.startsWith("data:image/")
+        ? imageBase64
+        : `data:image/png;base64,${imageBase64}`;
+      const { filename } = await saveSafeImageAsset(
+        normalizedBase64,
+        path.join(process.cwd(), "public"),
+        "deolinda_custom_emblem"
+      );
       const publicUrl = `/${filename}?v=${Date.now()}`;
-      (db as any).customEmblem = publicUrl;
+      db.customEmblem = publicUrl;
       if (enabled === undefined) {
-        (db as any).customEmblemEnabled = true;
+        db.customEmblemEnabled = true;
       }
+      invalidateSettingsCache("emblem");
       saveDatabase();
-      return res.json({ 
-        success: true, 
-        emblemUrl: publicUrl, 
-        emblemEnabled: (db as any).customEmblemEnabled 
+      return res.json({
+        success: true,
+        emblemUrl: publicUrl,
+        emblemEnabled: db.customEmblemEnabled
       });
     } else if (emblemUrl !== undefined) {
-      (db as any).customEmblem = emblemUrl;
+      if (emblemUrl !== null && (typeof emblemUrl !== "string" || !isSafeImageReference(emblemUrl))) {
+        return res.status(400).json({ error: "URL de emblema inválida." });
+      }
+      db.customEmblem = emblemUrl ? emblemUrl.trim() : null;
+      invalidateSettingsCache("emblem");
       saveDatabase();
-      return res.json({ 
-        success: true, 
-        emblemUrl, 
-        emblemEnabled: (db as any).customEmblemEnabled !== false 
+      return res.json({
+        success: true,
+        emblemUrl: db.customEmblem,
+        emblemEnabled: db.customEmblemEnabled !== false
       });
     } else {
+      invalidateSettingsCache("emblem");
       saveDatabase();
-      return res.json({ 
-        success: true, 
-        emblemUrl: (db as any).customEmblem || null, 
-        emblemEnabled: (db as any).customEmblemEnabled !== false 
+      return res.json({
+        success: true,
+        emblemUrl: db.customEmblem || null,
+        emblemEnabled: db.customEmblemEnabled !== false
       });
     }
   } catch (error: any) {
-    console.error("Error saving custom emblem:", error);
-    res.status(500).json({ error: error.message || "Failed to save emblem" });
+    const status = typeof error?.statusCode === "number" ? error.statusCode : 500;
+    if (status >= 500) console.error("Error saving custom emblem:", error);
+    return res.status(status).json({ error: status < 500 ? error.message : "Erro ao salvar emblema." });
   }
 });
 
-// Custom Menu Items API (Adicionar, Editar e Excluir itens do cardápio)
+// Custom Menu Items API
 app.get("/api/settings/menu", (_req, res) => {
   try {
-    const rawItems = (db as any).menuItems;
-    const normalizedItems = Array.isArray(rawItems)
-      ? rawItems.map((it: any) => ({
-          ...it,
-          category: normalizeServerItemCategory(it?.category)
-        }))
-      : null;
-    res.json({ items: normalizedItems });
-  } catch (error: any) {
-    res.json({ items: null });
+    return sendCachedJson(res, "menu", () => {
+      const rawItems = db.menuItems;
+      const normalizedItems = Array.isArray(rawItems)
+        ? rawItems.map((it: any) => ({
+            ...it,
+            category: normalizeServerItemCategory(it?.category)
+          }))
+        : null;
+      return { items: normalizedItems };
+    });
+  } catch {
+    return res.json({ items: null });
   }
 });
 
-// Keep menu item image URLs portable (base64 data URLs or https URLs) so all devices and containers render them reliably
 function processMenuItemImage(item: any): any {
   return item;
 }
 
-// Dedicated Fast Upload Menu Image API
-app.post("/api/settings/upload-menu-image", (req, res) => {
+// Dedicated Fast Upload Menu Image API (Protected + Path-confined)
+app.post("/api/settings/upload-menu-image", requireAdmin, async (req, res) => {
   try {
-    const { imageBase64, itemId } = req.body;
-    if (!imageBase64) return res.status(400).json({ error: "No image data" });
-    const match = imageBase64.match(/^data:image\/(\w+);base64,(.+)$/);
-    if (!match) return res.status(400).json({ error: "Invalid base64 format" });
-    const ext = match[1] === "jpeg" ? "jpg" : match[1];
-    const targetDir = path.join(process.cwd(), "public", "menu_images");
-    if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
-    const filename = `${itemId || `upload_${Date.now()}`}.${ext}`;
-    fs.writeFileSync(path.join(targetDir, filename), Buffer.from(match[2], "base64"));
+    const { imageBase64, itemId } = req.body || {};
+    if (typeof imageBase64 !== "string" || !imageBase64) {
+      return res.status(400).json({ error: "Dados de imagem ausentes." });
+    }
+    const { filename } = await saveSafeImageAsset(
+      imageBase64,
+      path.join(process.cwd(), "public", "menu_images"),
+      itemId ? String(itemId) : `upload_${Date.now()}`
+    );
     const publicUrl = `/menu_images/${filename}?v=${Date.now()}`;
     return res.json({ success: true, url: publicUrl, imageUrl: publicUrl });
   } catch (err: any) {
-    res.status(500).json({ error: err.message || "Failed to upload image" });
+    const status = typeof err?.statusCode === "number" ? err.statusCode : 500;
+    if (status >= 500) console.error("Menu image upload error:", err);
+    return res.status(status).json({ error: status < 500 ? err.message : "Erro ao enviar imagem." });
   }
 });
 
-// Keep gallery post image URLs portable (base64 data URLs or https URLs) so all devices and containers render them reliably
 function processGalleryPostImage(post: any): any {
   return post;
 }
 
-app.post("/api/settings/upload-gallery-image", (req, res) => {
+app.post("/api/settings/upload-gallery-image", requireAdmin, async (req, res) => {
   try {
-    const { imageBase64, postId } = req.body;
-    if (!imageBase64) return res.status(400).json({ error: "No image data" });
-    const match = imageBase64.match(/^data:image\/(\w+);base64,(.+)$/);
-    if (!match) return res.status(400).json({ error: "Invalid base64 format" });
-    const ext = match[1] === "jpeg" ? "jpg" : match[1];
-    const targetDir = path.join(process.cwd(), "public", "gallery_images");
-    if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
-    const filename = `${postId || `moment_${Date.now()}`}.${ext}`;
-    fs.writeFileSync(path.join(targetDir, filename), Buffer.from(match[2], "base64"));
+    const { imageBase64, postId } = req.body || {};
+    if (typeof imageBase64 !== "string" || !imageBase64) {
+      return res.status(400).json({ error: "Dados de imagem ausentes." });
+    }
+    const { filename } = await saveSafeImageAsset(
+      imageBase64,
+      path.join(process.cwd(), "public", "gallery_images"),
+      postId ? String(postId) : `moment_${Date.now()}`
+    );
     const publicUrl = `/gallery_images/${filename}?v=${Date.now()}`;
     return res.json({ success: true, url: publicUrl, imageUrl: publicUrl });
   } catch (err: any) {
-    res.status(500).json({ error: err.message || "Failed to upload gallery image" });
+    const status = typeof err?.statusCode === "number" ? err.statusCode : 500;
+    if (status >= 500) console.error("Gallery image upload error:", err);
+    return res.status(status).json({ error: status < 500 ? err.message : "Erro ao enviar imagem da galeria." });
   }
 });
 
-app.post("/api/settings/menu", (req, res) => {
+app.post("/api/settings/menu", requireAdmin, (req, res) => {
   try {
-    const { items } = req.body;
-    if (Array.isArray(items)) {
+    const { items } = req.body || {};
+    if (Array.isArray(items) && items.length <= 500) {
       const processedItems = items.map(processMenuItemImage);
-      (db as any).menuItems = processedItems;
+      db.menuItems = processedItems;
+      invalidateSettingsCache("menu");
       saveDatabase();
       return res.json({ success: true, count: processedItems.length });
     }
-    return res.status(400).json({ error: "Invalid items array" });
+    return res.status(400).json({ error: "Lista de itens inválida." });
   } catch (error: any) {
     console.error("Error saving menu items:", error);
-    res.status(500).json({ error: error.message || "Failed to save menu items" });
+    return res.status(500).json({ error: "Erro ao salvar itens do cardápio." });
   }
 });
 
 // Single Menu Item Upsert (Add/Edit individual item)
-app.post("/api/settings/menu-item", (req, res) => {
+app.post("/api/settings/menu-item", requireAdmin, (req, res) => {
   try {
-    const { item } = req.body;
-    if (item && item.id) {
+    const { item } = req.body || {};
+    if (item && typeof item === "object" && typeof item.id === "string" && item.id.trim()) {
       const processedItem = processMenuItemImage(item);
-      if (!Array.isArray((db as any).menuItems)) {
-        (db as any).menuItems = [];
+      if (!Array.isArray(db.menuItems)) {
+        db.menuItems = [];
       }
-      const existingIdx = (db as any).menuItems.findIndex((it: any) => it.id === processedItem.id);
+      const existingIdx = db.menuItems.findIndex((it: any) => it.id === processedItem.id);
       if (existingIdx !== -1) {
-        (db as any).menuItems[existingIdx] = processedItem;
+        db.menuItems[existingIdx] = processedItem;
       } else {
-        (db as any).menuItems = [processedItem, ...(db as any).menuItems];
+        db.menuItems = [processedItem, ...db.menuItems];
       }
+      invalidateSettingsCache("menu");
       saveDatabase();
-      return res.json({ success: true, item: processedItem, totalCount: (db as any).menuItems.length });
+      return res.json({ success: true, item: processedItem, totalCount: db.menuItems.length });
     }
-    return res.status(400).json({ error: "Invalid item" });
+    return res.status(400).json({ error: "Item inválido." });
   } catch (error: any) {
     console.error("Error saving single menu item:", error);
-    res.status(500).json({ error: error.message || "Failed to save menu item" });
+    return res.status(500).json({ error: "Erro ao salvar item do cardápio." });
   }
 });
 
 // Single Menu Item Delete
-app.delete("/api/settings/menu-item/:id", (req, res) => {
+app.delete("/api/settings/menu-item/:id", requireAdmin, (req, res) => {
   try {
     const { id } = req.params;
-    if (id && Array.isArray((db as any).menuItems)) {
-      (db as any).menuItems = (db as any).menuItems.filter((it: any) => it.id !== id);
+    if (id && Array.isArray(db.menuItems)) {
+      db.menuItems = db.menuItems.filter((it: any) => it.id !== id);
+      invalidateSettingsCache("menu");
       saveDatabase();
-      return res.json({ success: true, deletedId: id, totalCount: (db as any).menuItems.length });
+      return res.json({ success: true, deletedId: id, totalCount: db.menuItems.length });
     }
     return res.json({ success: true });
   } catch (error: any) {
     console.error("Error deleting menu item:", error);
-    res.status(500).json({ error: error.message || "Failed to delete menu item" });
+    return res.status(500).json({ error: "Erro ao excluir item do cardápio." });
   }
 });
 
 // Custom Gallery / Fotos & Momentos API
 app.get("/api/settings/gallery", (_req, res) => {
   try {
-    res.json({ posts: (db as any).galleryPosts || null });
-  } catch (error: any) {
-    res.json({ posts: null });
+    return sendCachedJson(res, "gallery", () => ({ posts: db.galleryPosts || null }));
+  } catch {
+    return res.json({ posts: null });
   }
 });
 
-app.post("/api/settings/gallery", (req, res) => {
+app.post("/api/settings/gallery", requireAdmin, (req, res) => {
   try {
-    const { posts } = req.body;
-    if (Array.isArray(posts)) {
+    const { posts } = req.body || {};
+    if (Array.isArray(posts) && posts.length <= 200) {
       const processedPosts = posts.map(processGalleryPostImage);
-      (db as any).galleryPosts = processedPosts;
+      db.galleryPosts = processedPosts;
+      invalidateSettingsCache("gallery");
       saveDatabase();
       return res.json({ success: true, count: processedPosts.length, posts: processedPosts });
     }
-    return res.status(400).json({ error: "Invalid posts array" });
+    return res.status(400).json({ error: "Lista de fotos inválida." });
   } catch (error: any) {
     console.error("Error saving gallery posts:", error);
-    res.status(500).json({ error: error.message || "Failed to save gallery posts" });
+    return res.status(500).json({ error: "Erro ao salvar galeria." });
   }
 });
 
@@ -818,134 +1426,254 @@ function normalizeServerCategories(cats: any[]): any[] {
 
 app.get("/api/settings/categories", (_req, res) => {
   try {
-    let cats = (db as any).menuCategories;
-    cats = normalizeServerCategories(cats);
-    (db as any).menuCategories = cats;
-    res.json({ categories: cats });
-  } catch (error: any) {
-    res.json({ categories: DEFAULT_SERVER_CATEGORIES });
+    return sendCachedJson(res, "categories", () => {
+      let cats = db.menuCategories;
+      cats = normalizeServerCategories(cats || []);
+      db.menuCategories = cats;
+      return { categories: cats };
+    });
+  } catch {
+    return res.json({ categories: DEFAULT_SERVER_CATEGORIES });
   }
 });
 
-app.post("/api/settings/categories", (req, res) => {
+app.post("/api/settings/categories", requireAdmin, (req, res) => {
   try {
-    const { categories } = req.body;
-    if (Array.isArray(categories)) {
+    const { categories } = req.body || {};
+    if (Array.isArray(categories) && categories.length <= 50) {
       const sanitizedCats = normalizeServerCategories(categories);
-      (db as any).menuCategories = sanitizedCats;
+      db.menuCategories = sanitizedCats;
+      invalidateSettingsCache("categories");
       saveDatabase();
       return res.json({ success: true, count: sanitizedCats.length, categories: sanitizedCats });
     }
-    return res.status(400).json({ error: "Invalid categories array" });
+    return res.status(400).json({ error: "Lista de categorias inválida." });
   } catch (error: any) {
     console.error("Error saving menu categories:", error);
-    res.status(500).json({ error: error.message || "Failed to save menu categories" });
+    return res.status(500).json({ error: "Erro ao salvar categorias do cardápio." });
   }
 });
 
 // Custom Site Information & Content API
 app.get("/api/settings/site-info", (_req, res) => {
   try {
-    res.json({ siteInfo: (db as any).siteInfo || null });
-  } catch (error: any) {
-    res.json({ siteInfo: null });
+    return sendCachedJson(res, "site-info", () => ({ siteInfo: db.siteInfo || null }));
+  } catch {
+    return res.json({ siteInfo: null });
   }
 });
 
-app.post("/api/settings/site-info", (req, res) => {
+app.post("/api/settings/site-info", requireAdmin, (req, res) => {
   try {
-    const { siteInfo } = req.body;
-    if (siteInfo && typeof siteInfo === "object") {
-      (db as any).siteInfo = siteInfo;
+    const { siteInfo } = req.body || {};
+    if (siteInfo && typeof siteInfo === "object" && !Array.isArray(siteInfo)) {
+      db.siteInfo = siteInfo;
+      invalidateSettingsCache("site-info");
       saveDatabase();
       return res.json({ success: true });
     }
-    return res.status(400).json({ error: "Invalid siteInfo object" });
+    return res.status(400).json({ error: "Objeto siteInfo inválido." });
   } catch (error: any) {
     console.error("Error saving site info:", error);
-    res.status(500).json({ error: error.message || "Failed to save site info" });
+    return res.status(500).json({ error: "Erro ao salvar informações do site." });
   }
 });
 
-// Admin Authentication Password API
-app.get("/api/settings/admin-password", (_req, res) => {
-  try {
-    res.json({ hasCustomPassword: Boolean((db as any).adminPassword) });
-  } catch (error: any) {
-    res.json({ hasCustomPassword: false });
-  }
+// Customer Accounts (Admin list + safe public registration + customer sign-in without exposing all customers)
+app.get("/api/customers", requireAdmin, (_req, res) => {
+  res.json({ customers: db.customers.map(toPublicCustomer) });
 });
 
-app.post("/api/settings/admin-password", (req, res) => {
-  try {
-    const { password } = req.body;
-    if (typeof password === "string" && password.trim().length >= 4) {
-      (db as any).adminPassword = password.trim();
-      saveDatabase();
-      return res.json({ success: true, message: "Senha da área administrativa atualizada com sucesso" });
+app.post("/api/customers/login", authRateLimiter, (req, res) => {
+  const identifier = typeof req.body?.identifier === "string" ? req.body.identifier.trim() : "";
+  const password = typeof req.body?.password === "string" ? req.body.password.trim() : "";
+
+  if (!identifier || !password || identifier.length > 254 || password.length > 128) {
+    return res.status(400).json({ error: "Informe identificador e senha válidos." });
+  }
+
+  const cleanIdent = identifier.toLowerCase();
+  const cleanPhone = identifier.replace(/\D/g, "");
+
+  const customer = db.customers.find(
+    (c) =>
+      (typeof c.email === "string" && c.email.toLowerCase() === cleanIdent) ||
+      (typeof c.phone === "string" && cleanPhone.length >= 8 && c.phone.replace(/\D/g, "") === cleanPhone)
+  );
+
+  if (!customer) {
+    return res.status(404).json({ error: "Cadastro não encontrado." });
+  }
+
+  if (typeof customer.passwordHash === "string" && customer.passwordHash) {
+    if (!verifyPasswordHash(password, customer.passwordHash)) {
+      return res.status(401).json({ error: "Senha incorreta." });
     }
-    return res.status(400).json({ error: "Senha inválida. Deve conter pelo menos 4 caracteres." });
-  } catch (error: any) {
-    console.error("Error saving admin password:", error);
-    res.status(500).json({ error: error.message || "Failed to save admin password" });
-  }
-});
-
-app.get("/api/customers", (_req, res) => {
-  res.json({ customers: db.customers });
-});
-
-app.post("/api/customers", (req, res) => {
-  const newCustomer = {
-    id: req.body.id || `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
-    createdAt: new Date().toISOString(),
-    ...req.body
-  };
-  // Update or insert
-  const existingIdx = db.customers.findIndex(c => c.id === newCustomer.id || c.email === newCustomer.email || c.phone === newCustomer.phone);
-  if (existingIdx >= 0) {
-    db.customers[existingIdx] = { ...db.customers[existingIdx], ...newCustomer };
-    logDatabaseEvent("CUSTOMER_UPDATED", { customerId: newCustomer.id, name: newCustomer.name });
   } else {
-    db.customers.unshift(newCustomer);
-    logDatabaseEvent("CUSTOMER_CREATED", { customerId: newCustomer.id, name: newCustomer.name });
+    // Allow legacy seed customer record without passwordHash to set a password on first login
+    customer.passwordHash = hashPassword(password);
+    saveDatabase();
   }
+
+  return res.json({ success: true, customer: toPublicCustomer(customer) });
+});
+
+app.post("/api/customers", publicWriteRateLimiter, (req, res) => {
+  const body = req.body || {};
+  const cleanName = typeof body.name === "string" ? body.name.trim().slice(0, 120) : "";
+  const cleanEmail = typeof body.email === "string" ? body.email.trim().toLowerCase().slice(0, 254) : "";
+  const cleanPhone = typeof body.phone === "string" ? body.phone.trim().slice(0, 30) : "";
+
+  if (!cleanName || (!cleanEmail && !cleanPhone)) {
+    return res.status(400).json({ error: "Nome e e-mail ou telefone são obrigatórios." });
+  }
+
+  const existingIdx = db.customers.findIndex(
+    (c) =>
+      (typeof body.id === "string" && c.id === body.id) ||
+      (cleanEmail && typeof c.email === "string" && c.email.toLowerCase() === cleanEmail) ||
+      (cleanPhone && typeof c.phone === "string" && c.phone === cleanPhone)
+  );
+
+  const sanitizedInput = sanitizeCustomerRecordForStorage({
+    ...body,
+    id:
+      existingIdx >= 0
+        ? db.customers[existingIdx].id
+        : typeof body.id === "string" && /^CUST-[A-Za-z0-9_-]{1,32}$/.test(body.id)
+        ? body.id
+        : `CUST-${Math.floor(1000 + Math.random() * 9000)}`,
+    name: cleanName,
+    email: cleanEmail,
+    phone: cleanPhone,
+    createdAt: existingIdx >= 0 ? db.customers[existingIdx].createdAt : new Date().toISOString()
+  });
+
+  let savedCustomer: any;
+  if (existingIdx >= 0) {
+    savedCustomer = { ...db.customers[existingIdx], ...sanitizedInput };
+    db.customers[existingIdx] = savedCustomer;
+    logDatabaseEvent("CUSTOMER_UPDATED", { customerId: savedCustomer.id, name: savedCustomer.name });
+  } else {
+    savedCustomer = sanitizedInput;
+    db.customers.unshift(savedCustomer);
+    if (db.customers.length > 5000) db.customers.pop();
+    logDatabaseEvent("CUSTOMER_CREATED", { customerId: savedCustomer.id, name: savedCustomer.name });
+  }
+
   saveDatabase();
-  res.status(201).json({ success: true, customer: newCustomer });
+  return res.status(201).json({ success: true, customer: toPublicCustomer(savedCustomer) });
 });
 
 // Orders API
-app.get("/api/orders", (_req, res) => {
+const ALLOWED_ORDER_STATUSES = new Set([
+  "received",
+  "preparing",
+  "baking",
+  "out_for_delivery",
+  "completed",
+  "cancelled"
+]);
+const ALLOWED_ORDER_TYPES = new Set(["delivery", "pickup", "table"]);
+
+app.get("/api/orders", requireAdmin, (_req, res) => {
   res.json({ orders: db.orders });
 });
 
-// Single Order Lookup (Crucial for Live Customer Order Tracking Window)
+// Single Order Lookup (Admin gets full order; public tracker gets safe status view without full PII)
 app.get("/api/orders/:id", (req, res) => {
   const { id } = req.params;
+  if (!/^[A-Za-z0-9_-]{3,40}$/.test(id)) {
+    return res.status(400).json({ error: "Identificador de pedido inválido." });
+  }
   const order = db.orders.find((o) => o.id === id);
   if (!order) {
     return res.status(404).json({ error: "Pedido não encontrado" });
   }
-  res.json({ success: true, order });
+  if (getValidAdminSession(req)) {
+    return res.json({ success: true, order });
+  }
+  const firstName = typeof order.customerName === "string"
+    ? order.customerName.trim().split(/\s+/)[0] || "Cliente"
+    : "Cliente";
+  return res.json({
+    success: true,
+    order: {
+      id: order.id,
+      customerName: firstName,
+      items: Array.isArray(order.items) ? order.items : [],
+      total: order.total,
+      type: order.type,
+      tableNumber: order.type === "table" ? order.tableNumber : undefined,
+      paymentMethod: order.paymentMethod,
+      status: order.status,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+      estimatedMinutes: order.estimatedMinutes
+    }
+  });
 });
 
-app.post("/api/orders", (req, res) => {
+app.post("/api/orders", publicWriteRateLimiter, (req, res) => {
+  const body = req.body || {};
+  const customerName = typeof body.customerName === "string" ? body.customerName.trim().slice(0, 120) : "";
+  const phone = typeof body.phone === "string" ? body.phone.trim().slice(0, 30) : "";
+  const email = typeof body.email === "string" ? body.email.trim().slice(0, 254) : undefined;
+  const items = Array.isArray(body.items) ? body.items : [];
+  const total = Number(body.total);
+  const type = typeof body.type === "string" && ALLOWED_ORDER_TYPES.has(body.type) ? body.type : "delivery";
+
+  if (!customerName || items.length === 0 || items.length > 50 || !Number.isFinite(total) || total < 0 || total > 50000) {
+    return res.status(400).json({ error: "Dados do pedido inválidos." });
+  }
+
+  const sanitizedItems = items.map((it: any) => ({
+    name: typeof it?.name === "string" ? it.name.trim().slice(0, 120) : "Item",
+    quantity: Math.max(1, Math.min(99, Math.floor(Number(it?.quantity || 1)))),
+    price: Number.isFinite(Number(it?.price)) ? Math.max(0, Number(it.price)) : 0,
+    crust: typeof it?.crust === "string" ? it.crust.trim().slice(0, 80) : undefined,
+    notes: typeof it?.notes === "string" ? it.notes.trim().slice(0, 300) : undefined,
+    extras: Array.isArray(it?.extras) ? it.extras.slice(0, 10).map((e: any) => String(e).slice(0, 60)) : undefined
+  }));
+
+  const safeId =
+    typeof body.id === "string" && /^ORD-[A-Za-z0-9_-]{2,24}$/.test(body.id)
+      ? body.id
+      : `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
+
   const newOrder = {
-    id: req.body.id || `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
-    status: req.body.status || "received",
+    id: safeId,
+    customerName,
+    phone,
+    ...(email ? { email } : {}),
+    items: sanitizedItems,
+    total,
+    type,
+    ...(type === "delivery" && typeof body.address === "string" ? { address: body.address.trim().slice(0, 300) } : {}),
+    ...(type === "table" && typeof body.tableNumber === "string" ? { tableNumber: body.tableNumber.trim().slice(0, 60) } : {}),
+    paymentMethod: typeof body.paymentMethod === "string" ? body.paymentMethod.trim().slice(0, 40) : "Pix",
+    status: "received",
     createdAt: new Date().toISOString(),
-    estimatedMinutes: req.body.estimatedMinutes || (req.body.type === "delivery" ? 35 : 20),
-    ...req.body
+    estimatedMinutes: Number.isFinite(Number(body.estimatedMinutes))
+      ? Math.max(5, Math.min(180, Math.floor(Number(body.estimatedMinutes))))
+      : type === "delivery"
+      ? 35
+      : 20
   };
+
   db.orders.unshift(newOrder);
+  if (db.orders.length > 2000) db.orders.pop();
   logDatabaseEvent("ORDER_CREATED", { orderId: newOrder.id, customer: newOrder.customerName, total: newOrder.total });
   saveDatabase();
-  res.status(201).json({ success: true, order: newOrder });
+  return res.status(201).json({ success: true, order: newOrder });
 });
 
-app.patch("/api/orders/:id/status", (req, res) => {
+app.patch("/api/orders/:id/status", requireAdmin, (req, res) => {
   const { id } = req.params;
-  const { status } = req.body;
+  const status = typeof req.body?.status === "string" ? req.body.status : "";
+  if (!ALLOWED_ORDER_STATUSES.has(status)) {
+    return res.status(400).json({ error: "Status de pedido inválido." });
+  }
   const order = db.orders.find((o) => o.id === id);
   if (!order) {
     return res.status(404).json({ error: "Pedido não encontrado" });
@@ -955,30 +1683,62 @@ app.patch("/api/orders/:id/status", (req, res) => {
   order.updatedAt = new Date().toISOString();
   logDatabaseEvent("ORDER_STATUS_CHANGED", { orderId: id, from: oldStatus, to: status });
   saveDatabase();
-  res.json({ success: true, order, message: `Status do pedido atualizado para ${status}` });
+  return res.json({ success: true, order, message: `Status do pedido atualizado para ${status}` });
 });
 
 // Reservations API
-app.get("/api/reservations", (_req, res) => {
+const ALLOWED_RESERVATION_STATUSES = new Set(["confirmed", "pending", "cancelled", "completed"]);
+
+app.get("/api/reservations", requireAdmin, (_req, res) => {
   res.json({ reservations: db.reservations });
 });
 
-app.post("/api/reservations", (req, res) => {
+app.post("/api/reservations", publicWriteRateLimiter, (req, res) => {
+  const body = req.body || {};
+  const name = typeof body.name === "string" ? body.name.trim().slice(0, 120) : "";
+  const phone = typeof body.phone === "string" ? body.phone.trim().slice(0, 30) : "";
+  const email = typeof body.email === "string" ? body.email.trim().slice(0, 254) : "";
+  const date = typeof body.date === "string" ? body.date.trim().slice(0, 30) : "";
+  const time = typeof body.time === "string" ? body.time.trim().slice(0, 20) : "";
+  const guests = Number(body.guests || 2);
+
+  if (!name || !phone || !date || !time || !Number.isFinite(guests) || guests < 1 || guests > 50) {
+    return res.status(400).json({ error: "Dados da reserva inválidos." });
+  }
+
+  const safeId =
+    typeof body.id === "string" && /^RES-[A-Za-z0-9_-]{2,24}$/.test(body.id)
+      ? body.id
+      : `RES-${Math.floor(100 + Math.random() * 900)}`;
+
   const newReservation = {
-    id: `RES-${Math.floor(100 + Math.random() * 900)}`,
+    id: safeId,
+    name,
+    phone,
+    email,
+    date,
+    time,
+    guests: Math.floor(guests),
+    area: typeof body.area === "string" ? body.area.trim().slice(0, 80) : "Jardim do Forno a Lenha",
+    occasion: typeof body.occasion === "string" ? body.occasion.trim().slice(0, 80) : undefined,
+    notes: typeof body.notes === "string" ? body.notes.trim().slice(0, 500) : "",
     status: "confirmed",
-    createdAt: new Date().toISOString(),
-    ...req.body
+    createdAt: new Date().toISOString()
   };
+
   db.reservations.unshift(newReservation);
+  if (db.reservations.length > 2000) db.reservations.pop();
   logDatabaseEvent("RESERVATION_CREATED", { resId: newReservation.id, name: newReservation.name });
   saveDatabase();
-  res.status(201).json({ success: true, reservation: newReservation });
+  return res.status(201).json({ success: true, reservation: newReservation });
 });
 
-app.patch("/api/reservations/:id/status", (req, res) => {
+app.patch("/api/reservations/:id/status", requireAdmin, (req, res) => {
   const { id } = req.params;
-  const { status } = req.body;
+  const status = typeof req.body?.status === "string" ? req.body.status : "";
+  if (!ALLOWED_RESERVATION_STATUSES.has(status)) {
+    return res.status(400).json({ error: "Status de reserva inválido." });
+  }
   const reservation = db.reservations.find((r) => r.id === id);
   if (!reservation) {
     return res.status(404).json({ error: "Reserva não encontrada" });
@@ -986,16 +1746,24 @@ app.patch("/api/reservations/:id/status", (req, res) => {
   reservation.status = status;
   logDatabaseEvent("RESERVATION_STATUS_CHANGED", { resId: id, status });
   saveDatabase();
-  res.json({ success: true, reservation });
+  return res.json({ success: true, reservation });
 });
 
 // AI Concierge Chat Route
-app.post("/api/chat", async (req, res) => {
-  const { message, history } = req.body;
-  
-  if (!message) {
-    return res.status(400).json({ error: "Mensagem obrigatória" });
+app.post("/api/chat", publicWriteRateLimiter, async (req, res) => {
+  const rawMessage = req.body?.message;
+  if (typeof rawMessage !== "string" || !rawMessage.trim() || rawMessage.trim().length > 1000) {
+    return res.status(400).json({ error: "Mensagem obrigatória (máximo de 1000 caracteres)." });
   }
+  const message = rawMessage.trim();
+
+  const rawHistory = Array.isArray(req.body?.history) ? req.body.history.slice(-8) : [];
+  const safeHistory = rawHistory
+    .filter((entry: any) => entry && typeof entry.text === "string" && entry.text.trim())
+    .map((entry: any) => ({
+      role: entry.role === "model" ? "model" : "user",
+      parts: [{ text: String(entry.text).trim().slice(0, 500) }]
+    }));
 
   const systemInstruction = `Você é o "Mastro Deolinda", o concierge gastronômico e sommelier virtual da 'Deolinda Pizzaria Napoletana'.
 Você atende os clientes em Português com carisma italiano, elegância e profunda paixão por pizza napoletana tradicional.
@@ -1024,9 +1792,11 @@ Suas respostas devem ser gentis, cultas, gastronômicas, dando dicas de harmoniz
     if (ai) {
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
+        config: { systemInstruction },
         contents: [
-          { role: "user", parts: [{ text: `${systemInstruction}\n\nHistórico recente: ${JSON.stringify(history || [])}\n\nCliente: ${message}` }] }
-        ],
+          ...safeHistory,
+          { role: "user", parts: [{ text: message }] }
+        ]
       });
       return res.json({ reply: response.text });
     }
@@ -1058,8 +1828,8 @@ Suas respostas devem ser gentis, cultas, gastronômicas, dando dicas de harmoniz
 });
 
 async function startServer() {
-  // Always serve static assets from public/ folder with proper mime types
-  app.use(express.static(path.join(process.cwd(), "public")));
+  // Always serve static assets from public/ folder with sensible cache headers
+  app.use(express.static(path.join(process.cwd(), "public"), { maxAge: "1h" }));
 
   const distHtmlPath = path.join(process.cwd(), "dist", "index.html");
   const isProduction = process.env.NODE_ENV === "production" || fs.existsSync(distHtmlPath);
@@ -1077,15 +1847,29 @@ async function startServer() {
     });
     app.use(vite.middlewares);
 
+    const rawIndexHtmlPath = path.join(process.cwd(), "index.html");
+    let cachedDevRawIndex: string | null = null;
+    let cachedTransformedDevHtml: { url: string; html: string } | null = null;
+
     app.use("*", async (req, res, next) => {
       const url = req.originalUrl;
       if (url.startsWith("/api/")) {
         return next();
       }
       try {
-        const rawIndex = fs.readFileSync(path.join(process.cwd(), "index.html"), "utf-8");
-        const transformedHtml = await vite.transformIndexHtml(url, rawIndex);
-        res.status(200).set({ "Content-Type": "text/html" }).end(transformedHtml);
+        if (!cachedDevRawIndex || !isHmrDisabled) {
+          cachedDevRawIndex = await fs.promises.readFile(rawIndexHtmlPath, "utf-8");
+        }
+        let htmlToServe: string;
+        if (isHmrDisabled && cachedTransformedDevHtml && cachedTransformedDevHtml.url === "/") {
+          htmlToServe = cachedTransformedDevHtml.html;
+        } else {
+          htmlToServe = await vite.transformIndexHtml(url, cachedDevRawIndex);
+          if (isHmrDisabled && url === "/") {
+            cachedTransformedDevHtml = { url: "/", html: htmlToServe };
+          }
+        }
+        res.status(200).set({ "Content-Type": "text/html; charset=utf-8" }).end(htmlToServe);
       } catch (e) {
         if (vite.ssrFixStacktrace) {
           vite.ssrFixStacktrace(e as Error);
@@ -1095,6 +1879,11 @@ async function startServer() {
     });
   } else {
     const distPath = path.join(process.cwd(), "dist");
+    const fallbackIndexHtmlPath = path.join(process.cwd(), "index.html");
+    const resolvedEntryHtml = fs.existsSync(distHtmlPath) ? distHtmlPath : fallbackIndexHtmlPath;
+    const cachedProdHtml = fs.existsSync(resolvedEntryHtml)
+      ? fs.readFileSync(resolvedEntryHtml, "utf-8")
+      : null;
 
     // Explicit SPA routes (including accented, unaccented, and URL-encoded variants)
     const knownSpaRoutes = [
@@ -1106,32 +1895,50 @@ async function startServer() {
       "/admin"
     ];
 
+    const serveSpaEntry = (_req: Request, res: Response) => {
+      if (cachedProdHtml) {
+        return res.status(200).set({ "Content-Type": "text/html; charset=utf-8" }).send(cachedProdHtml);
+      }
+      return res.sendFile(resolvedEntryHtml);
+    };
+
     knownSpaRoutes.forEach((route) => {
-      app.get([route, `${route}/`], (_req, res) => {
-        if (fs.existsSync(distHtmlPath)) {
-          return res.sendFile(distHtmlPath);
-        }
-        res.sendFile(path.join(process.cwd(), "index.html"));
-      });
+      app.get([route, `${route}/`], serveSpaEntry);
     });
 
-    app.use(express.static(distPath, { redirect: false }));
+    app.use(express.static(distPath, { redirect: false, maxAge: "1d" }));
 
     // Universal SPA Fallback for all other non-API URLs
     app.use((req, res, next) => {
       if (req.originalUrl.startsWith("/api/")) {
         return next();
       }
-      if (fs.existsSync(distHtmlPath)) {
-        return res.sendFile(distHtmlPath);
-      }
-      res.sendFile(path.join(process.cwd(), "index.html"));
+      return serveSpaEntry(req, res);
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  // Global Express Error Handler (Never expose stack traces or raw internals)
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    if (err?.type === "entity.too.large" || err?.status === 413) {
+      return res.status(413).json({ error: "Payload excede o limite permitido." });
+    }
+    if (err instanceof SyntaxError && (err as any)?.status === 400 && "body" in err) {
+      return res.status(400).json({ error: "Formato JSON inválido na requisição." });
+    }
+    console.error("[Server] Unexpected route error:", err);
+    if (!res.headersSent) {
+      return res.status(500).json({ error: "Erro interno no servidor." });
+    }
+  });
+
+  const httpServer = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Deolinda Pizzaria Napoletana server running at http://0.0.0.0:${PORT}`);
   });
+
+  // Protect sockets against slowloris / stalled connections while supporting keep-alive bursts
+  httpServer.keepAliveTimeout = 65000;
+  httpServer.headersTimeout = 66000;
+  httpServer.requestTimeout = 30000;
 }
 
 startServer();

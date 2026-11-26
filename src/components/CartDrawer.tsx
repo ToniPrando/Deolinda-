@@ -135,7 +135,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
     let combinedOrders: Order[] = [];
 
-    // 1. LocalStorage orders
+    // 1. LocalStorage orders (strictly scoped to the current customer below)
     try {
       const savedOrdersStr = localStorage.getItem('deolinda_orders');
       if (savedOrdersStr) {
@@ -143,17 +143,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         if (Array.isArray(localList)) {
           combinedOrders = [...localList];
         }
-      }
-    } catch {}
-
-    // 2. Fetch server / database orders (safe on static hosting)
-    try {
-      const serverList = await safeFetchJson<Order[]>('/api/orders');
-      if (Array.isArray(serverList) && serverList.length > 0) {
-        const map = new Map<string, Order>();
-        combinedOrders.forEach(o => map.set(o.id, o));
-        serverList.forEach(o => map.set(o.id, o));
-        combinedOrders = Array.from(map.values());
       }
     } catch {}
 
@@ -234,7 +223,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       setRegCity(currentUser.city || 'São Paulo');
       setRegCep(currentUser.cep || '');
       setRegComplement(currentUser.complement || '');
-      if (currentUser.password) setRegPassword(currentUser.password);
+      setRegPassword('');
 
       // Load orders for this customer
       refreshOrders();
@@ -541,8 +530,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       return;
     }
 
-    if (authMode === 'register' && !regPassword.trim()) {
-      setAuthError('Por favor, defina uma senha de acesso para proteger sua conta.');
+    if (authMode === 'register' && (!regPassword.trim() || regPassword.trim().length < 4)) {
+      setAuthError('Por favor, defina uma senha de acesso com pelo menos 4 caracteres para proteger sua conta.');
       return;
     }
 
@@ -566,7 +555,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       cep: regCep.trim() || undefined,
       complement: regComplement.trim() || undefined,
       isGoogleAuth: currentUser?.isGoogleAuth || false,
-      password: regPassword.trim() || (currentUser ? currentUser.password : '123456'),
       createdAt: currentUser ? currentUser.createdAt : new Date().toISOString()
     };
 
@@ -589,12 +577,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     onUpdateUser?.(updatedUser);
     setDeliveryAddress(updatedUser.address || '');
 
-    // Send to backend API
+    // Send to backend API (hashes password server-side via scrypt and never stores plaintext)
     try {
+      const payload = regPassword.trim()
+        ? { ...updatedUser, password: regPassword.trim() }
+        : updatedUser;
       await fetch('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedUser)
+        body: JSON.stringify(payload)
       });
     } catch {
       console.log('Customer stored locally');
@@ -638,68 +629,54 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     const cleanIdent = identifier.toLowerCase();
     const cleanPhone = identifier.replace(/\D/g, '');
 
-    // 1. Search in local customer list
+    // 1. Authenticate via server endpoint first (password verified against scrypt hash)
     let matchedCustomer: CustomerUser | null = null;
     try {
-      const existingListStr = localStorage.getItem('deolinda_customers_list');
-      const list: CustomerUser[] = existingListStr ? JSON.parse(existingListStr) : [];
-      
-      matchedCustomer = list.find(c => 
-        (c.email && c.email.toLowerCase() === cleanIdent) ||
-        (c.phone && cleanPhone.length >= 8 && c.phone.replace(/\D/g, '') === cleanPhone)
-      ) || null;
-
-      // Also check if current saved user in localStorage matches
-      if (!matchedCustomer) {
-        const savedUserStr = localStorage.getItem('deolinda_customer_user');
-        if (savedUserStr) {
-          const savedUser: CustomerUser = JSON.parse(savedUserStr);
-          if (
-            (savedUser.email && savedUser.email.toLowerCase() === cleanIdent) ||
-            (savedUser.phone && cleanPhone.length >= 8 && savedUser.phone.replace(/\D/g, '') === cleanPhone)
-          ) {
-            matchedCustomer = savedUser;
-          }
+      const resp = await fetch('/api/customers/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier, password: passwordInput })
+      });
+      if (resp.ok) {
+        const data = await resp.json().catch(() => null);
+        if (data?.customer) {
+          matchedCustomer = data.customer as CustomerUser;
         }
+      } else if (resp.status === 401) {
+        setAuthError('Senha incorreta. Verifique sua senha e tente novamente.');
+        return;
+      } else if (resp.status === 429) {
+        const errPayload = await resp.json().catch(() => ({}));
+        setAuthError(errPayload?.error || 'Muitas tentativas. Aguarde um minuto.');
+        return;
       }
     } catch (err) {
-      console.warn('Error reading local customer list:', err);
+      console.warn('Backend customer login fallback:', err);
     }
 
-    // 2. If not found locally, check backend API
+    // 2. Offline / static fallback against local customer profile (no plaintext password comparison)
     if (!matchedCustomer) {
       try {
-        const data = await safeFetchJson<{ customers?: CustomerUser[] }>('/api/customers');
-        if (data && Array.isArray(data.customers)) {
-          matchedCustomer = data.customers.find((c: CustomerUser) => 
-            (c.email && c.email.toLowerCase() === cleanIdent) ||
-            (c.phone && cleanPhone.length >= 8 && c.phone.replace(/\D/g, '') === cleanPhone)
-          ) || null;
-        }
+        const existingListStr = localStorage.getItem('deolinda_customers_list');
+        const list: CustomerUser[] = existingListStr ? JSON.parse(existingListStr) : [];
+        matchedCustomer = list.find(c =>
+          (c.email && c.email.toLowerCase() === cleanIdent) ||
+          (c.phone && cleanPhone.length >= 8 && c.phone.replace(/\D/g, '') === cleanPhone)
+        ) || null;
       } catch (err) {
-        console.warn('Backend customer lookup error:', err);
+        console.warn('Error reading local customer list:', err);
       }
     }
 
     if (matchedCustomer) {
-      // Validate Password if user has a password set
-      if (matchedCustomer.password && matchedCustomer.password.trim() !== '') {
-        if (matchedCustomer.password !== passwordInput) {
-          setAuthError('Senha incorreta. Verifique sua senha e tente novamente.');
-          return;
-        }
-      } else {
-        // Register password for existing account without password
-        matchedCustomer.password = passwordInput;
-      }
+      const { password: _removedPwd, ...safeCustomer } = matchedCustomer as CustomerUser & { password?: string };
+      localStorage.setItem('deolinda_customer_user', JSON.stringify(safeCustomer));
+      setCurrentUser(safeCustomer);
+      onUpdateUser?.(safeCustomer);
+      if (safeCustomer.address) setDeliveryAddress(safeCustomer.address);
 
-      localStorage.setItem('deolinda_customer_user', JSON.stringify(matchedCustomer));
-      setCurrentUser(matchedCustomer);
-      onUpdateUser?.(matchedCustomer);
-      if (matchedCustomer.address) setDeliveryAddress(matchedCustomer.address);
-      
       setLoginPassword('');
-      setSaveSuccessMsg(`Bem-vindo(a) de volta, ${matchedCustomer.name}!`);
+      setSaveSuccessMsg(`Bem-vindo(a) de volta, ${safeCustomer.name}!`);
 
       confetti({
         particleCount: 50,

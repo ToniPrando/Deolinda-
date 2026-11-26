@@ -29,7 +29,7 @@ import {
   subscribeToGalleryPosts,
   subscribeToSiteInfo,
   subscribeToMenuCategories,
-  subscribeToAdminPassword,
+  logoutAdminSession,
   enqueueMenuItemsBatchSave,
   enqueueMenuCategoriesSave,
   enqueueSiteInfoSave,
@@ -39,6 +39,7 @@ import {
 } from './services/firebaseService';
 import { navigateToSection, getRouteByPath, getRouteById } from './utils/navigationRouter';
 import { safeFetchJson } from './utils/safeFetch';
+import { getAdminAuthHeaders, getAdminAuthToken, subscribeAdminUnauthorized } from './utils/adminSession';
 
 export default function App() {
   const [activeSection, setActiveSection] = useState<string>(() => {
@@ -261,13 +262,16 @@ export default function App() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isAdminAuthOpen, setIsAdminAuthOpen] = useState(false);
-  const [customAdminPassword, setCustomAdminPassword] = useState<string | null>(() => {
+
+  useEffect(() => {
     try {
-      return localStorage.getItem('deolinda_admin_password');
-    } catch {
-      return null;
-    }
-  });
+      localStorage.removeItem('deolinda_admin_password');
+    } catch {}
+    return subscribeAdminUnauthorized(() => {
+      setIsAdminOpen(false);
+      setIsAdminAuthOpen(true);
+    });
+  }, []);
 
   // Real-Time Customer Order Live Tracking Modal & Persistent Active Order
   const [activeTrackingOrder, setActiveTrackingOrder] = useState<Order | null>(() => {
@@ -469,25 +473,12 @@ export default function App() {
       }
     });
 
-    // 10. Subscribe to Firestore admin password in real-time
-    const unsubAdminPwd = subscribeToAdminPassword((pwd) => {
-      setCustomAdminPassword(pwd);
-      try {
-        if (pwd) {
-          localStorage.setItem('deolinda_admin_password', pwd);
-        } else {
-          localStorage.removeItem('deolinda_admin_password');
-        }
-      } catch {}
-    });
-
     return () => {
       unsubscribeBrand();
       unsubMenu();
       unsubGallery();
       unsubSiteInfo();
       unsubCategories();
-      unsubAdminPwd();
     };
   }, []);
 
@@ -625,14 +616,15 @@ export default function App() {
     };
   }, [activeTrackingOrder?.id, activeTrackingOrder?.status]);
 
-  // Fallback backend polling for server routes (safe on static hosting)
+  // Fallback backend polling for server routes (only when admin session is active)
   const syncBackendData = async () => {
+    if (!getAdminAuthToken()) return;
     try {
       const data = await safeFetchJson<{ orders?: Order[] }>('/api/orders', {
-        headers: {
+        headers: getAdminAuthHeaders({
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
-        }
+        })
       });
       if (data && Array.isArray(data.orders) && data.orders.length > 0) {
         setOrders((prev) => {
@@ -772,7 +764,7 @@ export default function App() {
     try {
       await fetch(`/api/orders/${orderId}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ status })
       });
     } catch {
@@ -787,7 +779,7 @@ export default function App() {
     try {
       await fetch(`/api/reservations/${resId}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ status })
       });
     } catch {
@@ -837,6 +829,7 @@ export default function App() {
   const handleCloseAdmin = () => {
     setIsAdminOpen(false);
     setIsAdminAuthOpen(false);
+    void logoutAdminSession();
     try {
       sessionStorage.removeItem('deolinda_admin_authenticated');
       localStorage.removeItem('deolinda_admin_authenticated');
@@ -1023,7 +1016,6 @@ export default function App() {
         isOpen={isAdminAuthOpen}
         onClose={handleCloseAdminAuth}
         onSuccess={handleAdminAuthSuccess}
-        customAdminPassword={customAdminPassword}
       />
 
       {/* Admin Dashboard */}
@@ -1046,8 +1038,6 @@ export default function App() {
         customLogoUrl={customLogoUrl}
         customEmblemUrl={customEmblemUrl}
         isEmblemEnabled={isEmblemEnabled}
-        customAdminPassword={customAdminPassword}
-        onAdminPasswordUpdated={setCustomAdminPassword}
         onOpenLogoModal={(initialTab) => {
           setLogoModalInitialTab(initialTab || 'logo');
           setIsLogoModalOpen(true);
