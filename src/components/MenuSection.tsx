@@ -8,8 +8,6 @@ import {
 } from 'lucide-react';
 import { MenuItem, CategoryType, CartItem, CustomerUser, MenuCategory, SiteInfo } from '../types';
 import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES, normalizeMenuCategories, normalizeMenuItemCategory } from '../data/menuData';
-import { compressImageElementToDataUrl } from '../utils/imageCompressor';
-import { migrateCachedMenuImageToFirestore } from '../services/firebaseService';
 
 interface MenuSectionProps {
   menuItems?: MenuItem[];
@@ -151,7 +149,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
   };
 
   return (
-    <section id="cardapio" className="pt-3 sm:pt-4 pb-12 bg-white text-[#181513] scroll-mt-16 sm:scroll-mt-18">
+    <section id="cardapio" className="pt-3 sm:pt-4 pb-12 bg-white dark:bg-[#12100E] text-[#181513] dark:text-[#FAF7F2] scroll-mt-16 sm:scroll-mt-18 transition-colors duration-200">
       <div className="w-full max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Title - Compacto para priorizar visualização da grade */}
         <motion.div
@@ -161,7 +159,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
           className="text-center max-w-3xl mx-auto mb-3 sm:mb-4"
         >
-          <h2 className="font-serif-italian text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-[#181513] leading-tight">
+          <h2 className="font-serif-italian text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-[#181513] dark:text-[#FAF7F2] leading-tight">
             A Tradição Napolitana no seu Paladar
           </h2>
         </motion.div>
@@ -172,7 +170,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-20px' }}
           transition={{ duration: 0.4, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
-          className="relative z-30 max-w-6xl mx-auto bg-white p-3 sm:p-4 rounded-2xl border border-[#E0D5C3] shadow-xs mb-6 sm:mb-8"
+          className="relative z-30 max-w-6xl mx-auto bg-white dark:bg-[#1B1815] p-3 sm:p-4 rounded-2xl border border-[#E0D5C3] dark:border-white/10 shadow-xs mb-6 sm:mb-8"
         >
           <div className="flex flex-row gap-2.5 sm:gap-3 items-center justify-between">
             {/* Único Quadro de Opções do Cardápio (à esquerda, metade do tamanho, sem ícones) */}
@@ -185,11 +183,11 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                 aria-label={`Opções do cardápio: ${activeCategoryOption.label}`}
                 className={`w-full px-3 py-2 rounded-xl border text-left transition-all cursor-pointer ${
                   isCategoryMenuOpen || selectedCategory !== 'all'
-                    ? 'bg-[#E5E7EB] border-[#D1D5DB] text-[#181513] shadow-2xs'
-                    : 'bg-[#FAF7F2] hover:bg-[#E5E7EB] border-[#E0D5C3] text-[#181513]'
+                    ? 'bg-[#E5E7EB] dark:bg-[#2C2520] border-[#D1D5DB] dark:border-[#E5A93C]/40 text-[#181513] dark:text-[#E5A93C] shadow-2xs'
+                    : 'bg-[#FAF7F2] dark:bg-[#24201C] hover:bg-[#E5E7EB] dark:hover:bg-[#2D2722] border-[#E0D5C3] dark:border-white/10 text-[#181513] dark:text-[#FAF7F2]'
                 }`}
               >
-                <span className="block text-xs sm:text-sm font-bold text-[#181513] truncate">
+                <span className="block text-xs sm:text-sm font-bold text-[#181513] dark:text-[#FAF7F2] truncate">
                   {activeCategoryOption.label}
                 </span>
               </button>
@@ -198,7 +196,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                 <div
                   role="listbox"
                   aria-label="Categorias do cardápio"
-                  className="absolute left-0 top-full mt-1.5 min-w-[180px] sm:min-w-[200px] z-50 bg-white rounded-xl shadow-xl border border-[#E0D5C3] p-1 flex flex-col gap-0.5"
+                  className="absolute left-0 top-full mt-1.5 min-w-[180px] sm:min-w-[200px] z-50 bg-white dark:bg-[#1B1815] rounded-xl shadow-xl border border-[#E0D5C3] dark:border-white/10 p-1 flex flex-col gap-0.5"
                 >
                   {categories.map((cat) => {
                     const isSelected = selectedCategory === cat.id;
@@ -211,8 +209,8 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                         onClick={() => handleSelectCategory(cat.id)}
                         className={`w-full px-3 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all text-left cursor-pointer whitespace-nowrap ${
                           isSelected
-                            ? 'bg-[#E5E7EB] text-[#181513]'
-                            : 'text-[#181513] hover:bg-[#F3F4F6]'
+                            ? 'bg-[#E5E7EB] dark:bg-[#C24D2C]/25 text-[#181513] dark:text-[#E5A93C]'
+                            : 'text-[#181513] dark:text-[#FAF7F2] hover:bg-[#F3F4F6] dark:hover:bg-white/5'
                         }`}
                       >
                         {cat.label}
@@ -225,20 +223,20 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
 
             {/* Search Input (à direita) */}
             <div className="relative flex-1 min-w-0">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8C827A]" />
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8C827A] dark:text-[#A99E94]" />
               <input
                 type="text"
                 placeholder="Buscar por pizza ou ingrediente..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-8 py-2 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400/40 focus:border-cyan-500 selection:bg-cyan-400 selection:text-slate-950 transition-all"
+                className="w-full pl-10 pr-8 py-2 rounded-xl bg-[#FAF7F2] dark:bg-[#141210] border border-[#E0D5C3] dark:border-white/10 text-xs sm:text-sm text-[#181513] dark:text-[#FAF7F2] placeholder:text-[#8C827A] focus:outline-none focus:ring-2 focus:ring-cyan-400/40 focus:border-cyan-500 selection:bg-cyan-400 selection:text-slate-950 transition-all"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
                   aria-label="Limpar busca"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-white cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -253,13 +251,13 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3 }}
-            className="bg-white rounded-3xl p-12 text-center border border-[#E0D5C3] max-w-md mx-auto my-12"
+            className="bg-white dark:bg-[#1B1815] rounded-3xl p-12 text-center border border-[#E0D5C3] dark:border-white/10 max-w-md mx-auto my-12"
           >
             <UtensilsCrossed className="w-12 h-12 text-[#C24D2C] mx-auto mb-3 opacity-60" />
-            <h3 className="font-serif-italian text-xl font-bold text-[#181513] mb-2">
+            <h3 className="font-serif-italian text-xl font-bold text-[#181513] dark:text-[#FAF7F2] mb-2">
               Nenhum item encontrado
             </h3>
-            <p className="text-sm text-[#5C554E] mb-4">
+            <p className="text-sm text-[#5C554E] dark:text-[#C2B8AD] mb-4">
               Não encontramos nenhum prato com os filtros selecionados.
             </p>
             <button
@@ -292,20 +290,20 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                   ease: [0.22, 1, 0.36, 1],
                   delay: Math.min((index % 4) * 0.05, 0.2)
                 }}
-                className="bg-white rounded-2xl overflow-hidden border border-[#E0D5C3] shadow-xs hover:shadow-xl transition-all duration-300 flex flex-row items-stretch group will-change-transform hover:-translate-y-0.5 h-[196px] sm:h-[220px]"
+                className="bg-white dark:bg-[#1B1815] rounded-2xl overflow-hidden border border-[#E0D5C3] dark:border-white/10 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-row items-stretch group will-change-transform hover:-translate-y-0.5 h-[196px] sm:h-[220px]"
               >
                 {/* Esquerda: Informações do Item + Preço e Botão WhatsApp abaixo do texto */}
                 <div className="p-3.5 sm:p-5 flex flex-col flex-1 min-w-0 justify-between gap-2 overflow-hidden">
                   <div className="min-w-0">
                     {item.italianName && (
-                      <p className="text-[10px] sm:text-[11px] font-cinzel font-semibold uppercase tracking-wider text-[#C24D2C] mb-0.5 truncate">
+                      <p className="text-[10px] sm:text-[11px] font-cinzel font-semibold uppercase tracking-wider text-[#C24D2C] dark:text-[#E5A93C] mb-0.5 truncate">
                         {item.italianName}
                       </p>
                     )}
 
                     <h3 
                       onClick={() => openItemDetails(item)}
-                      className="font-serif-italian text-base sm:text-lg font-bold text-[#181513] mb-1 group-hover:text-[#C24D2C] transition-colors leading-snug line-clamp-2 cursor-pointer"
+                      className="font-serif-italian text-base sm:text-lg font-bold text-[#181513] dark:text-[#FAF7F2] mb-1 group-hover:text-[#C24D2C] dark:group-hover:text-[#E5A93C] transition-colors leading-snug line-clamp-2 cursor-pointer"
                       title="Clique para ver foto e detalhes"
                     >
                       {item.name}
@@ -313,7 +311,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
 
                     <p 
                       onClick={() => openItemDetails(item)}
-                      className="text-xs sm:text-sm text-[#5C554E] leading-relaxed line-clamp-2 sm:line-clamp-3 cursor-pointer"
+                      className="text-xs sm:text-sm text-[#5C554E] dark:text-[#C2B8AD] leading-relaxed line-clamp-2 sm:line-clamp-3 cursor-pointer"
                       title="Clique para ver foto e detalhes"
                     >
                       {item.description}
@@ -321,8 +319,8 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                   </div>
 
                   {/* Abaixo do texto: Preço e Botão WhatsApp */}
-                  <div className="pt-2.5 border-t border-[#F0EAE1] flex items-center justify-start gap-3 flex-wrap shrink-0">
-                    <span className="font-extrabold text-sm sm:text-base text-[#C24D2C] font-serif-italian tabular-nums whitespace-nowrap">
+                  <div className="pt-2.5 border-t border-[#F0EAE1] dark:border-white/10 flex items-center justify-start gap-3 flex-wrap shrink-0">
+                    <span className="font-extrabold text-sm sm:text-base text-[#C24D2C] dark:text-[#E5A93C] font-serif-italian tabular-nums whitespace-nowrap">
                       {formatBRL(item.price)}
                     </span>
 
@@ -353,19 +351,6 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                     alt={item.name}
                     className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     loading="lazy"
-                    onLoad={(e) => {
-                      if (
-                        item.image &&
-                        item.image.startsWith('/menu_images/') &&
-                        e.currentTarget.complete &&
-                        e.currentTarget.naturalWidth > 0
-                      ) {
-                        const portable = compressImageElementToDataUrl(e.currentTarget, 420000);
-                        if (portable) {
-                          migrateCachedMenuImageToFirestore(item, portable).catch(() => {});
-                        }
-                      }
-                    }}
                     onError={(e) => {
                       const fallback = 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=800&q=80';
                       if (e.currentTarget.src !== fallback) {
@@ -388,7 +373,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
           onClick={() => setViewingItem(null)}
         >
           <div 
-            className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-[#E0D5C3] animate-in zoom-in-95 duration-200 relative my-auto flex flex-col"
+            className="bg-white dark:bg-[#1B1815] rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-[#E0D5C3] dark:border-white/10 animate-in zoom-in-95 duration-200 relative my-auto flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Imagem do Item em Destaque */}
@@ -435,21 +420,21 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
             <div className="p-5 sm:p-6 space-y-4">
               <div>
                 {viewingItem.italianName && (
-                  <p className="text-xs font-cinzel font-semibold uppercase tracking-widest text-[#C24D2C] mb-1">
+                  <p className="text-xs font-cinzel font-semibold uppercase tracking-widest text-[#C24D2C] dark:text-[#E5A93C] mb-1">
                     {viewingItem.italianName}
                   </p>
                 )}
-                <h3 className="font-serif-italian text-2xl sm:text-3xl font-bold text-[#181513] leading-tight">
+                <h3 className="font-serif-italian text-2xl sm:text-3xl font-bold text-[#181513] dark:text-[#FAF7F2] leading-tight">
                   {viewingItem.name}
                 </h3>
               </div>
 
               {/* Descrição do Prato */}
               <div>
-                <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#8C827A] mb-1.5">
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#8C827A] dark:text-[#A99E94] mb-1.5">
                   Descrição
                 </h4>
-                <p className="text-sm sm:text-base text-[#5C554E] leading-relaxed">
+                <p className="text-sm sm:text-base text-[#5C554E] dark:text-[#C2B8AD] leading-relaxed">
                   {viewingItem.description}
                 </p>
               </div>
@@ -457,14 +442,14 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
               {/* Ingredientes Principais (se houver) */}
               {viewingItem.ingredients && viewingItem.ingredients.length > 0 && (
                 <div>
-                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#8C827A] mb-1.5">
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#8C827A] dark:text-[#A99E94] mb-1.5">
                     Ingredientes Principais
                   </h4>
                   <div className="flex flex-wrap gap-1.5">
                     {viewingItem.ingredients.map((ing, idx) => (
                       <span 
                         key={idx} 
-                        className="px-2.5 py-1 rounded-lg bg-[#FAF7F2] text-[#181513] text-xs font-medium border border-[#EADFCF]"
+                        className="px-2.5 py-1 rounded-lg bg-[#FAF7F2] dark:bg-[#26211D] text-[#181513] dark:text-[#FAF7F2] text-xs font-medium border border-[#EADFCF] dark:border-white/10"
                       >
                         {ing}
                       </span>
@@ -475,25 +460,25 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
 
               {/* Harmonização do Sommelier (se houver) */}
               {viewingItem.pairing && (
-                <div className="p-3 rounded-2xl bg-[#F7F4EE] border border-[#E8DEC8] flex items-center gap-2.5 text-xs text-[#1B382B]">
-                  <Wine className="w-4 h-4 text-[#C24D2C] shrink-0" />
+                <div className="p-3 rounded-2xl bg-[#F7F4EE] dark:bg-[#24201C] border border-[#E8DEC8] dark:border-white/10 flex items-center gap-2.5 text-xs text-[#1B382B] dark:text-[#E5D9C3]">
+                  <Wine className="w-4 h-4 text-[#C24D2C] dark:text-[#E5A93C] shrink-0" />
                   <span><strong>Harmonização do Sommelier:</strong> {viewingItem.pairing}</span>
                 </div>
               )}
             </div>
 
             {/* Rodapé do Modal com Botão Fechar e Valor ao lado do WhatsApp */}
-            <div className="p-4 sm:p-5 bg-[#FAF7F2] border-t border-[#E0D5C3] flex items-center justify-between gap-3">
+            <div className="p-4 sm:p-5 bg-[#FAF7F2] dark:bg-[#141210] border-t border-[#E0D5C3] dark:border-white/10 flex items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => setViewingItem(null)}
-                className="px-5 py-2.5 rounded-xl bg-white hover:bg-neutral-100 text-[#5C554E] hover:text-[#181513] border border-[#E0D5C3] font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-xs whitespace-nowrap shrink-0"
+                className="px-5 py-2.5 rounded-xl bg-white dark:bg-[#26211D] hover:bg-neutral-100 dark:hover:bg-[#322B26] text-[#5C554E] dark:text-[#D6CEC5] hover:text-[#181513] dark:hover:text-white border border-[#E0D5C3] dark:border-white/15 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-xs whitespace-nowrap shrink-0"
               >
                 Fechar
               </button>
 
               <div className="flex items-center gap-3">
-                <span className="font-extrabold text-base sm:text-lg text-[#C24D2C] font-serif-italian tabular-nums whitespace-nowrap">
+                <span className="font-extrabold text-base sm:text-lg text-[#C24D2C] dark:text-[#E5A93C] font-serif-italian tabular-nums whitespace-nowrap">
                   {formatBRL(viewingItem.price)}
                 </span>
 

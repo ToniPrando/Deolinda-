@@ -21,10 +21,14 @@ export async function compressImageFile(
     const reader = new FileReader();
     reader.onerror = reject;
     reader.onload = (e) => {
+      const rawDataUrl = e.target?.result as string;
       const img = new Image();
       img.onerror = () => {
-        // Fallback to original data URL if image cannot be decoded
-        resolve(e.target?.result as string);
+        if (rawDataUrl && rawDataUrl.length <= 420000) {
+          resolve(rawDataUrl);
+        } else {
+          reject(new Error('Formato de imagem não suportado ou arquivo muito grande. Use JPG, PNG ou WebP.'));
+        }
       };
       img.onload = () => {
         let width = img.width;
@@ -47,7 +51,7 @@ export async function compressImageFile(
 
         const ctx = canvas.getContext('2d');
         if (!ctx) {
-          resolve(e.target?.result as string);
+          resolve(rawDataUrl);
           return;
         }
 
@@ -56,15 +60,15 @@ export async function compressImageFile(
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Convert to optimized JPEG or WebP
+        // Convert to optimized JPEG
         try {
           const compressed = canvas.toDataURL('image/jpeg', quality);
           resolve(compressed);
         } catch {
-          resolve(e.target?.result as string);
+          resolve(rawDataUrl);
         }
       };
-      img.src = e.target?.result as string;
+      img.src = rawDataUrl;
     };
     reader.readAsDataURL(file);
   });
@@ -87,7 +91,9 @@ export function compressImageElementToDataUrl(
       { maxDim: 760, quality: 0.76 },
       { maxDim: 620, quality: 0.68 },
       { maxDim: 500, quality: 0.58 },
-      { maxDim: 400, quality: 0.5 }
+      { maxDim: 400, quality: 0.5 },
+      { maxDim: 320, quality: 0.42 },
+      { maxDim: 260, quality: 0.35 }
     ];
 
     for (const { maxDim, quality } of attempts) {
@@ -123,12 +129,12 @@ export function compressImageElementToDataUrl(
 
     // Final guaranteed compact fallback
     const canvas = document.createElement('canvas');
-    canvas.width = 360;
-    canvas.height = Math.max(1, Math.round((img.naturalHeight * 360) / img.naturalWidth));
+    canvas.width = 240;
+    canvas.height = Math.max(1, Math.round((img.naturalHeight * 240) / img.naturalWidth));
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/jpeg', 0.45);
+    return canvas.toDataURL('image/jpeg', 0.32);
   } catch {
     return null;
   }
@@ -157,12 +163,20 @@ export async function compressImageForFirestore(
     });
   }
 
-  let result = await compressImageFile(source, 760, 760, 0.76);
-  if (result.length > maxBytes) {
-    result = await compressImageFile(source, 600, 600, 0.65);
-  }
-  if (result.length > maxBytes) {
-    result = await compressImageFile(source, 460, 460, 0.55);
+  const passes = [
+    { dim: 760, q: 0.76 },
+    { dim: 600, q: 0.65 },
+    { dim: 460, q: 0.55 },
+    { dim: 360, q: 0.45 },
+    { dim: 280, q: 0.36 }
+  ];
+
+  let result = '';
+  for (const pass of passes) {
+    result = await compressImageFile(source, pass.dim, pass.dim, pass.q);
+    if (result.length <= maxBytes) {
+      return result;
+    }
   }
   return result;
 }

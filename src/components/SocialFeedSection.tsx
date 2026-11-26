@@ -11,7 +11,6 @@ import { SocialPost } from '../types';
 import { SOCIAL_POSTS } from '../data/socialData';
 import { LazyGalleryImage } from './LazyGalleryImage';
 import { PhotoLightbox } from './PhotoLightbox';
-import { migrateCachedGalleryImageToFirestore } from '../services/firebaseService';
 
 interface SocialFeedSectionProps {
   posts?: SocialPost[];
@@ -42,7 +41,7 @@ export const SocialFeedSection: React.FC<SocialFeedSectionProps> = ({ posts }) =
   const animationDurationSeconds = Math.max(75, Math.round(basePosts.length * 10));
 
   return (
-    <section id="galeria" className="pt-8 sm:pt-12 pb-14 bg-white text-[#181513] border-t border-[#EADFCF] scroll-mt-16 sm:scroll-mt-18 overflow-hidden">
+    <section id="galeria" className="pt-8 sm:pt-12 pb-14 bg-white dark:bg-[#12100E] text-[#181513] dark:text-[#FAF7F2] border-t border-[#EADFCF] dark:border-white/10 scroll-mt-16 sm:scroll-mt-18 overflow-hidden transition-colors duration-200">
       {/* CSS do looping contínuo da direita para a esquerda */}
       <style>{`
         @keyframes marqueeScrollLeft {
@@ -67,18 +66,18 @@ export const SocialFeedSection: React.FC<SocialFeedSectionProps> = ({ posts }) =
       <div className="w-full max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 mb-6 sm:mb-8">
         
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-[#F0EAE1]">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-[#F0EAE1] dark:border-white/10">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C24D2C]/10 text-[#C24D2C] text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2 border border-[#C24D2C]/25">
-              <Camera className="w-3.5 h-3.5 text-[#C24D2C]" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C24D2C]/10 dark:bg-[#E5A93C]/15 text-[#C24D2C] dark:text-[#E5A93C] text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2 border border-[#C24D2C]/25 dark:border-[#E5A93C]/30">
+              <Camera className="w-3.5 h-3.5 text-[#C24D2C] dark:text-[#E5A93C]" />
               <span>Galeria de Momentos • #DeolindaNapoletana</span>
             </div>
             
-            <h2 className="font-serif-italian text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-[#181513] mb-1.5 leading-tight">
+            <h2 className="font-serif-italian text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-[#181513] dark:text-[#FAF7F2] mb-1.5 leading-tight">
               Momentos da Pizzaria
             </h2>
             
-            <p className="text-[#5C554E] text-xs sm:text-sm max-w-2xl leading-relaxed">
+            <p className="text-[#5C554E] dark:text-[#C2B8AD] text-xs sm:text-sm max-w-2xl leading-relaxed">
               Confira os momentos especiais, as pizzas artesanais recém-saídas do forno a 430°C e a atmosfera acolhedora da Deolinda.
             </p>
           </div>
@@ -91,7 +90,7 @@ export const SocialFeedSection: React.FC<SocialFeedSectionProps> = ({ posts }) =
               onClick={() => setIsPaused(prev => !prev)}
               title={isPaused ? "Retomar movimento automático" : "Pausar movimento automático"}
               aria-label={isPaused ? "Retomar movimento" : "Pausar movimento"}
-              className="p-2.5 rounded-full bg-[#FAF7F2] hover:bg-[#F2ECE1] border border-[#E0D5C3] text-[#5C554E] hover:text-[#C24D2C] transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+              className="p-2.5 rounded-full bg-[#FAF7F2] dark:bg-[#1E1A17] hover:bg-[#F2ECE1] dark:hover:bg-[#2A2420] border border-[#E0D5C3] dark:border-white/10 text-[#5C554E] dark:text-[#C2B8AD] hover:text-[#C24D2C] transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
             >
               {isPaused ? (
                 <Play className="w-4 h-4 text-emerald-600 fill-current" />
@@ -106,7 +105,7 @@ export const SocialFeedSection: React.FC<SocialFeedSectionProps> = ({ posts }) =
               onClick={() => setLightboxIndex(0)}
               title="Expandir foto em tela cheia"
               aria-label="Expandir foto"
-              className="p-2.5 rounded-full bg-[#FAF7F2] hover:bg-[#F2ECE1] border border-[#E0D5C3] text-[#5C554E] hover:text-[#C24D2C] transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+              className="p-2.5 rounded-full bg-[#FAF7F2] dark:bg-[#1E1A17] hover:bg-[#F2ECE1] dark:hover:bg-[#2A2420] border border-[#E0D5C3] dark:border-white/10 text-[#5C554E] dark:text-[#C2B8AD] hover:text-[#C24D2C] transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
             >
               <Maximize2 className="w-4 h-4 text-[#C24D2C]" />
             </button>
@@ -119,8 +118,8 @@ export const SocialFeedSection: React.FC<SocialFeedSectionProps> = ({ posts }) =
               aria-label="Ver detalhes das fotos"
               className={`p-2.5 rounded-full border transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95 ${
                 showDetails 
-                  ? 'bg-[#FAF7F2] text-[#C24D2C] border-[#C24D2C]/40 shadow-xs' 
-                  : 'bg-[#FAF7F2] hover:bg-[#F2ECE1] border-[#E0D5C3] text-[#5C554E] hover:text-[#C24D2C]'
+                  ? 'bg-[#FAF7F2] dark:bg-[#26201B] text-[#C24D2C] border-[#C24D2C]/40 shadow-xs' 
+                  : 'bg-[#FAF7F2] dark:bg-[#1E1A17] hover:bg-[#F2ECE1] dark:hover:bg-[#2A2420] border-[#E0D5C3] dark:border-white/10 text-[#5C554E] dark:text-[#C2B8AD] hover:text-[#C24D2C]'
               }`}
             >
               <Info className="w-4 h-4 text-[#C24D2C]" />
@@ -133,8 +132,8 @@ export const SocialFeedSection: React.FC<SocialFeedSectionProps> = ({ posts }) =
       <div className="relative w-full overflow-hidden marquee-container py-2">
         
         {/* Máscaras de gradiente suave nas laterais para entrada e saída elegantes */}
-        <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 sm:w-20 md:w-28 bg-gradient-to-r from-white via-white/80 to-transparent z-10" />
-        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 sm:w-20 md:w-28 bg-gradient-to-l from-white via-white/80 to-transparent z-10" />
+        <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 sm:w-20 md:w-28 bg-gradient-to-r from-white via-white/80 dark:from-[#12100E] dark:via-[#12100E]/80 to-transparent z-10" />
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 sm:w-20 md:w-28 bg-gradient-to-l from-white via-white/80 dark:from-[#12100E] dark:via-[#12100E]/80 to-transparent z-10" />
 
         {/* Trilha do looping contínuo */}
         <div 
@@ -149,7 +148,7 @@ export const SocialFeedSection: React.FC<SocialFeedSectionProps> = ({ posts }) =
               <div
                 key={`${post.id || 'post'}-${idx}`}
                 onClick={() => setLightboxIndex(originalIndex)}
-                className="w-[280px] sm:w-[320px] md:w-[350px] shrink-0 bg-white rounded-3xl overflow-hidden border border-[#E0D5C3] shadow-xs hover:shadow-2xl transition-all duration-300 flex flex-col group cursor-pointer hover:-translate-y-1.5 focus:outline-hidden"
+                className="w-[280px] sm:w-[320px] md:w-[350px] shrink-0 bg-white dark:bg-[#1B1815] rounded-3xl overflow-hidden border border-[#E0D5C3] dark:border-white/10 shadow-xs hover:shadow-2xl transition-all duration-300 flex flex-col group cursor-pointer hover:-translate-y-1.5 focus:outline-hidden"
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => {
@@ -167,9 +166,6 @@ export const SocialFeedSection: React.FC<SocialFeedSectionProps> = ({ posts }) =
                     alt={post.caption}
                     aspectRatioClass="h-full w-full"
                     className="group-hover:scale-108 transition-transform duration-500"
-                    onRelativeImageLoaded={(portableDataUrl) => {
-                      migrateCachedGalleryImageToFirestore(post, portableDataUrl);
-                    }}
                   />
 
                   {/* Gradiente escuro para legibilidade */}
@@ -209,19 +205,19 @@ export const SocialFeedSection: React.FC<SocialFeedSectionProps> = ({ posts }) =
 
                 {/* Legenda e Tags (Alternável pelo ícone de detalhes) */}
                 {showDetails && (
-                  <div className="p-4 sm:p-4.5 flex flex-col flex-1 justify-between bg-white space-y-2 animate-in fade-in duration-200">
-                    <p className="text-xs sm:text-sm text-[#5C554E] leading-relaxed line-clamp-2 group-hover:text-[#181513] transition-colors font-normal">
+                  <div className="p-4 sm:p-4.5 flex flex-col flex-1 justify-between bg-white dark:bg-[#1B1815] space-y-2 animate-in fade-in duration-200">
+                    <p className="text-xs sm:text-sm text-[#5C554E] dark:text-[#C2B8AD] leading-relaxed line-clamp-2 group-hover:text-[#181513] dark:group-hover:text-[#FAF7F2] transition-colors font-normal">
                       {post.caption}
                     </p>
 
-                    <div className="flex flex-wrap gap-1.5 pt-2 border-t border-[#F0EAE1]">
+                    <div className="flex flex-wrap gap-1.5 pt-2 border-t border-[#F0EAE1] dark:border-white/10">
                       {(post.tags || []).slice(0, 3).map((tag, tIdx) => (
-                        <span key={tIdx} className="text-[11px] font-semibold text-[#C24D2C]">
+                        <span key={tIdx} className="text-[11px] font-semibold text-[#C24D2C] dark:text-[#E5A93C]">
                           {tag}
                         </span>
                       ))}
                       {(post.tags || []).length > 3 && (
-                        <span className="text-[10px] font-medium text-[#8C827A]">
+                        <span className="text-[10px] font-medium text-[#8C827A] dark:text-[#A99E94]">
                           +{(post.tags || []).length - 3}
                         </span>
                       )}

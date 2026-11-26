@@ -16,12 +16,10 @@ const THEME_STORAGE_KEY = 'deolinda_theme';
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<ThemeMode>(() => {
     try {
-      const saved = localStorage.getItem(THEME_STORAGE_KEY) as ThemeMode | null;
-      if (saved === 'light') {
-        return 'light';
+      const saved = localStorage.getItem(THEME_STORAGE_KEY);
+      if (saved === 'dark' || saved === 'light') {
+        return saved;
       }
-      // Reset any dark setting to light so the site stays white across all devices
-      localStorage.setItem(THEME_STORAGE_KEY, 'light');
     } catch {
       // fallback
     }
@@ -30,13 +28,28 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     const root = document.documentElement;
-    // Always enforce light theme across all devices
-    root.classList.remove('dark');
-    root.classList.add('light');
-    root.style.colorScheme = 'light';
+    if (theme === 'dark') {
+      root.classList.remove('light');
+      root.classList.add('dark');
+      root.style.colorScheme = 'dark';
+    } else {
+      root.classList.remove('dark');
+      root.classList.add('light');
+      root.style.colorScheme = 'light';
+    }
+
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) {
+      themeColorMeta.setAttribute('content', theme === 'dark' ? '#12100E' : '#ffffff');
+    }
+
+    const colorSchemeMeta = document.querySelector('meta[name="color-scheme"]');
+    if (colorSchemeMeta) {
+      colorSchemeMeta.setAttribute('content', theme);
+    }
 
     try {
-      localStorage.setItem(THEME_STORAGE_KEY, 'light');
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
     } catch {
       // ignore
     }

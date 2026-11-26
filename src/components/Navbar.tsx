@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Home } from 'lucide-react';
 import { CustomerUser, SiteInfo } from '../types';
 import { TricolorBands } from './TricolorBands';
+import { useTheme } from '../context/ThemeContext';
 
 interface NavbarProps {
   onOpenAuth?: () => void;
@@ -23,6 +24,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNavigate
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
+  const { isDark } = useTheme();
 
   const rawWhatsAppDigits = (siteInfo?.whatsappNumber || '5511915331853').replace(/\D/g, '');
   const whatsappDigits =
@@ -60,7 +62,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <img
           src={HEADER_LETTERING_LOGO}
           alt="Deolinda Pizzaria Napoletana"
-          className="h-8 sm:h-10 md:h-11 w-auto max-w-[210px] sm:max-w-[250px] md:max-w-[290px] object-contain bg-transparent"
+          className="h-8 sm:h-10 md:h-11 w-auto max-w-[210px] sm:max-w-[250px] md:max-w-[290px] object-contain bg-transparent dark:brightness-0 dark:invert dark:opacity-95 transition-[filter] duration-200"
           loading="eager"
         />
       </button>
@@ -69,7 +71,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header
-      className={`sticky top-0 z-40 transition-all duration-300 bg-white text-[#181513] border-b border-[#EADFCF] ${
+      className={`sticky top-0 z-40 transition-all duration-300 bg-white/95 dark:bg-[#141210]/95 backdrop-blur-md text-[#181513] dark:text-[#FAF7F2] border-b border-[#EADFCF] dark:border-white/10 ${
         isScrolled ? 'shadow-md py-2 sm:py-2.5' : 'py-2.5 sm:py-3.5'
       }`}
     >
@@ -89,11 +91,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => handleNavClick('hero', '/')}
               className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 font-cinzel uppercase text-[11px] sm:text-xs tracking-wider shrink-0 ${
                 activeSection === 'hero'
-                  ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold shadow-2xs border border-[#E0D5C3]'
-                  : 'text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold'
+                  ? 'bg-[#FAF7F2] dark:bg-[#241F1B] text-[#C24D2C] dark:text-[#E5A93C] font-bold shadow-2xs border border-[#E0D5C3] dark:border-[#E5A93C]/30'
+                  : 'text-[#4A423B] dark:text-[#D6CEC5] hover:text-[#C24D2C] dark:hover:text-[#E5A93C] hover:bg-[#FAF7F2] dark:hover:bg-white/5 font-semibold'
               }`}
             >
-              <Home className="w-3.5 h-3.5 text-[#C24D2C]" />
+              <Home className="w-3.5 h-3.5 text-[#C24D2C] dark:text-[#E5A93C]" />
               <span>Início</span>
             </button>
 
@@ -102,8 +104,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => handleNavClick('cardapio', '/cardapio')}
               className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full whitespace-nowrap transition-all cursor-pointer font-cinzel uppercase text-[11px] sm:text-xs tracking-wider shrink-0 ${
                 activeSection === 'cardapio'
-                  ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold shadow-2xs border border-[#E0D5C3]'
-                  : 'text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold'
+                  ? 'bg-[#FAF7F2] dark:bg-[#241F1B] text-[#C24D2C] dark:text-[#E5A93C] font-bold shadow-2xs border border-[#E0D5C3] dark:border-[#E5A93C]/30'
+                  : 'text-[#4A423B] dark:text-[#D6CEC5] hover:text-[#C24D2C] dark:hover:text-[#E5A93C] hover:bg-[#FAF7F2] dark:hover:bg-white/5 font-semibold'
               }`}
             >
               Cardápio
@@ -115,7 +117,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               title="Reservar mesa pelo WhatsApp"
-              className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full whitespace-nowrap transition-all cursor-pointer font-cinzel uppercase text-[11px] sm:text-xs tracking-wider shrink-0 text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold"
+              className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full whitespace-nowrap transition-all cursor-pointer font-cinzel uppercase text-[11px] sm:text-xs tracking-wider shrink-0 text-[#4A423B] dark:text-[#D6CEC5] hover:text-[#C24D2C] dark:hover:text-[#E5A93C] hover:bg-[#FAF7F2] dark:hover:bg-white/5 font-semibold"
             >
               Reservas
             </a>
@@ -125,8 +127,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => handleNavClick('historia', '/historia')}
               className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full whitespace-nowrap transition-all cursor-pointer font-cinzel uppercase text-[11px] sm:text-xs tracking-wider shrink-0 ${
                 activeSection === 'historia'
-                  ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold shadow-2xs border border-[#E0D5C3]'
-                  : 'text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold'
+                  ? 'bg-[#FAF7F2] dark:bg-[#241F1B] text-[#C24D2C] dark:text-[#E5A93C] font-bold shadow-2xs border border-[#E0D5C3] dark:border-[#E5A93C]/30'
+                  : 'text-[#4A423B] dark:text-[#D6CEC5] hover:text-[#C24D2C] dark:hover:text-[#E5A93C] hover:bg-[#FAF7F2] dark:hover:bg-white/5 font-semibold'
               }`}
             >
               Nossa Tradição
@@ -137,8 +139,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => handleNavClick('localizacao', '/localizacao')}
               className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full whitespace-nowrap transition-all cursor-pointer font-cinzel uppercase text-[11px] sm:text-xs tracking-wider shrink-0 ${
                 activeSection === 'localizacao'
-                  ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold shadow-2xs border border-[#E0D5C3]'
-                  : 'text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold'
+                  ? 'bg-[#FAF7F2] dark:bg-[#241F1B] text-[#C24D2C] dark:text-[#E5A93C] font-bold shadow-2xs border border-[#E0D5C3] dark:border-[#E5A93C]/30'
+                  : 'text-[#4A423B] dark:text-[#D6CEC5] hover:text-[#C24D2C] dark:hover:text-[#E5A93C] hover:bg-[#FAF7F2] dark:hover:bg-white/5 font-semibold'
               }`}
             >
               Localização & Horários
@@ -149,8 +151,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => handleNavClick('contato', '/fale-conosco')}
               className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full whitespace-nowrap transition-all cursor-pointer font-cinzel uppercase text-[11px] sm:text-xs tracking-wider shrink-0 ${
                 activeSection === 'contato'
-                  ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold shadow-2xs border border-[#E0D5C3]'
-                  : 'text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold'
+                  ? 'bg-[#FAF7F2] dark:bg-[#241F1B] text-[#C24D2C] dark:text-[#E5A93C] font-bold shadow-2xs border border-[#E0D5C3] dark:border-[#E5A93C]/30'
+                  : 'text-[#4A423B] dark:text-[#D6CEC5] hover:text-[#C24D2C] dark:hover:text-[#E5A93C] hover:bg-[#FAF7F2] dark:hover:bg-white/5 font-semibold'
               }`}
             >
               Fale Conosco
@@ -161,7 +163,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Desktop Navigation: Faixa tricolor + Asa esquerda (3) + Logo centralizado + Asa direita (3) + Faixa tricolor */}
         <nav className="hidden lg:flex w-full items-center justify-between text-sm py-1">
           {/* Faixa Tricolor Esquerda */}
-          <TricolorBands direction="left" theme="light" className="w-8 xl:w-14 shrink-0" size="sm" />
+          <TricolorBands direction="left" theme={isDark ? 'dark' : 'light'} className="w-8 xl:w-14 shrink-0" size="sm" />
 
           {/* Asa Esquerda de Menus */}
           <div className="flex items-center gap-1.5 xl:gap-4 2xl:gap-7 flex-1 justify-end pr-3 xl:pr-8">
@@ -172,11 +174,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               aria-label="Página Inicial"
               className={`px-3 xl:px-5 2xl:px-6 py-2 rounded-full whitespace-nowrap shrink-0 transition-all cursor-pointer flex items-center gap-1.5 xl:gap-2 font-cinzel uppercase text-[11px] xl:text-xs tracking-wide xl:tracking-wider ${
                 activeSection === 'hero'
-                  ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold shadow-xs border border-[#E0D5C3]'
-                  : 'text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold'
+                  ? 'bg-[#FAF7F2] dark:bg-[#241F1B] text-[#C24D2C] dark:text-[#E5A93C] font-bold shadow-xs border border-[#E0D5C3] dark:border-[#E5A93C]/30'
+                  : 'text-[#4A423B] dark:text-[#D6CEC5] hover:text-[#C24D2C] dark:hover:text-[#E5A93C] hover:bg-[#FAF7F2] dark:hover:bg-white/5 font-semibold'
               }`}
             >
-              <Home className="w-3.5 h-3.5 xl:w-4 xl:h-4 text-[#C24D2C]" />
+              <Home className="w-3.5 h-3.5 xl:w-4 xl:h-4 text-[#C24D2C] dark:text-[#E5A93C]" />
               <span>Início</span>
             </button>
 
@@ -185,8 +187,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => handleNavClick('cardapio', '/cardapio')}
               className={`px-3 xl:px-5 2xl:px-6 py-2 rounded-full whitespace-nowrap shrink-0 transition-all cursor-pointer font-cinzel uppercase text-[11px] xl:text-xs tracking-wide xl:tracking-wider ${
                 activeSection === 'cardapio'
-                  ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold shadow-xs border border-[#E0D5C3]'
-                  : 'text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold'
+                  ? 'bg-[#FAF7F2] dark:bg-[#241F1B] text-[#C24D2C] dark:text-[#E5A93C] font-bold shadow-xs border border-[#E0D5C3] dark:border-[#E5A93C]/30'
+                  : 'text-[#4A423B] dark:text-[#D6CEC5] hover:text-[#C24D2C] dark:hover:text-[#E5A93C] hover:bg-[#FAF7F2] dark:hover:bg-white/5 font-semibold'
               }`}
             >
               Cardápio
@@ -198,7 +200,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               title="Reservar mesa pelo WhatsApp"
-              className="px-3 xl:px-5 2xl:px-6 py-2 rounded-full whitespace-nowrap shrink-0 transition-all cursor-pointer font-cinzel uppercase text-[11px] xl:text-xs tracking-wide xl:tracking-wider text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold"
+              className="px-3 xl:px-5 2xl:px-6 py-2 rounded-full whitespace-nowrap shrink-0 transition-all cursor-pointer font-cinzel uppercase text-[11px] xl:text-xs tracking-wide xl:tracking-wider text-[#4A423B] dark:text-[#D6CEC5] hover:text-[#C24D2C] dark:hover:text-[#E5A93C] hover:bg-[#FAF7F2] dark:hover:bg-white/5 font-semibold"
             >
               Reservas
             </a>
@@ -216,8 +218,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => handleNavClick('historia', '/historia')}
               className={`px-3 xl:px-5 2xl:px-6 py-2 rounded-full whitespace-nowrap shrink-0 transition-all cursor-pointer font-cinzel uppercase text-[11px] xl:text-xs tracking-wide xl:tracking-wider ${
                 activeSection === 'historia'
-                  ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold shadow-xs border border-[#E0D5C3]'
-                  : 'text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold'
+                  ? 'bg-[#FAF7F2] dark:bg-[#241F1B] text-[#C24D2C] dark:text-[#E5A93C] font-bold shadow-xs border border-[#E0D5C3] dark:border-[#E5A93C]/30'
+                  : 'text-[#4A423B] dark:text-[#D6CEC5] hover:text-[#C24D2C] dark:hover:text-[#E5A93C] hover:bg-[#FAF7F2] dark:hover:bg-white/5 font-semibold'
               }`}
             >
               Nossa Tradição
@@ -228,8 +230,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => handleNavClick('localizacao', '/localizacao')}
               className={`px-3 xl:px-5 2xl:px-6 py-2 rounded-full whitespace-nowrap shrink-0 transition-all cursor-pointer font-cinzel uppercase text-[11px] xl:text-xs tracking-wide xl:tracking-wider ${
                 activeSection === 'localizacao'
-                  ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold shadow-xs border border-[#E0D5C3]'
-                  : 'text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold'
+                  ? 'bg-[#FAF7F2] dark:bg-[#241F1B] text-[#C24D2C] dark:text-[#E5A93C] font-bold shadow-xs border border-[#E0D5C3] dark:border-[#E5A93C]/30'
+                  : 'text-[#4A423B] dark:text-[#D6CEC5] hover:text-[#C24D2C] dark:hover:text-[#E5A93C] hover:bg-[#FAF7F2] dark:hover:bg-white/5 font-semibold'
               }`}
             >
               Localização & Horários
@@ -240,8 +242,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => handleNavClick('contato', '/fale-conosco')}
               className={`px-3 xl:px-5 2xl:px-6 py-2 rounded-full whitespace-nowrap shrink-0 transition-all cursor-pointer font-cinzel uppercase text-[11px] xl:text-xs tracking-wide xl:tracking-wider ${
                 activeSection === 'contato'
-                  ? 'bg-[#FAF7F2] text-[#C24D2C] font-bold shadow-xs border border-[#E0D5C3]'
-                  : 'text-[#4A423B] hover:text-[#C24D2C] hover:bg-[#FAF7F2] font-semibold'
+                  ? 'bg-[#FAF7F2] dark:bg-[#241F1B] text-[#C24D2C] dark:text-[#E5A93C] font-bold shadow-xs border border-[#E0D5C3] dark:border-[#E5A93C]/30'
+                  : 'text-[#4A423B] dark:text-[#D6CEC5] hover:text-[#C24D2C] dark:hover:text-[#E5A93C] hover:bg-[#FAF7F2] dark:hover:bg-white/5 font-semibold'
               }`}
             >
               Fale Conosco
@@ -249,7 +251,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Faixa Tricolor Direita */}
-          <TricolorBands direction="right" theme="light" className="w-8 xl:w-14 shrink-0" size="sm" />
+          <TricolorBands direction="right" theme={isDark ? 'dark' : 'light'} className="w-8 xl:w-14 shrink-0" size="sm" />
         </nav>
       </div>
     </header>

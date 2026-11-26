@@ -143,21 +143,21 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ siteInfo }) => {
   };
 
   const inputClasses =
-    'w-full rounded-xl border border-[#D5C9B8] bg-[#FAF7F2] px-4 py-3 text-sm text-[#181513] placeholder:text-[#8C827A] outline-none transition focus:border-[#C24D2C] focus:bg-white focus:ring-2 focus:ring-[#C24D2C]/20 shadow-xs';
+    'w-full rounded-xl border border-[#D5C9B8] dark:border-white/15 bg-[#FAF7F2] dark:bg-[#12100E] px-4 py-3 text-sm text-[#181513] dark:text-[#FAF7F2] placeholder:text-[#8C827A] outline-none transition focus:border-[#C24D2C] focus:bg-white dark:focus:bg-[#181513] focus:ring-2 focus:ring-[#C24D2C]/20 shadow-xs';
 
   return (
-    <section id="fale-conosco" className="bg-white text-[#181513] border-t border-[#EADFCF] py-14 sm:py-16 px-4 sm:px-6 lg:px-8">
+    <section id="fale-conosco" className="bg-white dark:bg-[#12100E] text-[#181513] dark:text-[#FAF7F2] border-t border-[#EADFCF] dark:border-white/10 py-14 sm:py-16 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
       <div className="w-full max-w-xl mx-auto text-left">
         <div className="text-center mb-7">
-          <div className="inline-flex items-center justify-center p-3 rounded-full bg-[#C24D2C]/10 border border-[#C24D2C]/25 mb-4">
-            <Mail className="w-6 h-6 text-[#C24D2C]" />
+          <div className="inline-flex items-center justify-center p-3 rounded-full bg-[#C24D2C]/10 dark:bg-[#E5A93C]/15 border border-[#C24D2C]/25 dark:border-[#E5A93C]/30 mb-4">
+            <Mail className="w-6 h-6 text-[#C24D2C] dark:text-[#E5A93C]" />
           </div>
 
-          <h2 className="text-2xl sm:text-3xl font-bold text-[#181513] font-cinzel mb-3">
+          <h2 className="text-2xl sm:text-3xl font-bold text-[#181513] dark:text-[#FAF7F2] font-cinzel mb-3">
             Fale Conosco
           </h2>
 
-          <p className="text-sm sm:text-base text-[#5C554E] leading-relaxed">
+          <p className="text-sm sm:text-base text-[#5C554E] dark:text-[#C2B8AD] leading-relaxed">
             Tem alguma dúvida, sugestão ou deseja falar com nossa equipe?
             Envie sua mensagem. Será um prazer atender você!
           </p>
@@ -165,7 +165,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ siteInfo }) => {
 
         <form
           onSubmit={handleContactSubmit}
-          className="bg-white border border-[#E0D5C3] rounded-3xl p-6 sm:p-8 shadow-xl shadow-[#C24D2C]/5 space-y-4"
+          className="bg-white dark:bg-[#1B1815] border border-[#E0D5C3] dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-xl shadow-[#C24D2C]/5 space-y-4"
         >
           <div className="absolute opacity-0 -z-10 pointer-events-none" aria-hidden="true">
             <label htmlFor="contact-website">Não preencha este campo</label>
@@ -179,7 +179,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ siteInfo }) => {
           </div>
 
           <div>
-            <label htmlFor="contact-name" className="block text-sm font-semibold text-[#181513] mb-1.5">
+            <label htmlFor="contact-name" className="block text-sm font-semibold text-[#181513] dark:text-[#FAF7F2] mb-1.5">
               Nome completo *
             </label>
             <input
@@ -196,7 +196,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ siteInfo }) => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="contact-email" className="block text-sm font-semibold text-[#181513] mb-1.5">
+              <label htmlFor="contact-email" className="block text-sm font-semibold text-[#181513] dark:text-[#FAF7F2] mb-1.5">
                 E-mail *
               </label>
               <input
@@ -212,7 +212,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ siteInfo }) => {
             </div>
 
             <div>
-              <label htmlFor="contact-phone" className="block text-sm font-semibold text-[#181513] mb-1.5">
+              <label htmlFor="contact-phone" className="block text-sm font-semibold text-[#181513] dark:text-[#FAF7F2] mb-1.5">
                 Telefone
               </label>
               <input
@@ -228,7 +228,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ siteInfo }) => {
           </div>
 
           <div>
-            <label htmlFor="contact-subject" className="block text-sm font-semibold text-[#181513] mb-1.5">
+            <label htmlFor="contact-subject" className="block text-sm font-semibold text-[#181513] dark:text-[#FAF7F2] mb-1.5">
               Assunto
             </label>
             <input
@@ -242,7 +242,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ siteInfo }) => {
           </div>
 
           <div>
-            <label htmlFor="contact-message" className="block text-sm font-semibold text-[#181513] mb-1.5">
+            <label htmlFor="contact-message" className="block text-sm font-semibold text-[#181513] dark:text-[#FAF7F2] mb-1.5">
               Sua mensagem *
             </label>
             <textarea

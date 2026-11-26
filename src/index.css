@@ -24,11 +24,13 @@
 html, body {
   background-color: #ffffff;
   color: #181513;
+  color-scheme: light;
 }
 
-/* Light Theme as Primary */
-html {
-  color-scheme: light;
+html.dark, html.dark body {
+  background-color: #12100E;
+  color: #FAF7F2;
+  color-scheme: dark;
 }
 
 ::selection {
@@ -39,47 +41,6 @@ html {
 ::-moz-selection {
   background-color: #22d3ee;
   color: #082f49;
-}
-
-.dark .text-\[\#1E1B18\] {
-  color: #FAF7F2 !important;
-}
-
-.dark .text-\[\#5C554E\] {
-  color: #C2B8AD !important;
-}
-
-.dark .text-\[\#8C827A\] {
-  color: #A99E94 !important;
-}
-
-.dark .border-\[\#E0D5C3\] {
-  border-color: rgba(255, 255, 255, 0.12) !important;
-}
-
-.dark .border-\[\#D6C7B2\] {
-  border-color: rgba(255, 255, 255, 0.14) !important;
-}
-
-.dark .border-\[\#F0E6D8\] {
-  border-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-.dark .border-\[\#EADFCF\] {
-  border-color: rgba(255, 255, 255, 0.12) !important;
-}
-
-.dark input:not([type="checkbox"]):not([type="radio"]),
-.dark textarea,
-.dark select {
-  background-color: #181513 !important;
-  color: #FAF7F2 !important;
-  border-color: rgba(255, 255, 255, 0.16) !important;
-}
-
-.dark input::placeholder,
-.dark textarea::placeholder {
-  color: #8C827A !important;
 }
 
 /* Custom scrollbar */

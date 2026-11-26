@@ -58,15 +58,11 @@ import {
   saveMenuItemsToFirestore,
   saveSingleMenuItemToFirestore,
   deleteSingleMenuItemFromFirestore,
-  migrateCachedMenuImageToFirestore,
-  enqueueMenuItemSave,
-  enqueueMenuItemDelete,
-  enqueueGalleryPostsSave,
-  saveQueue,
   saveGalleryPostsToFirestore,
   saveSiteInfoToFirestore,
   saveMenuCategoriesToFirestore,
   saveAdminPasswordToFirestore,
+  getLastCloudSyncStatus,
   ContactMessageRecord,
   subscribeToContactMessages,
   markContactMessageAsRead,
@@ -76,8 +72,7 @@ import { TricolorBands } from './TricolorBands';
 import {
   compressImageFile,
   compressImageForFirestore,
-  compressBrandImageForFirestore,
-  compressImageElementToDataUrl
+  compressBrandImageForFirestore
 } from '../utils/imageCompressor';
 
 interface AdminDashboardProps {
@@ -100,8 +95,8 @@ interface AdminDashboardProps {
   customEmblemUrl?: string | null;
   isEmblemEnabled?: boolean;
   onOpenLogoModal?: (initialTab?: 'logo' | 'emblem') => void;
-  onEmblemUpdated?: (newEmblemUrl: string | null, enabled?: boolean) => void;
-  onLogoUpdated?: (newLogoUrl: string | null) => void;
+  onEmblemUpdated?: (newEmblemUrl: string | null, enabled?: boolean, options?: { skipCloudSync?: boolean }) => void;
+  onLogoUpdated?: (newLogoUrl: string | null, options?: { skipCloudSync?: boolean }) => void;
   customAdminPassword?: string | null;
   onAdminPasswordUpdated?: (newPassword: string | null) => void;
 }
@@ -130,6 +125,71 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'menu' | 'gallery' | 'messages' | 'branding' | 'siteInfo' | 'security'>('menu');
   const [isManualSyncing, setIsManualSyncing] = useState(false);
   const [, setLastSyncTime] = useState<string>('Agora');
+
+  // Global Floating Toast Indicator for Firestore Save Operations
+  const [adminToast, setAdminToast] = useState<{
+    status: 'saving' | 'success' | 'error';
+    title: string;
+    message: string;
+  } | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearToastTimer = () => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+  };
+
+  const showSavingToast = (message: string) => {
+    clearToastTimer();
+    setAdminToast({
+      status: 'saving',
+      title: 'Salvando no Firestore...',
+      message
+    });
+  };
+
+  const showToastSuccess = (message: string, title = 'Salvo no Firestore') => {
+    clearToastTimer();
+    setAdminToast({
+      status: 'success',
+      title,
+      message
+    });
+    toastTimerRef.current = setTimeout(() => {
+      setAdminToast(null);
+    }, 4500);
+  };
+
+  const showToastError = (message: string, title = 'Erro ao salvar no Firestore') => {
+    clearToastTimer();
+    setAdminToast({
+      status: 'error',
+      title,
+      message
+    });
+    toastTimerRef.current = setTimeout(() => {
+      setAdminToast(null);
+    }, 6500);
+  };
+
+  const showFirestoreOutcomeToast = (successMessage: string, fallbackWarningPrefix: string): boolean => {
+    const sync = getLastCloudSyncStatus();
+    if (sync.firestoreSaved) {
+      showToastSuccess(successMessage);
+      return true;
+    }
+    showToastError(
+      `${fallbackWarningPrefix} O servidor local registrou, mas o Firestore não confirmou o envio${sync.errorMessage ? ` (${sync.errorMessage})` : ''}.`,
+      'Aviso de sincronização com Firestore'
+    );
+    return false;
+  };
+
+  useEffect(() => {
+    return () => clearToastTimer();
+  }, []);
 
   // Contact messages from Fale Conosco
   const [contactMessages, setContactMessages] = useState<ContactMessageRecord[]>([]);
@@ -295,6 +355,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
 
     setIsSavingCategory(true);
+    showSavingToast(`Enviando categoria "${trimmedLabel}" para o Firestore...`);
     try {
       const newCategory: MenuCategory = {
         id: slug,
@@ -330,14 +391,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         onMenuCategoriesUpdated(updatedCategories, { skipCloudSync: true });
       }
       await saveMenuCategoriesToFirestore(updatedCategories);
+      showFirestoreOutcomeToast(
+        `Categoria "${trimmedLabel}" enviada com sucesso ao Firestore!`,
+        `Categoria "${trimmedLabel}" salva localmente.`
+      );
 
       // Reset form
       setEditingCategory(null);
       setCategoryFormData({ label: '', icon: '🍕', id: '' });
       setTimeout(() => setMenuNotice(null), 5000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao salvar categoria:', err);
-      setCategoryFormError('Erro ao salvar o botão. Tente novamente.');
+      const errMsg = err?.message || 'Erro ao salvar o botão. Tente novamente.';
+      setCategoryFormError(errMsg);
+      showToastError(errMsg);
     } finally {
       setIsSavingCategory(false);
     }
@@ -345,6 +412,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleDeleteCategory = async (catId: string, catLabel: string) => {
     setIsSavingCategory(true);
+    showSavingToast(`Removendo categoria "${catLabel}" no Firestore...`);
     try {
       const updated = currentCategories.filter(c => c.id !== catId);
       setCurrentCategories(updated);
@@ -352,6 +420,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         onMenuCategoriesUpdated(updated, { skipCloudSync: true });
       }
       await saveMenuCategoriesToFirestore(updated);
+      showFirestoreOutcomeToast(
+        `Categoria "${catLabel}" removida com sucesso do Firestore!`,
+        `Categoria "${catLabel}" removida localmente.`
+      );
       setConfirmDeleteCatId(null);
       if (editingCategory?.id === catId) {
         setEditingCategory(null);
@@ -359,9 +431,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       }
       setMenuNotice({ type: 'success', text: `Botão "${catLabel}" removido do cardápio com sucesso!` });
       setTimeout(() => setMenuNotice(null), 5000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao excluir categoria:', err);
-      setCategoryFormError('Erro ao excluir o botão. Tente novamente.');
+      const errMsg = err?.message || 'Erro ao excluir o botão. Tente novamente.';
+      setCategoryFormError(errMsg);
+      showToastError(errMsg);
     } finally {
       setIsSavingCategory(false);
     }
@@ -380,24 +454,39 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (onMenuCategoriesUpdated) {
       onMenuCategoriesUpdated(reordered, { skipCloudSync: true });
     }
-    await saveMenuCategoriesToFirestore(reordered);
+    showSavingToast('Salvando nova ordem das categorias no Firestore...');
+    try {
+      await saveMenuCategoriesToFirestore(reordered);
+      showFirestoreOutcomeToast(
+        'Ordem das categorias salva com sucesso no Firestore!',
+        'Ordem salva localmente.'
+      );
+    } catch (err: any) {
+      showToastError(err?.message || 'Erro ao salvar ordem das categorias.');
+    }
   };
 
   const handleRestoreDefaultCategories = async () => {
     setIsSavingCategory(true);
+    showSavingToast('Restaurando categorias padrão no Firestore...');
     try {
       setCurrentCategories(DEFAULT_MENU_CATEGORIES);
       if (onMenuCategoriesUpdated) {
         onMenuCategoriesUpdated(DEFAULT_MENU_CATEGORIES, { skipCloudSync: true });
       }
       await saveMenuCategoriesToFirestore(DEFAULT_MENU_CATEGORIES);
+      showFirestoreOutcomeToast(
+        'Categorias padrão restauradas e enviadas ao Firestore!',
+        'Categorias restauradas localmente.'
+      );
       setIsConfirmingRestoreDefaultCats(false);
       setEditingCategory(null);
       setCategoryFormData({ label: '', icon: '🍕', id: '' });
       setMenuNotice({ type: 'success', text: 'Botões de categoria restaurados para o padrão original!' });
       setTimeout(() => setMenuNotice(null), 5000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao restaurar categorias padrão:', err);
+      showToastError(err?.message || 'Erro ao restaurar categorias padrão.');
     } finally {
       setIsSavingCategory(false);
     }
@@ -439,19 +528,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleRestoreDefaultMenu = async () => {
     setIsSavingItem(true);
+    showSavingToast('Restaurando cardápio padrão no Firestore...');
     try {
       setCurrentMenuItems(MENU_ITEMS);
       if (onMenuItemsUpdated) {
         onMenuItemsUpdated(MENU_ITEMS, { skipCloudBatch: true });
       }
       await saveMenuItemsToFirestore(MENU_ITEMS);
+      showFirestoreOutcomeToast(
+        'Cardápio padrão restaurado e enviado com sucesso ao Firestore!',
+        'Cardápio restaurado localmente.'
+      );
       setIsConfirmingRestoreDefaultMenu(false);
       setEditingItem(null);
       setMenuNotice({ type: 'success', text: 'Cardápio restaurado com sucesso para os pratos cadastrados da casa!' });
       setTimeout(() => setMenuNotice(null), 5000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao restaurar cardápio padrão:', err);
-      setMenuNotice({ type: 'error', text: 'Erro ao restaurar o cardápio padrão.' });
+      const errMsg = err?.message || 'Erro ao restaurar o cardápio padrão.';
+      setMenuNotice({ type: 'error', text: errMsg });
+      showToastError(errMsg);
     } finally {
       setIsSavingItem(false);
     }
@@ -510,75 +606,98 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       .map(s => s.trim())
       .filter(Boolean);
 
-    let finalImage = itemFormData.image.trim() || 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=800&q=80';
-    if (finalImage.startsWith('data:image/')) {
-      try {
+    setIsSavingItem(true);
+    showSavingToast(`Enviando "${itemFormData.name.trim()}" para o Firestore...`);
+    try {
+      let finalImage = itemFormData.image.trim() || 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=800&q=80';
+      if (finalImage.startsWith('data:image/')) {
         finalImage = await compressImageForFirestore(finalImage, 420000);
-      } catch {}
+      }
+
+      const savedItem: MenuItem = {
+        id: editingItem ? editingItem.id : `item-${Date.now()}`,
+        name: itemFormData.name.trim(),
+        italianName: itemFormData.italianName.trim() || undefined,
+        category: itemFormData.category,
+        price: parsedPrice,
+        description: itemFormData.description.trim() || 'Prato artesanal preparado com ingredientes frescos e selecionados.',
+        ingredients: ingredientsList.length > 0 ? ingredientsList : ['Ingredientes frescos da casa'],
+        pairing: itemFormData.pairing.trim() || undefined,
+        image: finalImage,
+        tags: editingItem?.tags || [],
+        isAvailable: itemFormData.isAvailable,
+        isPopular: editingItem?.isPopular || false,
+        pointsEarned: editingItem?.pointsEarned || Math.round(parsedPrice),
+        pointsToRedeem: editingItem?.pointsToRedeem || Math.round(parsedPrice * 6),
+        pointsBonusTag: editingItem?.pointsBonusTag || undefined
+      };
+
+      const persistedItem = await saveSingleMenuItemToFirestore(savedItem);
+
+      let updatedList: MenuItem[];
+      if (editingItem) {
+        updatedList = currentMenuItems.map(it => it.id === editingItem.id ? persistedItem : it);
+        setMenuNotice({ type: 'success', text: `Item "${persistedItem.name}" atualizado e enviado com sucesso ao Firestore!` });
+      } else {
+        updatedList = [persistedItem, ...currentMenuItems];
+        setMenuNotice({ type: 'success', text: `Novo item "${persistedItem.name}" cadastrado e enviado com sucesso ao Firestore!` });
+      }
+
+      showFirestoreOutcomeToast(
+        `Prato "${persistedItem.name}" enviado e salvo com sucesso no Firestore!`,
+        `Prato "${persistedItem.name}" salvo localmente.`
+      );
+
+      setCurrentMenuItems(updatedList);
+      if (onMenuItemsUpdated) {
+        onMenuItemsUpdated(updatedList, { skipCloudBatch: true });
+      }
+
+      setIsItemModalOpen(false);
+      setEditingItem(null);
+      setTimeout(() => setMenuNotice(null), 5000);
+    } catch (err: any) {
+      console.error('Erro ao salvar item do cardápio:', err);
+      const errMsg = err?.message || 'Erro ao salvar item no banco de dados. Tente novamente.';
+      setItemFormError(errMsg);
+      showToastError(errMsg);
+    } finally {
+      setIsSavingItem(false);
     }
-
-    const savedItem: MenuItem = {
-      id: editingItem ? editingItem.id : `item-${Date.now()}`,
-      name: itemFormData.name.trim(),
-      italianName: itemFormData.italianName.trim() || undefined,
-      category: itemFormData.category,
-      price: parsedPrice,
-      description: itemFormData.description.trim() || 'Prato artesanal preparado com ingredientes frescos e selecionados.',
-      ingredients: ingredientsList.length > 0 ? ingredientsList : ['Ingredientes frescos da casa'],
-      pairing: itemFormData.pairing.trim() || undefined,
-      image: finalImage,
-      tags: editingItem?.tags || [],
-      isAvailable: itemFormData.isAvailable,
-      isPopular: editingItem?.isPopular || false,
-      pointsEarned: editingItem?.pointsEarned || Math.round(parsedPrice),
-      pointsToRedeem: editingItem?.pointsToRedeem || Math.round(parsedPrice * 6),
-      pointsBonusTag: editingItem?.pointsBonusTag || undefined
-    };
-
-    // 1. Optimistic Instant UI Update (< 10ms) without overlapping batch write
-    let updatedList: MenuItem[];
-    if (editingItem) {
-      updatedList = currentMenuItems.map(it => it.id === editingItem.id ? savedItem : it);
-      setMenuNotice({ type: 'success', text: `Item "${savedItem.name}" atualizado e sincronizado na nuvem para todos os dispositivos!` });
-    } else {
-      updatedList = [savedItem, ...currentMenuItems];
-      setMenuNotice({ type: 'success', text: `Novo item "${savedItem.name}" adicionado e sincronizado para todos os dispositivos!` });
-    }
-
-    setCurrentMenuItems(updatedList);
-    if (onMenuItemsUpdated) {
-      onMenuItemsUpdated(updatedList, { skipCloudBatch: true });
-    }
-
-    // Immediately close modal and clear state so the user never waits
-    setIsItemModalOpen(false);
-    setEditingItem(null);
-    setIsSavingItem(false);
-    setTimeout(() => setMenuNotice(null), 5000);
-
-    // 2. Background non-blocking persistence via Save Queue (writes portable compressed photo + data to Firestore menu_items)
-    enqueueMenuItemSave(savedItem);
   };
 
   const executeDeleteItem = async (id: string, name: string) => {
-    // 1. Optimistic Instant UI update
-    const updatedList = currentMenuItems.filter(it => it.id !== id);
-    setCurrentMenuItems(updatedList);
-    if (onMenuItemsUpdated) {
-      onMenuItemsUpdated(updatedList, { skipCloudBatch: true });
+    setIsDeletingItem(true);
+    showSavingToast(`Excluindo "${name}" do Firestore...`);
+    try {
+      await deleteSingleMenuItemFromFirestore(id);
+      const updatedList = currentMenuItems.filter(it => it.id !== id);
+      setCurrentMenuItems(updatedList);
+      if (onMenuItemsUpdated) {
+        onMenuItemsUpdated(updatedList, { skipCloudBatch: true });
+      }
+
+      setItemToDelete(null);
+      setConfirmDeleteMenuId(null);
+      setMenuNotice({ type: 'success', text: `Item "${name}" foi excluído com sucesso do cardápio!` });
+      showFirestoreOutcomeToast(
+        `Item "${name}" excluído com sucesso do Firestore!`,
+        `Item "${name}" removido localmente.`
+      );
+      setTimeout(() => setMenuNotice(null), 5000);
+    } catch (err: any) {
+      console.error('Erro ao excluir item do cardápio:', err);
+      const errMsg = err?.message || `Erro ao excluir "${name}". Tente novamente.`;
+      setMenuNotice({ type: 'error', text: errMsg });
+      showToastError(errMsg);
+      setItemToDelete(null);
+    } finally {
+      setIsDeletingItem(false);
     }
-
-    setItemToDelete(null);
-    setConfirmDeleteMenuId(null);
-    setIsDeletingItem(false);
-    setMenuNotice({ type: 'success', text: `Item "${name}" foi excluído com sucesso do cardápio!` });
-    setTimeout(() => setMenuNotice(null), 5000);
-
-    // 2. Background persistence via Save Queue
-    enqueueMenuItemDelete(id);
   };
 
   const handleToggleItemAvailability = async (id: string) => {
+    const previousList = currentMenuItems;
     let targetItem: MenuItem | undefined;
     const updatedList = currentMenuItems.map(it => {
       if (it.id === id) {
@@ -593,7 +712,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       onMenuItemsUpdated(updatedList, { skipCloudBatch: true });
     }
     if (targetItem) {
-      await saveSingleMenuItemToFirestore(targetItem);
+      showSavingToast(`Atualizando "${targetItem.name}" no Firestore...`);
+      try {
+        await saveSingleMenuItemToFirestore(targetItem);
+        showFirestoreOutcomeToast(
+          `"${targetItem.name}" marcado como ${targetItem.isAvailable ? 'disponível' : 'pausado'} no Firestore!`,
+          `Disponibilidade de "${targetItem.name}" salva localmente.`
+        );
+      } catch (err: any) {
+        setCurrentMenuItems(previousList);
+        if (onMenuItemsUpdated) {
+          onMenuItemsUpdated(previousList, { skipCloudBatch: true });
+        }
+        const errMsg = err?.message || 'Erro ao atualizar disponibilidade no banco de dados.';
+        setMenuNotice({ type: 'error', text: errMsg });
+        showToastError(errMsg);
+      }
     }
   };
 
@@ -772,13 +906,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
 
     setIsSavingPost(true);
+    showSavingToast('Enviando foto e legenda para o Firestore...');
     try {
       let finalImageUrl = rawUrl;
       // Ensure any base64 data URL fits comfortably inside a Cloud Firestore document (< 420KB)
       if (finalImageUrl.startsWith('data:image/')) {
-        try {
-          finalImageUrl = await compressImageForFirestore(finalImageUrl, 420000);
-        } catch {}
+        finalImageUrl = await compressImageForFirestore(finalImageUrl, 420000);
       }
 
       const parsedTags = postFormData.tagsStr
@@ -801,14 +934,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       let updatedPosts: SocialPost[];
       if (editingPost) {
         updatedPosts = currentSocialPosts.map(p => p.id === editingPost.id ? savedPost : p);
-        setGalleryNotice({ type: 'success', text: 'Foto e informações atualizadas com sucesso!' });
+        setGalleryNotice({ type: 'success', text: 'Foto e informações atualizadas com sucesso no Firestore!' });
       } else {
         updatedPosts = [savedPost, ...currentSocialPosts];
-        setGalleryNotice({ type: 'success', text: 'Nova foto cadastrada com sucesso na galeria!' });
+        setGalleryNotice({ type: 'success', text: 'Nova foto cadastrada com sucesso na galeria e no Firestore!' });
       }
 
       // Synchronous persistence to backend and Cloud Firestore
       const cleanSavedPosts = await saveGalleryPostsToFirestore(updatedPosts);
+      showFirestoreOutcomeToast(
+        editingPost
+          ? 'Foto e legenda atualizadas com sucesso no Firestore!'
+          : 'Nova foto enviada e salva com sucesso no Firestore!',
+        'Foto salva localmente.'
+      );
 
       setCurrentSocialPosts(cleanSavedPosts);
       if (onSocialPostsUpdated) {
@@ -820,16 +959,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setTimeout(() => setGalleryNotice(null), 5000);
     } catch (err: any) {
       console.error('Erro ao salvar foto na galeria:', err);
-      setPostFormError('Erro ao salvar foto. Tente novamente.');
+      const errMsg = err?.message || 'Erro ao salvar foto. Tente novamente.';
+      setPostFormError(errMsg);
+      showToastError(errMsg);
       setIsSavingPost(false);
     }
   };
 
   const executeDeletePost = async (id: string) => {
     setIsDeletingPost(true);
+    showSavingToast('Removendo foto do Firestore...');
     try {
       const updated = currentSocialPosts.filter(p => p.id !== id);
       const cleanSavedPosts = await saveGalleryPostsToFirestore(updated);
+      showFirestoreOutcomeToast(
+        'Foto removida com sucesso do Firestore!',
+        'Foto removida localmente.'
+      );
       setCurrentSocialPosts(cleanSavedPosts);
       if (onSocialPostsUpdated) {
         onSocialPostsUpdated(cleanSavedPosts);
@@ -839,21 +985,34 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setGalleryNotice({ type: 'success', text: 'Foto removida com sucesso da galeria!' });
       setIsDeletingPost(false);
       setTimeout(() => setGalleryNotice(null), 5000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao excluir foto:', err);
-      setGalleryNotice({ type: 'error', text: 'Erro ao remover foto. Tente novamente.' });
+      const errMsg = err?.message || 'Erro ao remover foto. Tente novamente.';
+      setGalleryNotice({ type: 'error', text: errMsg });
+      showToastError(errMsg);
       setIsDeletingPost(false);
     }
   };
 
   const handleRestoreDefaultPosts = async () => {
-    setCurrentSocialPosts(SOCIAL_POSTS);
-    if (onSocialPostsUpdated) {
-      onSocialPostsUpdated(SOCIAL_POSTS);
+    showSavingToast('Restaurando fotos padrão da galeria no Firestore...');
+    try {
+      setCurrentSocialPosts(SOCIAL_POSTS);
+      if (onSocialPostsUpdated) {
+        onSocialPostsUpdated(SOCIAL_POSTS);
+      }
+      await saveGalleryPostsToFirestore(SOCIAL_POSTS);
+      showFirestoreOutcomeToast(
+        'Galeria padrão restaurada e enviada ao Firestore!',
+        'Galeria restaurada localmente.'
+      );
+      setGalleryNotice({ type: 'success', text: 'Galeria restaurada para as fotos padrão com sucesso!' });
+      setTimeout(() => setGalleryNotice(null), 5000);
+    } catch (err: any) {
+      const errMsg = err?.message || 'Erro ao restaurar fotos padrão.';
+      setGalleryNotice({ type: 'error', text: errMsg });
+      showToastError(errMsg);
     }
-    await saveGalleryPostsToFirestore(SOCIAL_POSTS);
-    setGalleryNotice({ type: 'success', text: 'Galeria restaurada para as fotos padrão com sucesso!' });
-    setTimeout(() => setGalleryNotice(null), 5000);
   };
 
   const filteredGalleryPosts = currentSocialPosts.filter(post => {
@@ -923,29 +1082,34 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleSaveSiteInfo = async () => {
     setIsSavingSiteInfo(true);
+    showSavingToast('Enviando informações do site para o Firestore...');
     try {
       const infoToSave = { ...currentSiteInfo };
       if (infoToSave.storyImageUrl && infoToSave.storyImageUrl.startsWith('data:image/')) {
-        try {
-          infoToSave.storyImageUrl = await compressImageForFirestore(infoToSave.storyImageUrl, 360000);
-        } catch {}
+        infoToSave.storyImageUrl = await compressImageForFirestore(infoToSave.storyImageUrl, 360000);
       }
       setCurrentSiteInfo(infoToSave);
       if (onSiteInfoUpdated) {
         onSiteInfoUpdated(infoToSave, { skipCloudSync: true });
       }
       await saveSiteInfoToFirestore(infoToSave);
+      showFirestoreOutcomeToast(
+        'Informações e fotos do site enviadas com sucesso ao Firestore!',
+        'Informações salvas localmente.'
+      );
       setSiteInfoNotice({
         type: 'success',
-        text: 'Todas as informações e fotos do site foram salvas e sincronizadas com sucesso em todos os dispositivos!'
+        text: 'Todas as informações e fotos do site foram enviadas e salvas com sucesso no Firestore!'
       });
       setTimeout(() => setSiteInfoNotice(null), 5000);
     } catch (err: any) {
       console.error('Erro ao salvar informações do site:', err);
+      const errMsg = err?.message || 'Erro ao salvar informações. Tente novamente.';
       setSiteInfoNotice({
         type: 'error',
-        text: 'Erro ao salvar informações. Tente novamente.'
+        text: errMsg
       });
+      showToastError(errMsg);
     } finally {
       setIsSavingSiteInfo(false);
     }
@@ -955,21 +1119,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setCurrentSiteInfo(DEFAULT_SITE_INFO);
     setIsConfirmingResetSiteInfo(false);
     setIsSavingSiteInfo(true);
+    showSavingToast('Restaurando informações padrão do site no Firestore...');
     try {
       if (onSiteInfoUpdated) {
         onSiteInfoUpdated(DEFAULT_SITE_INFO, { skipCloudSync: true });
       }
       await saveSiteInfoToFirestore(DEFAULT_SITE_INFO);
+      showFirestoreOutcomeToast(
+        'Informações padrão do site enviadas com sucesso ao Firestore!',
+        'Informações restauradas localmente.'
+      );
       setSiteInfoNotice({
         type: 'success',
         text: 'Informações do site restauradas com sucesso para os valores padrão!'
       });
       setTimeout(() => setSiteInfoNotice(null), 5000);
-    } catch (err) {
+    } catch (err: any) {
+      const errMsg = err?.message || 'Erro ao restaurar padrões.';
       setSiteInfoNotice({
         type: 'error',
-        text: 'Erro ao restaurar padrões.'
+        text: errMsg
       });
+      showToastError(errMsg);
     } finally {
       setIsSavingSiteInfo(false);
     }
@@ -1000,24 +1171,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
     setIsEmblemSaving(true);
     setEmblemNotice(null);
+    showSavingToast('Enviando imagem anexa para o Firestore...');
     try {
       await saveEmblemToFirestore(finalUrl, emblemIsEnabled);
-      try {
-        await fetch('/api/settings/emblem', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ emblemUrl: finalUrl, enabled: emblemIsEnabled })
-        });
-      } catch (e) {
-        console.warn('Backend emblem save fallback error:', e);
-      }
       if (onEmblemUpdated) {
-        onEmblemUpdated(finalUrl, emblemIsEnabled);
+        onEmblemUpdated(finalUrl, emblemIsEnabled, { skipCloudSync: true });
       }
-      setEmblemNotice({ type: 'success', text: 'Imagem anexa salva com sucesso! Exibida ao lado do logo do cabeçalho e embaixo do logo na página principal.' });
+      showFirestoreOutcomeToast(
+        'Imagem anexa enviada e salva com sucesso no Firestore!',
+        'Imagem anexa salva localmente.'
+      );
+      setEmblemNotice({ type: 'success', text: 'Imagem anexa salva com sucesso no Firestore! Exibida ao lado do logo do cabeçalho e embaixo do logo na página principal.' });
       setTimeout(() => setEmblemNotice(null), 5000);
     } catch (err: any) {
-      setEmblemNotice({ type: 'error', text: 'Erro ao salvar imagem anexa na nuvem.' });
+      const errMsg = err?.message || 'Erro ao salvar imagem anexa no Firestore.';
+      setEmblemNotice({ type: 'error', text: errMsg });
+      showToastError(errMsg);
     } finally {
       setIsEmblemSaving(false);
     }
@@ -1026,27 +1195,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleRemoveEmblemDirect = async () => {
     setIsEmblemSaving(true);
     setEmblemNotice(null);
+    showSavingToast('Removendo imagem anexa no Firestore...');
     try {
       await saveEmblemToFirestore(null, false);
-      try {
-        await fetch('/api/settings/emblem', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ emblemUrl: null, enabled: false })
-        });
-      } catch (e) {
-        console.warn(e);
-      }
       setEmblemPreview(null);
       setEmblemBase64(null);
       setEmblemUrlInput('');
       if (onEmblemUpdated) {
-        onEmblemUpdated(null, false);
+        onEmblemUpdated(null, false, { skipCloudSync: true });
       }
+      showFirestoreOutcomeToast(
+        'Imagem anexa removida com sucesso no Firestore!',
+        'Imagem anexa removida localmente.'
+      );
       setEmblemNotice({ type: 'success', text: 'Imagem anexa removida com sucesso de todas as páginas!' });
       setTimeout(() => setEmblemNotice(null), 5000);
     } catch (err: any) {
-      setEmblemNotice({ type: 'error', text: 'Erro ao remover imagem anexa.' });
+      const errMsg = err?.message || 'Erro ao remover imagem anexa.';
+      setEmblemNotice({ type: 'error', text: errMsg });
+      showToastError(errMsg);
     } finally {
       setIsEmblemSaving(false);
     }
@@ -1119,6 +1286,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
 
     setIsSavingPassword(true);
+    showSavingToast('Salvando nova senha de acesso no Firestore...');
     try {
       await saveAdminPasswordToFirestore(newPwd);
       setCurrentAdminPassword(newPwd);
@@ -1129,16 +1297,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         localStorage.setItem('deolinda_admin_password', newPwd);
       } catch {}
 
+      showFirestoreOutcomeToast(
+        'Senha da Área ADM atualizada com sucesso no Firestore!',
+        'Senha salva localmente.'
+      );
       setPasswordNotice({ 
         type: 'success', 
-        text: 'Senha da Área do Administrador atualizada com sucesso e sincronizada na nuvem Firebase!' 
+        text: 'Senha da Área do Administrador atualizada com sucesso e enviada ao Firestore!' 
       });
       setCurrentPasswordInput('');
       setNewPasswordInput('');
       setConfirmPasswordInput('');
       setTimeout(() => setPasswordNotice(null), 6000);
     } catch (err: any) {
-      setPasswordNotice({ type: 'error', text: 'Erro ao salvar nova senha. Tente novamente.' });
+      const errMsg = err?.message || 'Erro ao salvar nova senha. Tente novamente.';
+      setPasswordNotice({ type: 'error', text: errMsg });
+      showToastError(errMsg);
     } finally {
       setIsSavingPassword(false);
     }
@@ -1146,6 +1320,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleResetAdminPasswordToDefault = async () => {
     setIsSavingPassword(true);
+    showSavingToast('Restaurando senha padrão no Firestore...');
     try {
       const defaultPwd = '1234';
       await saveAdminPasswordToFirestore(defaultPwd);
@@ -1157,6 +1332,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         localStorage.setItem('deolinda_admin_password', defaultPwd);
       } catch {}
 
+      showFirestoreOutcomeToast(
+        'Senha padrão restaurada com sucesso no Firestore!',
+        'Senha restaurada localmente.'
+      );
       setIsConfirmingResetPassword(false);
       setPasswordNotice({ 
         type: 'success', 
@@ -1166,8 +1345,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setNewPasswordInput('');
       setConfirmPasswordInput('');
       setTimeout(() => setPasswordNotice(null), 6000);
-    } catch (err) {
-      setPasswordNotice({ type: 'error', text: 'Erro ao restaurar senha padrão.' });
+    } catch (err: any) {
+      const errMsg = err?.message || 'Erro ao restaurar senha padrão.';
+      setPasswordNotice({ type: 'error', text: errMsg });
+      showToastError(errMsg);
     } finally {
       setIsSavingPassword(false);
     }
@@ -1185,6 +1366,52 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         isMaximized ? 'p-0' : 'p-2 sm:p-6'
       }`}
     >
+      {/* Floating Firestore Save Status Toast (Always visible above scroll/modals) */}
+      {adminToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`fixed bottom-5 right-5 sm:top-5 sm:bottom-auto z-[10000] max-w-sm w-[calc(100%-2.5rem)] rounded-2xl p-4 shadow-2xl border backdrop-blur-md flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-200 ${
+            adminToast.status === 'saving'
+              ? 'bg-[#181513]/95 border-[#E5A93C]/70 text-white'
+              : adminToast.status === 'success'
+              ? 'bg-emerald-950/95 border-emerald-400/70 text-white'
+              : 'bg-rose-950/95 border-rose-400/70 text-white'
+          }`}
+        >
+          <div className="mt-0.5 shrink-0">
+            {adminToast.status === 'saving' ? (
+              <RefreshCw className="w-5 h-5 text-[#E5A93C] animate-spin" />
+            ) : adminToast.status === 'success' ? (
+              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-rose-400" />
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-extrabold uppercase tracking-wider text-white">
+              {adminToast.title}
+            </p>
+            <p className="text-xs text-white/85 mt-0.5 leading-relaxed">
+              {adminToast.message}
+            </p>
+          </div>
+          {adminToast.status !== 'saving' && (
+            <button
+              type="button"
+              onClick={() => {
+                clearToastTimer();
+                setAdminToast(null);
+              }}
+              aria-label="Fechar notificação"
+              className="p-1 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      )}
+
       <div className={`bg-[#FAF7F2] shadow-2xl flex flex-col overflow-hidden border border-[#E0D5C3] transition-all duration-200 ${
         isMaximized 
           ? 'w-full h-full rounded-none border-none' 
@@ -1470,19 +1697,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           src={item.image}
                           alt={item.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          onLoad={(e) => {
-                            if (
-                              item.image &&
-                              item.image.startsWith('/menu_images/') &&
-                              e.currentTarget.complete &&
-                              e.currentTarget.naturalWidth > 0
-                            ) {
-                              const portable = compressImageElementToDataUrl(e.currentTarget, 420000);
-                              if (portable) {
-                                migrateCachedMenuImageToFirestore(item, portable).catch(() => {});
-                              }
-                            }
-                          }}
                           onError={(e) => {
                             const fallback = 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=800&q=80';
                             if (e.currentTarget.src !== fallback) {
@@ -2091,11 +2305,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   className="px-5 py-2.5 rounded-2xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-[#C24D2C]/25 hover:scale-102 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
                 >
                   {isSavingSiteInfo ? (
-                    <RefreshCw className="w-4 h-4 animate-spin text-[#E5A93C]" />
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin text-[#E5A93C]" />
+                      <span>Salvando...</span>
+                    </>
                   ) : (
-                    <Save className="w-4 h-4 text-[#E5A93C]" />
+                    <>
+                      <Save className="w-4 h-4 text-[#E5A93C]" />
+                      <span>Salvar Informações</span>
+                    </>
                   )}
-                  <span>Salvar Informações</span>
                 </button>
               </div>
             </div>
@@ -2303,25 +2522,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (file) {
+                              showSavingToast('Enviando novo logotipo para o Firestore...');
                               try {
                                 const compressedLogo = await compressBrandImageForFirestore(file, 380000);
                                 if (compressedLogo) {
+                                  await saveLogoToFirestore(compressedLogo);
                                   if (onLogoUpdated) {
-                                    onLogoUpdated(compressedLogo);
-                                  } else {
-                                    await saveLogoToFirestore(compressedLogo);
+                                    onLogoUpdated(compressedLogo, { skipCloudSync: true });
                                   }
+                                  showFirestoreOutcomeToast(
+                                    'Logotipo atualizado e enviado com sucesso ao Firestore!',
+                                    'Logotipo salvo localmente.'
+                                  );
                                   setSiteInfoNotice({
                                     type: 'success',
-                                    text: 'Logotipo atualizado e sincronizado na nuvem para todos os dispositivos!'
+                                    text: 'Logotipo atualizado e salvo com sucesso no Firestore!'
                                   });
                                   setTimeout(() => setSiteInfoNotice(null), 4000);
                                 }
-                              } catch {
+                              } catch (err: any) {
+                                const errMsg = err?.message || 'Não foi possível salvar a imagem do logotipo.';
                                 setSiteInfoNotice({
                                   type: 'error',
-                                  text: 'Não foi possível processar a imagem do logotipo.'
+                                  text: errMsg
                                 });
+                                showToastError(errMsg);
                               } finally {
                                 e.target.value = '';
                               }
@@ -2400,8 +2625,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     disabled={isSavingSiteInfo}
                     className="px-6 py-2.5 rounded-2xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
                   >
-                    <Save className="w-4 h-4 text-[#E5A93C]" />
-                    <span>Salvar Dados de Contato</span>
+                    {isSavingSiteInfo ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-[#E5A93C]" />
+                        <span>Salvando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 text-[#E5A93C]" />
+                        <span>Salvar Dados de Contato</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -2441,8 +2675,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     disabled={isSavingSiteInfo}
                     className="px-6 py-2.5 rounded-2xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
                   >
-                    <Save className="w-4 h-4 text-[#E5A93C]" />
-                    <span>Salvar Informações de Início</span>
+                    {isSavingSiteInfo ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-[#E5A93C]" />
+                        <span>Salvando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 text-[#E5A93C]" />
+                        <span>Salvar Informações de Início</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -2535,7 +2778,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   {showStoryUrlInput && (
                     <div className="pt-2 border-t border-[#E0D5C3]/70 flex flex-col sm:flex-row gap-2">
                       <input
-                        type="url"
+                        type="text"
                         value={currentSiteInfo.storyImageUrl || ''}
                         onChange={(e) => handleUpdateSiteInfoField('storyImageUrl', e.target.value)}
                         placeholder="https://exemplo.com/foto-historia.jpg"
@@ -2600,8 +2843,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     disabled={isSavingSiteInfo}
                     className="px-6 py-2.5 rounded-2xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
                   >
-                    <Save className="w-4 h-4 text-[#E5A93C]" />
-                    <span>Salvar História</span>
+                    {isSavingSiteInfo ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-[#E5A93C]" />
+                        <span>Salvando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 text-[#E5A93C]" />
+                        <span>Salvar História</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -2674,8 +2926,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     disabled={isSavingSiteInfo}
                     className="px-6 py-2.5 rounded-2xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
                   >
-                    <Save className="w-4 h-4 text-[#E5A93C]" />
-                    <span>Salvar Horários de Funcionamento</span>
+                    {isSavingSiteInfo ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-[#E5A93C]" />
+                        <span>Salvando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 text-[#E5A93C]" />
+                        <span>Salvar Horários de Funcionamento</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -2754,8 +3015,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     disabled={isSavingSiteInfo}
                     className="px-6 py-2.5 rounded-2xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
                   >
-                    <Save className="w-4 h-4 text-[#E5A93C]" />
-                    <span>Salvar Ambiente & Rodapé</span>
+                    {isSavingSiteInfo ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-[#E5A93C]" />
+                        <span>Salvando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 text-[#E5A93C]" />
+                        <span>Salvar Ambiente & Rodapé</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -2890,16 +3160,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <button
                             type="button"
                             onClick={async () => {
+                              showSavingToast('Restaurando logomarca padrão no Firestore...');
                               try {
                                 await saveLogoToFirestore(null);
-                                await fetch('/api/settings/logo', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ logoUrl: null })
-                                });
-                                if (onLogoUpdated) onLogoUpdated(null);
-                              } catch (e) {
+                                if (onLogoUpdated) onLogoUpdated(null, { skipCloudSync: true });
+                                showFirestoreOutcomeToast(
+                                  'Logomarca padrão restaurada e salva no Firestore!',
+                                  'Logomarca restaurada localmente.'
+                                );
+                              } catch (e: any) {
                                 console.error(e);
+                                showToastError(e?.message || 'Erro ao restaurar logomarca no Firestore.');
                               } finally {
                                 setIsConfirmingRestoreLogo(false);
                               }
@@ -3046,7 +3317,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <input
-                          type="url"
+                          type="text"
                           placeholder="https://exemplo.com/minha-imagem-ou-logo.png"
                           value={emblemUrlInput}
                           onChange={(e) => {
@@ -3997,7 +4268,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                 <div className="flex gap-2">
                   <input
-                    type="url"
+                    type="text"
                     value={itemFormData.image}
                     onChange={(e) => setItemFormData({ ...itemFormData, image: e.target.value })}
                     placeholder="URL da imagem (https://...) ou clique em Upload Foto"

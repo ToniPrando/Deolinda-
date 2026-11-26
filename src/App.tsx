@@ -12,6 +12,7 @@ import { AdminAuthModal } from './components/AdminAuthModal';
 import { OrderTrackingModal } from './components/OrderTrackingModal';
 import { LogoUploadModal } from './components/LogoUploadModal';
 import { Footer } from './components/Footer';
+import { BackToTopButton } from './components/BackToTopButton';
 import { CartItem, Order, Reservation, OrderStatus, CustomerUser, MenuItem, SocialPost, SiteInfo, MenuCategory } from './types';
 import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES, normalizeMenuItems, ensureAdditionalDrinkCategories } from './data/menuData';
 import { SOCIAL_POSTS } from './data/socialData';
@@ -50,6 +51,7 @@ export default function App() {
     return 'hero';
   });
   const isNavigatingRef = useRef(false);
+  const heroBlockRef = useRef<HTMLDivElement | null>(null);
 
   const [currentUser, setCurrentUser] = useState<CustomerUser | null>(() => {
     try {
@@ -90,7 +92,7 @@ export default function App() {
 
   const [socialPosts, setSocialPosts] = useState<SocialPost[]>(() => {
     try {
-      const saved = localStorage.getItem('deolinda_custom_social_posts') || localStorage.getItem('deolinda_custom_gallery_posts');
+      const saved = localStorage.getItem('deolinda_custom_gallery_posts') || localStorage.getItem('deolinda_custom_social_posts');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -360,11 +362,18 @@ export default function App() {
       }
     });
 
-    // 2. Fetch menu items from backend API
+    let firestoreMenuLoaded = false;
+    let firestoreGalleryLoaded = false;
+    let firestoreSiteInfoLoaded = false;
+    let firestoreCategoriesLoaded = false;
+
+    // 2. Fetch menu items from backend API (only if Firestore has not already delivered live items)
     safeFetchJson<{ items?: MenuItem[] }>('/api/settings/menu').then(data => {
+      if (firestoreMenuLoaded) return;
       if (data && Array.isArray(data.items) && data.items.length > 0) {
         const normalizedItems = normalizeMenuItems(data.items);
         setMenuItems(prev => {
+          if (firestoreMenuLoaded) return prev;
           if (prev.length > normalizedItems.length && prev !== MENU_ITEMS) {
             return prev;
           }
@@ -379,12 +388,14 @@ export default function App() {
     // 3. Subscribe to Firestore menu items in real-time
     const unsubMenu = subscribeToMenuItems((items) => {
       if (items && items.length > 0) {
+        firestoreMenuLoaded = true;
         setMenuItems(normalizeMenuItems(items));
       }
     });
 
     // 4. Fetch gallery posts from backend API (never overwrite custom cached/Firestore posts with default seed posts)
     safeFetchJson<{ posts?: SocialPost[] }>('/api/settings/gallery').then(data => {
+      if (firestoreGalleryLoaded) return;
       if (data && Array.isArray(data.posts) && data.posts.length > 0) {
         const defaultIds = new Set(['post-1', 'post-2', 'post-3', 'post-4', 'post-5', 'post-6', 'post-7', 'post-8']);
         const apiIsDefaultSeed =
@@ -392,14 +403,14 @@ export default function App() {
           data.posts.every(p => defaultIds.has(p.id) && !p.imageUrl?.startsWith('data:image/'));
 
         setSocialPosts(prev => {
+          if (firestoreGalleryLoaded) return prev;
           const prevIsDefaultSeed =
             prev.length <= 8 &&
             prev.every(p => defaultIds.has(p.id) && !p.imageUrl?.startsWith('data:image/'));
           if (!prevIsDefaultSeed && apiIsDefaultSeed) return prev;
           try {
-            const jsonStr = JSON.stringify(data.posts);
-            localStorage.setItem('deolinda_custom_social_posts', jsonStr);
-            localStorage.setItem('deolinda_custom_gallery_posts', jsonStr);
+            localStorage.removeItem('deolinda_custom_social_posts');
+            localStorage.setItem('deolinda_custom_gallery_posts', JSON.stringify(data.posts));
           } catch {}
           return data.posts!;
         });
@@ -409,12 +420,14 @@ export default function App() {
     // 5. Subscribe to Firestore gallery posts in real-time
     const unsubGallery = subscribeToGalleryPosts((posts) => {
       if (posts && posts.length > 0) {
+        firestoreGalleryLoaded = true;
         setSocialPosts(posts);
       }
     });
 
     // 6. Fetch site info from backend API
     safeFetchJson<{ siteInfo?: SiteInfo }>('/api/settings/site-info').then(data => {
+      if (firestoreSiteInfoLoaded) return;
       if (data && data.siteInfo && typeof data.siteInfo === 'object') {
         const cleaned = cleanSiteInfoSubtitle({ ...DEFAULT_SITE_INFO, ...data.siteInfo });
         setSiteInfo(cleaned);
@@ -427,6 +440,7 @@ export default function App() {
     // 7. Subscribe to Firestore site info in real-time
     const unsubSiteInfo = subscribeToSiteInfo((info) => {
       if (info && typeof info === 'object') {
+        firestoreSiteInfoLoaded = true;
         const cleaned = cleanSiteInfoSubtitle({ ...DEFAULT_SITE_INFO, ...info });
         setSiteInfo(cleaned);
         try {
@@ -437,6 +451,7 @@ export default function App() {
 
     // 8. Fetch menu categories from backend API
     safeFetchJson<{ categories?: MenuCategory[] }>('/api/settings/categories').then(data => {
+      if (firestoreCategoriesLoaded) return;
       if (data && Array.isArray(data.categories) && data.categories.length > 0) {
         const cleaned = ensureAdditionalDrinkCategories(data.categories);
         setMenuCategories(cleaned);
@@ -449,6 +464,7 @@ export default function App() {
     // 9. Subscribe to Firestore menu categories in real-time
     const unsubCategories = subscribeToMenuCategories((cats) => {
       if (cats && cats.length > 0) {
+        firestoreCategoriesLoaded = true;
         setMenuCategories(ensureAdditionalDrinkCategories(cats));
       }
     });
@@ -517,21 +533,24 @@ export default function App() {
   const handleOptimisticSocialPostsUpdated = (updatedPosts: SocialPost[]) => {
     setSocialPosts(updatedPosts);
     try {
-      const jsonStr = JSON.stringify(updatedPosts);
-      localStorage.setItem('deolinda_custom_gallery_posts', jsonStr);
-      localStorage.setItem('deolinda_custom_social_posts', jsonStr);
+      localStorage.removeItem('deolinda_custom_social_posts');
+      localStorage.setItem('deolinda_custom_gallery_posts', JSON.stringify(updatedPosts));
     } catch {}
   };
 
-  const handleLogoUpdated = (newUrl: string | null) => {
+  const handleLogoUpdated = (newUrl: string | null, options?: { skipCloudSync?: boolean }) => {
     setCustomLogoUrl(newUrl);
-    enqueueLogoSave(newUrl);
+    if (!options?.skipCloudSync) {
+      enqueueLogoSave(newUrl);
+    }
   };
 
-  const handleEmblemUpdated = (newUrl: string | null, enabled: boolean = true) => {
+  const handleEmblemUpdated = (newUrl: string | null, enabled: boolean = true, options?: { skipCloudSync?: boolean }) => {
     setCustomEmblemUrl(newUrl);
     setIsEmblemEnabled(enabled);
-    enqueueEmblemSave(newUrl, enabled);
+    if (!options?.skipCloudSync) {
+      enqueueEmblemSave(newUrl, enabled);
+    }
   };
 
   // Sync cart to localStorage
@@ -888,7 +907,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-white text-[#181513] font-sans selection:bg-[#C24D2C] selection:text-white transition-colors duration-200">
+    <div className="min-h-screen flex flex-col bg-white dark:bg-[#12100E] text-[#181513] dark:text-[#FAF7F2] font-sans selection:bg-[#C24D2C] selection:text-white transition-colors duration-200">
       
       {/* Navigation */}
       <Navbar
@@ -949,13 +968,15 @@ export default function App() {
         {/* Página Inicial: Home (/) */}
         {activeSection === 'hero' && (
           <div className="animate-fade-in">
-            <Hero
-              customLogoUrl={customLogoUrl}
-              customEmblemUrl={customEmblemUrl}
-              isEmblemEnabled={isEmblemEnabled}
-              siteInfo={siteInfo}
-              onNavigate={handleNavigate}
-            />
+            <div ref={heroBlockRef}>
+              <Hero
+                customLogoUrl={customLogoUrl}
+                customEmblemUrl={customEmblemUrl}
+                isEmblemEnabled={isEmblemEnabled}
+                siteInfo={siteInfo}
+                onNavigate={handleNavigate}
+              />
+            </div>
             {/* Galeria de Fotos e Momentos da Pizzaria */}
             <SocialFeedSection posts={socialPosts} />
           </div>
@@ -1045,6 +1066,13 @@ export default function App() {
         initialTab={logoModalInitialTab}
         onLogoUpdated={handleLogoUpdated}
         onEmblemUpdated={handleEmblemUpdated}
+      />
+
+      {/* Floating Back to Top Button */}
+      <BackToTopButton
+        heroBlockRef={heroBlockRef}
+        activeSection={activeSection}
+        hidden={isAdminOpen || isCartOpen || isAdminAuthOpen || isLogoModalOpen}
       />
 
     </div>

@@ -14,7 +14,7 @@ import {
   EyeOff,
   Layers
 } from 'lucide-react';
-import { saveLogoToFirestore, saveEmblemToFirestore } from '../services/firebaseService';
+import { saveLogoToFirestore, saveEmblemToFirestore, getLastCloudSyncStatus } from '../services/firebaseService';
 import { compressBrandImageForFirestore } from '../utils/imageCompressor';
 
 interface LogoUploadModalProps {
@@ -24,8 +24,8 @@ interface LogoUploadModalProps {
   currentEmblemUrl?: string | null;
   isEmblemEnabled?: boolean;
   initialTab?: 'logo' | 'emblem';
-  onLogoUpdated: (newLogoUrl: string | null) => void;
-  onEmblemUpdated?: (newEmblemUrl: string | null, enabled?: boolean) => void;
+  onLogoUpdated: (newLogoUrl: string | null, options?: { skipCloudSync?: boolean }) => void;
+  onEmblemUpdated?: (newEmblemUrl: string | null, enabled?: boolean, options?: { skipCloudSync?: boolean }) => void;
 }
 
 export const LogoUploadModal: React.FC<LogoUploadModalProps> = ({
@@ -214,28 +214,21 @@ export const LogoUploadModal: React.FC<LogoUploadModalProps> = ({
         finalLogoUrl = await optimizeImage(logoBase64, 450);
       }
 
-      // 1. Direct Cloud Firestore write
       await saveLogoToFirestore(finalLogoUrl);
+      const syncStatus = getLastCloudSyncStatus();
+      onLogoUpdated(finalLogoUrl, { skipCloudSync: true });
 
-      // 2. Local backend fallback
-      try {
-        await fetch('/api/settings/logo', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ logoUrl: finalLogoUrl })
-        });
-      } catch (backendErr) {
-        console.warn('Backend server logo endpoint fallback error:', backendErr);
+      if (syncStatus.firestoreSaved) {
+        setSuccessMessage('Logotipo enviado e salvo com sucesso no Firestore!');
+        setTimeout(() => {
+          onClose();
+        }, 1200);
+      } else {
+        setErrorMessage('Logotipo salvo no servidor, porém o Firestore não confirmou o envio. Tente novamente.');
       }
-
-      setSuccessMessage('Logotipo sincronizado na nuvem e atualizado em todos os dispositivos!');
-      onLogoUpdated(finalLogoUrl);
-      setTimeout(() => {
-        onClose();
-      }, 1000);
     } catch (err: any) {
       console.error('Error saving logo:', err);
-      setErrorMessage('Erro ao salvar o logotipo. Tente novamente.');
+      setErrorMessage(err?.message || 'Erro ao salvar o logotipo no Firestore. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
@@ -247,27 +240,23 @@ export const LogoUploadModal: React.FC<LogoUploadModalProps> = ({
     setErrorMessage(null);
     try {
       await saveLogoToFirestore(null);
-      try {
-        await fetch('/api/settings/logo', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ logoUrl: null, imageBase64: null })
-        });
-      } catch (e) {
-        console.warn(e);
-      }
+      const syncStatus = getLastCloudSyncStatus();
 
-      onLogoUpdated(null);
+      onLogoUpdated(null, { skipCloudSync: true });
       setLogoPreviewUrl(null);
       setLogoBase64(null);
       setLogoUrlInput('');
       setLogoFileDetails(null);
-      setSuccessMessage('Logotipo restaurado para o padrão oficial da Deolinda.');
-      setTimeout(() => {
-        onClose();
-      }, 1000);
+      if (syncStatus.firestoreSaved) {
+        setSuccessMessage('Logotipo padrão restaurado e salvo no Firestore!');
+        setTimeout(() => {
+          onClose();
+        }, 1200);
+      } else {
+        setErrorMessage('Logotipo restaurado localmente, mas o Firestore não confirmou o envio.');
+      }
     } catch (err: any) {
-      setErrorMessage('Erro ao restaurar o logotipo padrão.');
+      setErrorMessage(err?.message || 'Erro ao restaurar o logotipo padrão no Firestore.');
     } finally {
       setIsLoading(false);
     }
@@ -289,33 +278,23 @@ export const LogoUploadModal: React.FC<LogoUploadModalProps> = ({
         finalEmblemUrl = await optimizeImage(emblemBase64, 600);
       }
 
-      // 1. Direct Cloud Firestore write
       await saveEmblemToFirestore(finalEmblemUrl, emblemEnabled);
+      const syncStatus = getLastCloudSyncStatus();
 
-      // 2. Local backend fallback
-      try {
-        await fetch('/api/settings/emblem', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            emblemUrl: finalEmblemUrl,
-            enabled: emblemEnabled
-          })
-        });
-      } catch (backendErr) {
-        console.warn('Backend server emblem endpoint fallback error:', backendErr);
-      }
-
-      setSuccessMessage('Imagem anexa sincronizada com sucesso no cabeçalho e página inicial!');
       if (onEmblemUpdated) {
-        onEmblemUpdated(finalEmblemUrl, emblemEnabled);
+        onEmblemUpdated(finalEmblemUrl, emblemEnabled, { skipCloudSync: true });
       }
-      setTimeout(() => {
-        onClose();
-      }, 1000);
+      if (syncStatus.firestoreSaved) {
+        setSuccessMessage('Imagem anexa enviada e salva com sucesso no Firestore!');
+        setTimeout(() => {
+          onClose();
+        }, 1200);
+      } else {
+        setErrorMessage('Imagem salva no servidor, mas o Firestore não confirmou o envio.');
+      }
     } catch (err: any) {
       console.error('Error saving emblem:', err);
-      setErrorMessage('Erro ao salvar a imagem anexa. Tente novamente.');
+      setErrorMessage(err?.message || 'Erro ao salvar a imagem anexa no Firestore. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
@@ -327,29 +306,25 @@ export const LogoUploadModal: React.FC<LogoUploadModalProps> = ({
     setErrorMessage(null);
     try {
       await saveEmblemToFirestore(null, false);
-      try {
-        await fetch('/api/settings/emblem', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ emblemUrl: null, enabled: false })
-        });
-      } catch (e) {
-        console.warn(e);
-      }
+      const syncStatus = getLastCloudSyncStatus();
 
       if (onEmblemUpdated) {
-        onEmblemUpdated(null, false);
+        onEmblemUpdated(null, false, { skipCloudSync: true });
       }
       setEmblemPreviewUrl(null);
       setEmblemBase64(null);
       setEmblemUrlInput('');
       setEmblemFileDetails(null);
-      setSuccessMessage('Imagem anexa removida com sucesso de todas as páginas.');
-      setTimeout(() => {
-        onClose();
-      }, 1000);
+      if (syncStatus.firestoreSaved) {
+        setSuccessMessage('Imagem anexa removida e atualizada com sucesso no Firestore.');
+        setTimeout(() => {
+          onClose();
+        }, 1200);
+      } else {
+        setErrorMessage('Imagem removida localmente, mas o Firestore não confirmou.');
+      }
     } catch (err: any) {
-      setErrorMessage('Erro ao remover a imagem anexa.');
+      setErrorMessage(err?.message || 'Erro ao remover a imagem anexa no Firestore.');
     } finally {
       setIsLoading(false);
     }
@@ -548,7 +523,7 @@ export const LogoUploadModal: React.FC<LogoUploadModalProps> = ({
               </label>
               <div className="flex gap-2">
                 <input
-                  type="url"
+                  type="text"
                   placeholder="https://exemplo.com/logotipo.png"
                   value={logoUrlInput}
                   onChange={(e) => {
@@ -605,7 +580,7 @@ export const LogoUploadModal: React.FC<LogoUploadModalProps> = ({
                   {isLoading ? (
                     <>
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Salvando...</span>
+                      <span>Salvando no Firestore...</span>
                     </>
                   ) : (
                     <>
@@ -783,7 +758,7 @@ export const LogoUploadModal: React.FC<LogoUploadModalProps> = ({
               </label>
               <div className="flex gap-2">
                 <input
-                  type="url"
+                  type="text"
                   placeholder="https://exemplo.com/emblema.png"
                   value={emblemUrlInput}
                   onChange={(e) => {
@@ -840,7 +815,7 @@ export const LogoUploadModal: React.FC<LogoUploadModalProps> = ({
                   {isLoading ? (
                     <>
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Salvando...</span>
+                      <span>Salvando no Firestore...</span>
                     </>
                   ) : (
                     <>

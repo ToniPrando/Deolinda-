@@ -60,19 +60,19 @@ export const LocationSection: React.FC<LocationSectionProps> = ({ siteInfo }) =>
   };
 
   return (
-    <section id="localizacao" className="pt-6 sm:pt-8 pb-12 sm:pb-16 bg-white text-[#181513] border-t border-[#EADFCF] relative overflow-hidden scroll-mt-16 sm:scroll-mt-18">
+    <section id="localizacao" className="pt-6 sm:pt-8 pb-12 sm:pb-16 bg-white dark:bg-[#12100E] text-[#181513] dark:text-[#FAF7F2] border-t border-[#EADFCF] dark:border-white/10 relative overflow-hidden scroll-mt-16 sm:scroll-mt-18 transition-colors duration-200">
       <div className="w-full max-w-[820px] mx-auto px-4 sm:px-6 relative z-10">
         
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-5 sm:mb-6">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C24D2C]/10 text-[#C24D2C] text-[10px] sm:text-[11px] font-bold uppercase tracking-widest mb-2 border border-[#C24D2C]/25">
-            <MapPin className="w-3.5 h-3.5 text-[#C24D2C]" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C24D2C]/10 dark:bg-[#E5A93C]/15 text-[#C24D2C] dark:text-[#E5A93C] text-[10px] sm:text-[11px] font-bold uppercase tracking-widest mb-2 border border-[#C24D2C]/25 dark:border-[#E5A93C]/30">
+            <MapPin className="w-3.5 h-3.5 text-[#C24D2C] dark:text-[#E5A93C]" />
             <span>{siteInfo?.locationBadge || 'Onde Nos Encontrar'}</span>
           </div>
-          <h2 className="font-serif-italian text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-[#181513] mb-2">
+          <h2 className="font-serif-italian text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-[#181513] dark:text-[#FAF7F2] mb-2">
             {siteInfo?.locationTitle || 'Visite a Deolinda Pizzaria Napoletana'}
           </h2>
-          <p className="text-[#5C554E] text-xs sm:text-sm max-w-xl mx-auto leading-relaxed">
+          <p className="text-[#5C554E] dark:text-[#C2B8AD] text-xs sm:text-sm max-w-xl mx-auto leading-relaxed">
             {siteInfo?.locationSubtitle || 'Um refúgio italiano aconchegante com aroma de lenha queimando, vinhos selecionados e a verdadeira hospitalidade de Nápoles.'}
           </p>
         </div>
@@ -84,26 +84,26 @@ export const LocationSection: React.FC<LocationSectionProps> = ({ siteInfo }) =>
           <div className="md:col-span-5 flex flex-col">
             
             {/* Opening Hours & Contact Card */}
-            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#E0D5C3] shadow-md space-y-3.5 h-full flex flex-col justify-between">
+            <div className="bg-white dark:bg-[#1B1815] rounded-2xl p-4 sm:p-5 border border-[#E0D5C3] dark:border-white/10 shadow-md space-y-3.5 h-full flex flex-col justify-between">
               <div>
                 <div className="flex items-center gap-2 text-[#C24D2C] mb-2.5">
                   <Clock className="w-4 h-4 text-[#C24D2C]" />
-                  <h3 className="font-serif-italian text-base sm:text-lg font-bold text-[#181513]">
+                  <h3 className="font-serif-italian text-base sm:text-lg font-bold text-[#181513] dark:text-[#FAF7F2]">
                     Horários de Atendimento
                   </h3>
                 </div>
 
-                <div className="space-y-1 text-xs text-[#5C554E]">
+                <div className="space-y-1 text-xs text-[#5C554E] dark:text-[#C2B8AD]">
                   {getWeeklyHoursFromSiteInfo(siteInfo).map((entry, idx, arr) => {
                     const isClosed = entry.hours.toLowerCase().includes('fechado');
                     const isLast = idx === arr.length - 1;
                     return (
                       <div
                         key={entry.id}
-                        className={`flex justify-between items-start gap-3 py-1.5 ${!isLast ? 'border-b border-[#EADFCF]' : ''} ${isClosed ? 'text-[#8C827A]' : ''}`}
+                        className={`flex justify-between items-start gap-3 py-1.5 ${!isLast ? 'border-b border-[#EADFCF] dark:border-white/10' : ''} ${isClosed ? 'text-[#8C827A] dark:text-[#8C827A]' : ''}`}
                       >
-                        <span className={isClosed ? '' : 'font-medium text-[#181513] shrink-0'}>{entry.day}</span>
-                        <span className={`text-right ${isClosed ? 'italic' : 'text-[#C24D2C] font-bold'}`}>
+                        <span className={isClosed ? '' : 'font-medium text-[#181513] dark:text-[#FAF7F2] shrink-0'}>{entry.day}</span>
+                        <span className={`text-right ${isClosed ? 'italic' : 'text-[#C24D2C] dark:text-[#E5A93C] font-bold'}`}>
                           {entry.hours}
                         </span>
                       </div>
@@ -111,28 +111,28 @@ export const LocationSection: React.FC<LocationSectionProps> = ({ siteInfo }) =>
                   })}
                 </div>
 
-                <div className="pt-2.5 text-[11px] text-[#8C5E0A] flex items-center gap-1.5 font-medium">
+                <div className="pt-2.5 text-[11px] text-[#8C5E0A] dark:text-[#E5A93C] flex items-center gap-1.5 font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
                   <span>{siteInfo?.environmentInfo || 'Forno a Lenha aquecido a 430°C durante todo o serviço'}</span>
                 </div>
 
                 {/* Endereço Oficial */}
-                <div className="pt-3 border-t border-[#EADFCF]">
+                <div className="pt-3 border-t border-[#EADFCF] dark:border-white/10">
                   <a
                     href={mapsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-3 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] hover:border-[#C24D2C] hover:bg-white flex items-start gap-2.5 transition-all group shadow-2xs"
+                    className="p-3 rounded-xl bg-[#FAF7F2] dark:bg-[#24201C] border border-[#E0D5C3] dark:border-white/10 hover:border-[#C24D2C] hover:bg-white dark:hover:bg-[#2B2621] flex items-start gap-2.5 transition-all group shadow-2xs"
                   >
                     <MapPin className="w-4 h-4 text-[#C24D2C] shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
                     <div>
-                      <span className="block text-[10px] font-bold text-[#C24D2C] uppercase tracking-wider">Endereço da Pizzaria</span>
-                      <p className="text-xs font-semibold text-[#181513] mt-0.5 leading-snug">
+                      <span className="block text-[10px] font-bold text-[#C24D2C] dark:text-[#E5A93C] uppercase tracking-wider">Endereço da Pizzaria</span>
+                      <p className="text-xs font-semibold text-[#181513] dark:text-[#FAF7F2] mt-0.5 leading-snug">
                         {siteInfo?.address && !siteInfo.address.toLowerCase().includes('augusta')
                           ? `${siteInfo.address}, ${siteInfo.addressNeighborhood || 'Centro'}, ${siteInfo.addressCityState || 'Itu, SP'}`
                           : 'Rua Santa Cruz, 232, Centro, Itu, SP'}
                       </p>
-                      <span className="inline-flex items-center gap-1 text-[10px] text-[#7A7067] group-hover:text-[#C24D2C] mt-0.5">
+                      <span className="inline-flex items-center gap-1 text-[10px] text-[#7A7067] dark:text-[#A99E94] group-hover:text-[#C24D2C] dark:group-hover:text-[#E5A93C] mt-0.5">
                         <span>Ver rotas no Google Maps</span>
                         <ExternalLink className="w-2.5 h-2.5" />
                       </span>
@@ -142,7 +142,7 @@ export const LocationSection: React.FC<LocationSectionProps> = ({ siteInfo }) =>
               </div>
 
               {/* Direct WhatsApp Contact Button */}
-              <div className="pt-3 border-t border-[#EADFCF]">
+              <div className="pt-3 border-t border-[#EADFCF] dark:border-white/10">
                 <a
                   href={`https://wa.me/${siteInfo?.whatsappNumber || '5511915331853'}?text=${encodeURIComponent(siteInfo?.whatsappMessage || 'Olá Deolinda Pizzaria! Gostaria de informações.')}`}
                   target="_blank"
@@ -158,20 +158,20 @@ export const LocationSection: React.FC<LocationSectionProps> = ({ siteInfo }) =>
           </div>
 
           {/* Interactive Map Visual Representation (Right 7 cols) */}
-          <div className="md:col-span-7 bg-white rounded-2xl overflow-hidden border border-[#E0D5C3] shadow-md flex flex-col justify-between relative min-h-[220px]">
+          <div className="md:col-span-7 bg-white dark:bg-[#1B1815] rounded-2xl overflow-hidden border border-[#E0D5C3] dark:border-white/10 shadow-md flex flex-col justify-between relative min-h-[220px]">
             
             {/* Map Visual Header */}
-            <div className="p-3 bg-gradient-to-b from-white/95 to-transparent absolute top-0 inset-x-0 z-10 flex items-center justify-between pointer-events-none">
-              <div className="flex items-center gap-1.5 bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-full border border-[#E0D5C3] text-[10px] shadow-xs">
+            <div className="p-3 bg-gradient-to-b from-white/95 dark:from-[#1B1815]/95 to-transparent absolute top-0 inset-x-0 z-10 flex items-center justify-between pointer-events-none">
+              <div className="flex items-center gap-1.5 bg-white/95 dark:bg-[#1B1815]/95 backdrop-blur-md px-2.5 py-1 rounded-full border border-[#E0D5C3] dark:border-white/15 text-[10px] shadow-xs">
                 <span className="w-2 h-2 rounded-full bg-[#C24D2C] animate-pulse" />
-                <span className="font-bold text-[#181513]">Localização Oficial</span>
+                <span className="font-bold text-[#181513] dark:text-[#FAF7F2]">Localização Oficial</span>
               </div>
 
               <a
                 href={mapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="pointer-events-auto px-2.5 py-1 rounded-full bg-white/95 hover:bg-white backdrop-blur-md text-[#181513] border border-[#E0D5C3] text-[11px] font-semibold flex items-center gap-1 shadow-xs transition-all"
+                className="pointer-events-auto px-2.5 py-1 rounded-full bg-white/95 dark:bg-[#1B1815]/95 hover:bg-white dark:hover:bg-[#26211D] backdrop-blur-md text-[#181513] dark:text-[#FAF7F2] border border-[#E0D5C3] dark:border-white/15 text-[11px] font-semibold flex items-center gap-1 shadow-xs transition-all"
               >
                 <span>Google Maps</span>
                 <ExternalLink className="w-3 h-3 text-[#C24D2C]" />
@@ -179,7 +179,7 @@ export const LocationSection: React.FC<LocationSectionProps> = ({ siteInfo }) =>
             </div>
 
             {/* Stylized Map View Graphic */}
-            <div className="relative flex-1 w-full min-h-[180px] bg-[#FAF7F2] flex items-center justify-center overflow-hidden group">
+            <div className="relative flex-1 w-full min-h-[180px] bg-[#FAF7F2] dark:bg-[#181513] flex items-center justify-center overflow-hidden group">
               <img
                 src="https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=1200&q=80"
                 alt="Mapa da Região Deolinda Pizzaria"
@@ -218,10 +218,10 @@ export const LocationSection: React.FC<LocationSectionProps> = ({ siteInfo }) =>
             </div>
 
             {/* Bottom Card Footer */}
-            <div className="p-3 bg-[#FAF7F2] border-t border-[#EADFCF] flex flex-col sm:flex-row items-center justify-between gap-2.5">
-              <div className="text-[11px] text-[#5C554E] text-center sm:text-left">
-                <p className="font-bold text-[#181513] leading-tight">Navegação GPS em tempo real:</p>
-                <p className="text-[#7A7067] text-[10px]">Traça a melhor rota a partir da sua posição</p>
+            <div className="p-3 bg-[#FAF7F2] dark:bg-[#181513] border-t border-[#EADFCF] dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-2.5">
+              <div className="text-[11px] text-[#5C554E] dark:text-[#C2B8AD] text-center sm:text-left">
+                <p className="font-bold text-[#181513] dark:text-[#FAF7F2] leading-tight">Navegação GPS em tempo real:</p>
+                <p className="text-[#7A7067] dark:text-[#A99E94] text-[10px]">Traça a melhor rota a partir da sua posição</p>
               </div>
 
               <button
