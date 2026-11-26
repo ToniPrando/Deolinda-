@@ -1196,15 +1196,41 @@ app.post("/api/settings/emblem", requireAdmin, async (req, res) => {
 });
 
 // Custom Menu Items API
+function getServerCategorySortOrder(category: any): number {
+  const normalized = normalizeServerItemCategory(category).trim().toLowerCase();
+  switch (normalized) {
+    case "entrada":
+    case "antipasti":
+      return 0;
+    case "pizzas_napoletanas":
+      return 1;
+    case "bevande":
+    case "bebidas_sem_alcool":
+    case "cervejas":
+      return 2;
+    case "dolci":
+      return 3;
+    default:
+      return 4;
+  }
+}
+
 app.get("/api/settings/menu", (_req, res) => {
   try {
     return sendCachedJson(res, "menu", () => {
       const rawItems = db.menuItems;
       const normalizedItems = Array.isArray(rawItems)
-        ? rawItems.map((it: any) => ({
-            ...it,
-            category: normalizeServerItemCategory(it?.category)
-          }))
+        ? rawItems
+            .map((it: any) => ({
+              ...it,
+              category: normalizeServerItemCategory(it?.category)
+            }))
+            .sort((a: any, b: any) => {
+              const orderA = getServerCategorySortOrder(a.category);
+              const orderB = getServerCategorySortOrder(b.category);
+              if (orderA !== orderB) return orderA - orderB;
+              return String(a.name || "").localeCompare(String(b.name || ""), "pt-BR");
+            })
         : null;
       return { items: normalizedItems };
     });

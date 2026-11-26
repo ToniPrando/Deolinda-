@@ -7,7 +7,7 @@ import {
   Wine
 } from 'lucide-react';
 import { MenuItem, CategoryType, CartItem, CustomerUser, MenuCategory, SiteInfo } from '../types';
-import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES, normalizeMenuCategories, normalizeMenuItemCategory } from '../data/menuData';
+import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES, normalizeMenuCategories, normalizeMenuItemCategory, sortMenuItemsByCategory } from '../data/menuData';
 
 interface MenuSectionProps {
   menuItems?: MenuItem[];
@@ -80,7 +80,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
   const currentItems = menuItems || MENU_ITEMS;
 
   const filteredItems = useMemo(() => {
-    return currentItems.filter((item) => {
+    const matched = currentItems.filter((item) => {
       const itemCat = String(normalizeMenuItemCategory(item.category) || '').trim().toLowerCase();
       const filterCat = String(selectedCategory).trim().toLowerCase();
       const matchCategory = selectedCategory === 'all' || itemCat === filterCat;
@@ -91,6 +91,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
 
       return matchCategory && matchQuery;
     });
+    return sortMenuItemsByCategory(matched);
   }, [currentItems, selectedCategory, searchQuery]);
 
   const activeCategoryOption = useMemo(() => {

@@ -933,15 +933,18 @@ export function subscribeToMenuItems(
   try {
     const menuColRef = collection(db, 'menu_items');
     
-    // Sort priority order for standard pizzeria categories
+    // Sort priority order: Entradas -> Pizzas -> Bebidas -> Sobremesas
     const categoryOrder: Record<string, number> = {
       'entrada': 0,
+      'antipasti': 0,
       'pizzas_napoletanas': 1,
       'napolitane_moderne': 1,
       'tradizionali': 1,
       'speciali': 1,
-      'dolci': 2,
-      'bevande': 3
+      'bevande': 2,
+      'bebidas_sem_alcool': 2,
+      'cervejas': 2,
+      'dolci': 3
     };
 
     const processSnapshot = (snapshot: any) => {

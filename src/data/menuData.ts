@@ -29,6 +29,38 @@ export function normalizeMenuItemCategory(category?: string): CategoryType {
   return category as CategoryType;
 }
 
+export function getMenuCategorySortOrder(category?: string): number {
+  const normalized = String(normalizeMenuItemCategory(category) || "").trim().toLowerCase();
+  switch (normalized) {
+    case "entrada":
+    case "antipasti":
+      return 0; // Primeiro: Entradas
+    case "pizzas_napoletanas":
+    case "napolitane_moderne":
+    case "tradizionali":
+    case "speciali":
+      return 1; // Depois: Pizzas
+    case "bevande":
+    case "bebidas_sem_alcool":
+    case "cervejas":
+      return 2; // Na sequência: Bebidas
+    case "dolci":
+      return 3; // Sobremesas
+    default:
+      return 4;
+  }
+}
+
+export function sortMenuItemsByCategory(items: MenuItem[]): MenuItem[] {
+  if (!Array.isArray(items)) return [];
+  return [...items].sort((a, b) => {
+    const orderA = getMenuCategorySortOrder(a.category);
+    const orderB = getMenuCategorySortOrder(b.category);
+    if (orderA !== orderB) return orderA - orderB;
+    return String(a.name || "").localeCompare(String(b.name || ""), "pt-BR");
+  });
+}
+
 export function normalizeMenuItems(items: MenuItem[]): MenuItem[] {
   if (!Array.isArray(items)) return [];
   return items.map((item) => ({
