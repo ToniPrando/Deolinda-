@@ -1,4 +1,14 @@
-import { SiteInfo } from '../types';
+import { SiteInfo, WeeklyHourEntry } from '../types';
+
+export const DEFAULT_WEEKLY_HOURS: WeeklyHourEntry[] = [
+  { id: 'mon', day: 'Segunda-feira', hours: 'Fechado para descanso da equipe e maturação dos fermentos' },
+  { id: 'tue', day: 'Terça-feira', hours: '18h00 às 23h00' },
+  { id: 'wed', day: 'Quarta-feira', hours: '18h00 às 23h00' },
+  { id: 'thu', day: 'Quinta-feira', hours: '18h00 às 23h00' },
+  { id: 'fri', day: 'Sexta-feira', hours: '18h00 às 00h00' },
+  { id: 'sat', day: 'Sábado', hours: '18h00 às 00h00' },
+  { id: 'sun', day: 'Domingo', hours: '18h00 às 23h00' }
+];
 
 export const DEFAULT_SITE_INFO: SiteInfo = {
   // Identidade & Contatos
@@ -67,6 +77,7 @@ export const DEFAULT_SITE_INFO: SiteInfo = {
   hoursFriSat: '18h00 às 00h00',
   hoursSun: '18h00 às 23h00',
   hoursMon: 'Fechado para descanso da equipe e maturação dos fermentos',
+  weeklyHours: DEFAULT_WEEKLY_HOURS,
   valetInfo: 'Serviço de Valet cortesia na porta e convênio com estacionamento ao lado.',
   environmentInfo: 'Salão principal com ar condicionado e Jardim do Forno a Lenha ao ar livre pet-friendly.',
 
@@ -74,3 +85,28 @@ export const DEFAULT_SITE_INFO: SiteInfo = {
   footerCopyright: 'Deolinda Pizzaria Napoletana. Fatta con amore, lievito madre e farina pura.',
   footerAssociationText: ''
 };
+
+export function getWeeklyHoursFromSiteInfo(siteInfo?: Partial<SiteInfo> | null): WeeklyHourEntry[] {
+  if (siteInfo && Array.isArray(siteInfo.weeklyHours) && siteInfo.weeklyHours.length > 0) {
+    return siteInfo.weeklyHours.map((entry, idx) => ({
+      id: entry?.id || `day-${idx}`,
+      day: typeof entry?.day === 'string' ? entry.day : (DEFAULT_WEEKLY_HOURS[idx]?.day || ''),
+      hours: typeof entry?.hours === 'string' ? entry.hours : (DEFAULT_WEEKLY_HOURS[idx]?.hours || '')
+    }));
+  }
+
+  const mon = siteInfo?.hoursMon || DEFAULT_SITE_INFO.hoursMon;
+  const tueThu = siteInfo?.hoursTueThu || DEFAULT_SITE_INFO.hoursTueThu;
+  const friSat = siteInfo?.hoursFriSat || DEFAULT_SITE_INFO.hoursFriSat;
+  const sun = siteInfo?.hoursSun || DEFAULT_SITE_INFO.hoursSun;
+
+  return [
+    { id: 'mon', day: 'Segunda-feira', hours: mon },
+    { id: 'tue', day: 'Terça-feira', hours: tueThu },
+    { id: 'wed', day: 'Quarta-feira', hours: tueThu },
+    { id: 'thu', day: 'Quinta-feira', hours: tueThu },
+    { id: 'fri', day: 'Sexta-feira', hours: friSat },
+    { id: 'sat', day: 'Sábado', hours: friSat },
+    { id: 'sun', day: 'Domingo', hours: sun }
+  ];
+}

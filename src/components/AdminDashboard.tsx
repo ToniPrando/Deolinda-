@@ -50,7 +50,7 @@ import {
 } from 'lucide-react';
 import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES, normalizeMenuItems, ensureAdditionalDrinkCategories, normalizeMenuItemCategory } from '../data/menuData';
 import { SOCIAL_POSTS } from '../data/socialData';
-import { DEFAULT_SITE_INFO } from '../data/siteInfoData';
+import { DEFAULT_SITE_INFO, getWeeklyHoursFromSiteInfo } from '../data/siteInfoData';
 import { MenuItem, CategoryType, SocialPost, SiteInfo, MenuCategory } from '../types';
 import { 
   saveEmblemToFirestore, 
@@ -887,7 +887,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   }, [siteInfo]);
 
-  const [siteInfoCategory, setSiteInfoCategory] = useState<'contact' | 'hero' | 'story' | 'hours'>('contact');
+  const [siteInfoCategory, setSiteInfoCategory] = useState<'contact' | 'hero' | 'story' | 'hours' | 'environment'>('contact');
   const [siteInfoNotice, setSiteInfoNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isSavingSiteInfo, setIsSavingSiteInfo] = useState(false);
   const [isProcessingStoryImage, setIsProcessingStoryImage] = useState(false);
@@ -899,6 +899,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       ...prev,
       [field]: value
     }));
+  };
+
+  const handleUpdateWeeklyHourField = (index: number, field: 'day' | 'hours', value: string) => {
+    setCurrentSiteInfo(prev => {
+      const list = getWeeklyHoursFromSiteInfo(prev).map((item, i) =>
+        i === index ? { ...item, [field]: value } : item
+      );
+      const updated: SiteInfo = {
+        ...prev,
+        weeklyHours: list
+      };
+      if (field === 'hours') {
+        const entryId = list[index]?.id;
+        if (entryId === 'mon') updated.hoursMon = value;
+        if (entryId === 'tue') updated.hoursTueThu = value;
+        if (entryId === 'fri') updated.hoursFriSat = value;
+        if (entryId === 'sun') updated.hoursSun = value;
+      }
+      return updated;
+    });
   };
 
   const handleSaveSiteInfo = async () => {
@@ -2086,7 +2106,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 { id: 'contact', label: '📞 Contatos & Localização', icon: Phone },
                 { id: 'hero', label: '🍕 Informações de Início', icon: Sparkles },
                 { id: 'story', label: '📜 Nossa Tradição', icon: BookOpen },
-                { id: 'hours', label: '⏰ Horários, Ambiente & Rodapé', icon: Clock }
+                { id: 'hours', label: '⏰ Horários de Funcionamento', icon: Clock },
+                { id: 'environment', label: '🏡 Ambiente & Rodapé', icon: MapPin }
               ].map((subCat) => {
                 const IconComponent = subCat.icon;
                 const isSelected = siteInfoCategory === subCat.id;
@@ -2586,15 +2607,89 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             )}
 
-            {/* Sub-Category 5: Horários, Ambiente & Rodapé */}
+            {/* Sub-Category 4: Horários de Funcionamento */}
             {siteInfoCategory === 'hours' && (
               <div className="bg-white rounded-3xl p-6 border border-[#E0D5C3] shadow-xs space-y-6">
                 <div>
                   <h5 className="font-serif-italian text-lg font-bold text-[#181513] mb-1">
-                    Horários de Funcionamento, Ambiente & Rodapé
+                    Horários de Funcionamento
                   </h5>
                   <p className="text-xs text-[#5C554E]">
-                    Horários detalhados por dia da semana, avisos de estacionamento e textos do rodapé do site.
+                    Configure os dias da semana e, logo abaixo de cada dia, o respectivo horário de funcionamento exibido no site.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {getWeeklyHoursFromSiteInfo(currentSiteInfo).map((entry, idx) => (
+                    <div
+                      key={entry.id}
+                      className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E0D5C3] space-y-3"
+                    >
+                      <div>
+                        <label className="block text-[11px] font-bold text-[#181513] uppercase tracking-wider mb-1">
+                          Dia da Semana
+                        </label>
+                        <input
+                          type="text"
+                          value={entry.day}
+                          onChange={(e) => handleUpdateWeeklyHourField(idx, 'day', e.target.value)}
+                          placeholder="Ex: Segunda-feira"
+                          className="w-full px-3.5 py-2 rounded-xl bg-white border border-[#E0D5C3] text-sm font-semibold text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/25 focus:border-[#C24D2C]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-[#5C554E] uppercase tracking-wider mb-1">
+                          Horário de Funcionamento
+                        </label>
+                        <input
+                          type="text"
+                          value={entry.hours}
+                          onChange={(e) => handleUpdateWeeklyHourField(idx, 'hours', e.target.value)}
+                          placeholder="Ex: 18h00 às 23h30"
+                          className="w-full px-3.5 py-2 rounded-xl bg-white border border-[#E0D5C3] text-sm text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/25 focus:border-[#C24D2C]"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="pt-2">
+                  <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
+                    Resumo de Horários (Linha Única)
+                  </label>
+                  <input
+                    type="text"
+                    value={currentSiteInfo.openingHoursSummary}
+                    onChange={(e) => handleUpdateSiteInfoField('openingHoursSummary', e.target.value)}
+                    placeholder="Terça a Domingo das 18h às 23h30"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513]"
+                  />
+                </div>
+
+                <div className="pt-4 border-t border-[#F0EAE1] flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleSaveSiteInfo}
+                    disabled={isSavingSiteInfo}
+                    className="px-6 py-2.5 rounded-2xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
+                  >
+                    <Save className="w-4 h-4 text-[#E5A93C]" />
+                    <span>Salvar Horários de Funcionamento</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Sub-Category 5: Ambiente & Rodapé */}
+            {siteInfoCategory === 'environment' && (
+              <div className="bg-white rounded-3xl p-6 border border-[#E0D5C3] shadow-xs space-y-6">
+                <div>
+                  <h5 className="font-serif-italian text-lg font-bold text-[#181513] mb-1">
+                    Ambiente & Rodapé
+                  </h5>
+                  <p className="text-xs text-[#5C554E]">
+                    Textos da seção de localização e mensagem de copyright do rodapé do site.
                   </p>
                 </div>
 
@@ -2638,72 +2733,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
-                      Terça a Quinta-feira
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSiteInfo.hoursTueThu}
-                      onChange={(e) => handleUpdateSiteInfoField('hoursTueThu', e.target.value)}
-                      placeholder="18h00 às 23h30"
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
-                      Sexta e Sábado
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSiteInfo.hoursFriSat}
-                      onChange={(e) => handleUpdateSiteInfoField('hoursFriSat', e.target.value)}
-                      placeholder="18h00 às 00h00"
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
-                      Domingo
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSiteInfo.hoursSun}
-                      onChange={(e) => handleUpdateSiteInfoField('hoursSun', e.target.value)}
-                      placeholder="18h00 às 23h00"
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
-                      Segunda-feira
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSiteInfo.hoursMon}
-                      onChange={(e) => handleUpdateSiteInfoField('hoursMon', e.target.value)}
-                      placeholder="Fechado (Descanso da Massa)"
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
-                      Resumo de Horários (Linha Única)
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSiteInfo.openingHoursSummary}
-                      onChange={(e) => handleUpdateSiteInfoField('openingHoursSummary', e.target.value)}
-                      placeholder="Terça a Domingo das 18h às 23h30"
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513]"
-                    />
-                  </div>
-
-                  <div>
+                  <div className="md:col-span-2">
                     <label className="block text-xs font-bold text-[#181513] uppercase tracking-wider mb-1.5">
                       Texto de Copyright do Rodapé
                     </label>
@@ -2725,7 +2755,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     className="px-6 py-2.5 rounded-2xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
                   >
                     <Save className="w-4 h-4 text-[#E5A93C]" />
-                    <span>Salvar Horários & Rodapé</span>
+                    <span>Salvar Ambiente & Rodapé</span>
                   </button>
                 </div>
               </div>

@@ -9,6 +9,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { SiteInfo } from '../types';
+import { getWeeklyHoursFromSiteInfo } from '../data/siteInfoData';
 
 interface LocationSectionProps {
   siteInfo?: SiteInfo;
@@ -92,23 +93,22 @@ export const LocationSection: React.FC<LocationSectionProps> = ({ siteInfo }) =>
                   </h3>
                 </div>
 
-                <div className="space-y-1.5 text-xs text-[#5C554E]">
-                  <div className="flex justify-between py-1.5 border-b border-[#EADFCF]">
-                    <span className="font-medium text-[#181513]">Terça a Quinta</span>
-                    <span className="text-[#C24D2C] font-bold">{siteInfo?.hoursTueThu || '18h00 às 23h30'}</span>
-                  </div>
-                  <div className="flex justify-between py-1.5 border-b border-[#EADFCF]">
-                    <span className="font-medium text-[#181513]">Sexta e Sábado</span>
-                    <span className="text-[#C24D2C] font-bold">{siteInfo?.hoursFriSat || '18h00 às 00h00'}</span>
-                  </div>
-                  <div className="flex justify-between py-1.5 border-b border-[#EADFCF]">
-                    <span className="font-medium text-[#181513]">Domingo</span>
-                    <span className="text-[#C24D2C] font-bold">{siteInfo?.hoursSun || '18h00 às 23h00'}</span>
-                  </div>
-                  <div className="flex justify-between py-1.5 text-[#8C827A]">
-                    <span>Segunda-feira</span>
-                    <span className="italic">{siteInfo?.hoursMon || 'Fechado (Descanso)'}</span>
-                  </div>
+                <div className="space-y-1 text-xs text-[#5C554E]">
+                  {getWeeklyHoursFromSiteInfo(siteInfo).map((entry, idx, arr) => {
+                    const isClosed = entry.hours.toLowerCase().includes('fechado');
+                    const isLast = idx === arr.length - 1;
+                    return (
+                      <div
+                        key={entry.id}
+                        className={`flex justify-between items-start gap-3 py-1.5 ${!isLast ? 'border-b border-[#EADFCF]' : ''} ${isClosed ? 'text-[#8C827A]' : ''}`}
+                      >
+                        <span className={isClosed ? '' : 'font-medium text-[#181513] shrink-0'}>{entry.day}</span>
+                        <span className={`text-right ${isClosed ? 'italic' : 'text-[#C24D2C] font-bold'}`}>
+                          {entry.hours}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 <div className="pt-2.5 text-[11px] text-[#8C5E0A] flex items-center gap-1.5 font-medium">

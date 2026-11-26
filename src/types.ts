@@ -206,11 +206,18 @@ export interface SiteInfo {
   hoursFriSat: string;
   hoursSun: string;
   hoursMon: string;
+  weeklyHours?: WeeklyHourEntry[];
   valetInfo: string;
   environmentInfo: string;
 
   // Rodapé
   footerCopyright: string;
   footerAssociationText: string;
+}
+
+export interface WeeklyHourEntry {
+  id: string;
+  day: string;
+  hours: string;
 }
 
