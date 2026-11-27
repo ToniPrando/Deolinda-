@@ -19,7 +19,8 @@ service cloud.firestore {
 
     // Orders collection: real-time order creation and kitchen status tracking
     match /orders/{orderId} {
-      allow read: if isValidId(orderId);
+      allow get: if isValidId(orderId);
+      allow list: if true;
       allow create: if isValidId(orderId)
                     && request.resource.data.id is string
                     && request.resource.data.customerName is string
@@ -40,7 +41,8 @@ service cloud.firestore {
 
     // Reservations collection: table booking and status updates
     match /reservations/{reservationId} {
-      allow read: if isValidId(reservationId);
+      allow get: if isValidId(reservationId);
+      allow list: if true;
       allow create: if isValidId(reservationId)
                     && request.resource.data.name is string
                     && request.resource.data.name.size() >= 1
@@ -56,7 +58,8 @@ service cloud.firestore {
 
     // Contact messages collection: Fale Conosco submissions
     match /messages/{messageId} {
-      allow read: if isValidId(messageId);
+      allow get: if isValidId(messageId);
+      allow list: if true;
       allow create: if isValidId(messageId)
                     && request.resource.data.name is string
                     && request.resource.data.name.size() >= 1
@@ -86,7 +89,8 @@ service cloud.firestore {
 
     // Menu Items collection
     match /menu_items/{itemId} {
-      allow read: if isValidId(itemId);
+      allow get: if isValidId(itemId);
+      allow list: if true;
       allow create, update: if isValidId(itemId)
                             && request.resource.data.id is string
                             && request.resource.data.name is string
@@ -101,7 +105,8 @@ service cloud.firestore {
 
     // Gallery Posts collection
     match /gallery_posts/{postId} {
-      allow read: if isValidId(postId);
+      allow get: if isValidId(postId);
+      allow list: if true;
       allow create, update: if isValidId(postId)
                             && request.resource.data.id is string
                             && request.resource.data.imageUrl is string

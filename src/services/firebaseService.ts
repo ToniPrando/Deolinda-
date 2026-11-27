@@ -1276,17 +1276,19 @@ export function subscribeToGalleryPosts(
       );
     }
 
-    if (result.length > 0) {
-      onUpdate(result);
+    const validResult = result.filter((p) => Boolean(p && typeof p.imageUrl === 'string' && p.imageUrl.trim().length > 0));
+
+    if (validResult.length > 0) {
+      onUpdate(validResult);
       try { localStorage.removeItem('deolinda_custom_social_posts'); } catch {}
-      safeSetLocalStorage('deolinda_custom_gallery_posts', JSON.stringify(result));
+      safeSetLocalStorage('deolinda_custom_gallery_posts', JSON.stringify(validResult));
       // Keep Express backend cache synchronized only when an admin session is active
-      if (!syncedServerCache && !isDefaultSeedGallery(result) && getAdminAuthToken()) {
+      if (!syncedServerCache && !isDefaultSeedGallery(validResult) && getAdminAuthToken()) {
         syncedServerCache = true;
         fetch('/api/settings/gallery', {
           method: 'POST',
           headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify({ posts: result })
+          body: JSON.stringify({ posts: validResult })
         }).catch(() => {});
       }
       return;
@@ -1294,17 +1296,21 @@ export function subscribeToGalleryPosts(
 
     // Only fall back to backend API when both listeners finished, and NEVER overwrite custom localStorage with default seed posts on Firestore errors
     if (bothDone) {
-      const cachedLocal = getCachedLocalPosts();
+      const cachedLocal = getCachedLocalPosts().filter((p) => Boolean(p && typeof p.imageUrl === 'string' && p.imageUrl.trim().length > 0));
       const anyErrored = collectionErrored || manifestErrored;
 
       safeFetchJson<{ posts?: SocialPost[] }>('/api/settings/gallery').then((data) => {
-        const serverPosts = data && Array.isArray(data.posts) ? data.posts : [];
+        const serverPosts = data && Array.isArray(data.posts)
+          ? data.posts.filter((p) => Boolean(p && typeof p.imageUrl === 'string' && p.imageUrl.trim().length > 0))
+          : [];
+        if (serverPosts.length > 0 && (!isDefaultSeedGallery(serverPosts) || anyErrored)) {
+          onUpdate(serverPosts);
+          try { localStorage.removeItem('deolinda_custom_social_posts'); } catch {}
+          safeSetLocalStorage('deolinda_custom_gallery_posts', JSON.stringify(serverPosts));
+          return;
+        }
         if (cachedLocal.length > 0 && (!isDefaultSeedGallery(cachedLocal) || anyErrored)) {
-          if (serverPosts.length > 0 && !isDefaultSeedGallery(serverPosts)) {
-            onUpdate(serverPosts);
-          } else {
-            onUpdate(cachedLocal);
-          }
+          onUpdate(cachedLocal);
           return;
         }
         if (serverPosts.length > 0) {

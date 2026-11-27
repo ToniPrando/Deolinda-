@@ -96,7 +96,10 @@ export default function App() {
       const saved = localStorage.getItem('deolinda_custom_gallery_posts') || localStorage.getItem('deolinda_custom_social_posts');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) {
+          const valid = parsed.filter((p) => p && typeof p.imageUrl === 'string' && p.imageUrl.trim().length > 0);
+          if (valid.length > 0) return valid;
+        }
       }
     } catch {}
     return SOCIAL_POSTS;
