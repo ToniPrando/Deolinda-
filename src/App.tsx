@@ -16,7 +16,7 @@ import { BackToTopButton } from './components/BackToTopButton';
 import { CartItem, Order, Reservation, OrderStatus, CustomerUser, MenuItem, SocialPost, SiteInfo, MenuCategory } from './types';
 import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES, normalizeMenuItems, ensureAdditionalDrinkCategories } from './data/menuData';
 import { SOCIAL_POSTS } from './data/socialData';
-import { DEFAULT_SITE_INFO } from './data/siteInfoData';
+import { DEFAULT_SITE_INFO, DEFAULT_BACKGROUND_IMAGE_URL, DEFAULT_BACKGROUND_OPACITY } from './data/siteInfoData';
 import { 
   subscribeToOrders, 
   subscribeToReservations, 
@@ -899,8 +899,28 @@ export default function App() {
     };
   }, []);
 
+  const resolvedBackgroundUrl =
+    siteInfo.backgroundImageUrl !== undefined
+      ? siteInfo.backgroundImageUrl.trim()
+      : DEFAULT_BACKGROUND_IMAGE_URL;
+  const resolvedBackgroundOpacity =
+    typeof siteInfo.backgroundOpacity === 'number' && Number.isFinite(siteInfo.backgroundOpacity)
+      ? Math.max(0, Math.min(100, siteInfo.backgroundOpacity))
+      : DEFAULT_BACKGROUND_OPACITY;
+
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-[#12100E] text-[#181513] dark:text-[#FAF7F2] font-sans selection:bg-[#C24D2C] selection:text-white transition-colors duration-200">
+    <div className="relative min-h-screen flex flex-col bg-white dark:bg-[#12100E] text-[#181513] dark:text-[#FAF7F2] font-sans selection:bg-[#C24D2C] selection:text-white transition-colors duration-200">
+      {/* Global Site Background Photo Overlay (Controlled via Admin) */}
+      {resolvedBackgroundUrl && resolvedBackgroundOpacity > 0 && (
+        <div
+          aria-hidden="true"
+          className="fixed inset-0 z-0 pointer-events-none bg-cover bg-center bg-no-repeat transition-opacity duration-300"
+          style={{
+            backgroundImage: `url("${resolvedBackgroundUrl.replace(/["\\]/g, '\\$&')}")`,
+            opacity: resolvedBackgroundOpacity / 100
+          }}
+        />
+      )}
       
       {/* Navigation */}
       <Navbar
@@ -915,7 +935,7 @@ export default function App() {
       />
 
       {/* Main Content: Renderiza uma página diferente para cada link do menu */}
-      <main className="flex-grow">
+      <main className="relative z-10 flex-grow">
         {/* Página 1: Cardápio (/cardapio) */}
         {activeSection === 'cardapio' && (
           <div className="animate-fade-in">

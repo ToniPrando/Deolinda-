@@ -146,7 +146,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ siteInfo }) => {
     'w-full rounded-xl border border-[#D5C9B8] dark:border-white/15 bg-[#FAF7F2] dark:bg-[#12100E] px-4 py-3 text-sm text-[#181513] dark:text-[#FAF7F2] placeholder:text-[#8C827A] outline-none transition focus:border-[#C24D2C] focus:bg-white dark:focus:bg-[#181513] focus:ring-2 focus:ring-[#C24D2C]/20 shadow-xs';
 
   return (
-    <section id="fale-conosco" className="bg-white dark:bg-[#12100E] text-[#181513] dark:text-[#FAF7F2] border-t border-[#EADFCF] dark:border-white/10 py-14 sm:py-16 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
+    <section id="fale-conosco" className="bg-transparent text-[#181513] dark:text-[#FAF7F2] border-t border-[#EADFCF] dark:border-white/10 py-14 sm:py-16 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
       <div className="w-full max-w-xl mx-auto text-left">
         <div className="text-center mb-7">
           <div className="inline-flex items-center justify-center p-3 rounded-full bg-[#C24D2C]/10 dark:bg-[#E5A93C]/15 border border-[#C24D2C]/25 dark:border-[#E5A93C]/30 mb-4">

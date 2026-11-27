@@ -654,7 +654,8 @@ const LARGE_MEDIA_POST_PATHS = new Set([
   "/api/settings/upload-gallery-image",
   "/api/settings/menu",
   "/api/settings/menu-item",
-  "/api/settings/gallery"
+  "/api/settings/gallery",
+  "/api/settings/site-info"
 ]);
 
 app.use(defaultUrlParser);
@@ -1493,7 +1494,21 @@ app.post("/api/settings/site-info", requireAdmin, (req, res) => {
   try {
     const { siteInfo } = req.body || {};
     if (siteInfo && typeof siteInfo === "object" && !Array.isArray(siteInfo)) {
-      db.siteInfo = siteInfo;
+      const sanitizedInfo = { ...siteInfo };
+      if (typeof sanitizedInfo.backgroundImageUrl === "string") {
+        const trimmedBg = sanitizedInfo.backgroundImageUrl.trim();
+        if (trimmedBg && !isSafeImageReference(trimmedBg)) {
+          return res.status(400).json({ error: "URL da imagem de fundo inválida." });
+        }
+        sanitizedInfo.backgroundImageUrl = trimmedBg;
+      }
+      if (sanitizedInfo.backgroundOpacity !== undefined) {
+        const parsedOpacity = Number(sanitizedInfo.backgroundOpacity);
+        sanitizedInfo.backgroundOpacity = Number.isFinite(parsedOpacity)
+          ? Math.max(0, Math.min(100, Math.round(parsedOpacity)))
+          : 15;
+      }
+      db.siteInfo = sanitizedInfo;
       invalidateSettingsCache("site-info");
       saveDatabase();
       return res.json({ success: true });

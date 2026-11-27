@@ -22,7 +22,7 @@ export const Footer: React.FC<FooterProps> = ({ siteInfo, customLogoUrl }) => {
   const { theme, setTheme } = useTheme();
 
   return (
-    <footer className="site-footer bg-white dark:bg-[#12100E] text-[#181513] dark:text-[#FAF7F2] border-t border-[#EADFCF] dark:border-white/10 pt-10 pb-8 transition-colors duration-200">
+    <footer className="site-footer relative z-10 bg-white/80 dark:bg-[#12100E]/80 backdrop-blur-[2px] text-[#181513] dark:text-[#FAF7F2] border-t border-[#EADFCF] dark:border-white/10 pt-10 pb-8 transition-colors duration-200">
       <div className="footer-content w-full max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Main Center Block: Logo e Nome ao lado do Endereço, e Botões Sociais */}

@@ -1421,12 +1421,24 @@ function stripUndefinedDeep<T>(value: T): T {
 export async function saveSiteInfoToFirestore(siteInfo: SiteInfo): Promise<void> {
   const cleanInfo = stripUndefinedDeep({ ...siteInfo });
 
-  // Compress uploaded story image cleanly so settings/site_info stays well under Firestore's 1MB limit
+  // Compress uploaded story and background images cleanly so settings/site_info stays well under Firestore's 1MB limit
   if (typeof cleanInfo.storyImageUrl === 'string' && cleanInfo.storyImageUrl.startsWith('data:image/')) {
-    cleanInfo.storyImageUrl = await compressImageForFirestore(cleanInfo.storyImageUrl, 360000);
-    if (JSON.stringify(cleanInfo).length > 850000) {
-      cleanInfo.storyImageUrl = await compressImageForFirestore(cleanInfo.storyImageUrl, 220000);
+    cleanInfo.storyImageUrl = await compressImageForFirestore(cleanInfo.storyImageUrl, 280000);
+  }
+  if (typeof cleanInfo.backgroundImageUrl === 'string' && cleanInfo.backgroundImageUrl.startsWith('data:image/')) {
+    cleanInfo.backgroundImageUrl = await compressImageForFirestore(cleanInfo.backgroundImageUrl, 320000);
+  }
+  if (JSON.stringify(cleanInfo).length > 850000) {
+    if (typeof cleanInfo.storyImageUrl === 'string' && cleanInfo.storyImageUrl.startsWith('data:image/')) {
+      cleanInfo.storyImageUrl = await compressImageForFirestore(cleanInfo.storyImageUrl, 180000);
     }
+    if (typeof cleanInfo.backgroundImageUrl === 'string' && cleanInfo.backgroundImageUrl.startsWith('data:image/')) {
+      cleanInfo.backgroundImageUrl = await compressImageForFirestore(cleanInfo.backgroundImageUrl, 200000);
+    }
+  }
+  if (cleanInfo.backgroundOpacity !== undefined) {
+    const num = Number(cleanInfo.backgroundOpacity);
+    cleanInfo.backgroundOpacity = Number.isFinite(num) ? Math.max(0, Math.min(100, Math.round(num))) : 15;
   }
 
   let firestoreSaved = false;

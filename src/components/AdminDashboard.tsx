@@ -50,7 +50,12 @@ import {
 } from 'lucide-react';
 import { MENU_ITEMS, DEFAULT_MENU_CATEGORIES, normalizeMenuItems, ensureAdditionalDrinkCategories, normalizeMenuItemCategory } from '../data/menuData';
 import { SOCIAL_POSTS } from '../data/socialData';
-import { DEFAULT_SITE_INFO, getWeeklyHoursFromSiteInfo } from '../data/siteInfoData';
+import {
+  DEFAULT_SITE_INFO,
+  DEFAULT_BACKGROUND_IMAGE_URL,
+  DEFAULT_BACKGROUND_OPACITY,
+  getWeeklyHoursFromSiteInfo
+} from '../data/siteInfoData';
 import { MenuItem, CategoryType, SocialPost, SiteInfo, MenuCategory } from '../types';
 import { 
   saveEmblemToFirestore, 
@@ -1076,13 +1081,55 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     });
   };
 
+  const [isProcessingBgImage, setIsProcessingBgImage] = useState(false);
+  const [bgUrlInput, setBgUrlInput] = useState('');
+  const [dragBgActive, setDragBgActive] = useState(false);
+  const bgFileInputRef = useRef<HTMLInputElement>(null);
+
+  const activeBgPreviewUrl =
+    currentSiteInfo.backgroundImageUrl !== undefined
+      ? currentSiteInfo.backgroundImageUrl
+      : DEFAULT_BACKGROUND_IMAGE_URL;
+  const activeBgOpacity =
+    typeof currentSiteInfo.backgroundOpacity === 'number' && Number.isFinite(currentSiteInfo.backgroundOpacity)
+      ? Math.max(0, Math.min(100, Math.round(currentSiteInfo.backgroundOpacity)))
+      : DEFAULT_BACKGROUND_OPACITY;
+
+  const handleBackgroundFileSelect = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      showToastError('Selecione um arquivo de imagem válido (PNG, JPG, WebP ou GIF).');
+      return;
+    }
+    setIsProcessingBgImage(true);
+    try {
+      const compressed = await compressImageForFirestore(file, 320000);
+      if (compressed) {
+        const nextOpacity = activeBgOpacity === 0 ? DEFAULT_BACKGROUND_OPACITY : activeBgOpacity;
+        setCurrentSiteInfo(prev => ({
+          ...prev,
+          backgroundImageUrl: compressed,
+          backgroundOpacity: nextOpacity
+        }));
+        setBgUrlInput('');
+        showToastSuccess('Foto carregada! Clique em "Salvar Fundo e Transparência" para aplicar no site.');
+      }
+    } catch {
+      showToastError('Erro ao processar a imagem de fundo selecionada.');
+    } finally {
+      setIsProcessingBgImage(false);
+    }
+  };
+
   const handleSaveSiteInfo = async () => {
     setIsSavingSiteInfo(true);
     showSavingToast('Enviando informações do site para o Firestore...');
     try {
       const infoToSave = { ...currentSiteInfo };
       if (infoToSave.storyImageUrl && infoToSave.storyImageUrl.startsWith('data:image/')) {
-        infoToSave.storyImageUrl = await compressImageForFirestore(infoToSave.storyImageUrl, 360000);
+        infoToSave.storyImageUrl = await compressImageForFirestore(infoToSave.storyImageUrl, 280000);
+      }
+      if (infoToSave.backgroundImageUrl && infoToSave.backgroundImageUrl.startsWith('data:image/')) {
+        infoToSave.backgroundImageUrl = await compressImageForFirestore(infoToSave.backgroundImageUrl, 320000);
       }
       setCurrentSiteInfo(infoToSave);
       if (onSiteInfoUpdated) {
@@ -2939,6 +2986,94 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       className="w-full px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-sm text-[#181513]"
                     />
                   </div>
+
+                  {/* Foto de Fundo & Transparência do Site (Sincronizado com aba Identidade) */}
+                  <div className="md:col-span-2 p-4 sm:p-5 rounded-2xl bg-[#FAF7F2] border border-[#E0D5C3] space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <h6 className="font-bold text-sm text-[#181513] flex items-center gap-2">
+                          <ImageIcon className="w-4 h-4 text-[#C24D2C]" />
+                          <span>Foto de Fundo do Site &amp; Grau de Transparência</span>
+                        </h6>
+                        <p className="text-xs text-[#5C554E] mt-0.5">
+                          Altere a imagem exibida com transparência ao fundo de todas as páginas e ajuste a intensidade (%).
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => bgFileInputRef.current?.click()}
+                        disabled={isProcessingBgImage}
+                        className="px-3.5 py-2 rounded-xl bg-[#C24D2C] hover:bg-[#A63A1E] text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shrink-0 disabled:opacity-50"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>{isProcessingBgImage ? 'Processando...' : 'Trocar Foto'}</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                      <div className="md:col-span-4 relative h-24 rounded-xl overflow-hidden border border-[#E0D5C3] bg-white flex items-center justify-center">
+                        {activeBgPreviewUrl ? (
+                          <div
+                            className="absolute inset-0 bg-cover bg-center"
+                            style={{
+                              backgroundImage: `url("${activeBgPreviewUrl.replace(/["\\]/g, '\\$&')}")`,
+                              opacity: activeBgOpacity / 100
+                            }}
+                          />
+                        ) : null}
+                        <span className="relative z-10 text-[11px] font-bold text-[#181513] bg-white/80 px-2.5 py-1 rounded-lg border border-[#E0D5C3]">
+                          {activeBgPreviewUrl ? `Prévia (${activeBgOpacity}%)` : 'Sem foto de fundo'}
+                        </span>
+                      </div>
+
+                      <div className="md:col-span-8 space-y-2.5">
+                        <div className="flex items-center justify-between gap-3">
+                          <label className="text-xs font-bold text-[#181513] uppercase tracking-wider flex items-center gap-1.5">
+                            <SlidersHorizontal className="w-3.5 h-3.5 text-[#C24D2C]" />
+                            <span>Grau da Transparência / Visibilidade</span>
+                          </label>
+                          <span className="text-xs font-extrabold text-[#C24D2C] tabular-nums">
+                            {activeBgOpacity}%
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          step={1}
+                          value={activeBgOpacity}
+                          onChange={(e) => handleUpdateSiteInfoField('backgroundOpacity', Number(e.target.value))}
+                          className="w-full accent-[#C24D2C] cursor-pointer"
+                        />
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <input
+                            type="text"
+                            value={currentSiteInfo.backgroundImageUrl ?? ''}
+                            onChange={(e) => handleUpdateSiteInfoField('backgroundImageUrl', e.target.value)}
+                            placeholder="URL ou caminho da foto (ex: /assets/...)"
+                            className="flex-1 min-w-[200px] px-3 py-1.5 rounded-lg bg-white border border-[#E0D5C3] text-xs text-[#181513]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleUpdateSiteInfoField('backgroundImageUrl', DEFAULT_BACKGROUND_IMAGE_URL);
+                              handleUpdateSiteInfoField('backgroundOpacity', DEFAULT_BACKGROUND_OPACITY);
+                            }}
+                            className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-neutral-100 border border-[#E0D5C3] text-[11px] font-semibold text-[#181513] cursor-pointer"
+                          >
+                            Padrão
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateSiteInfoField('backgroundImageUrl', '')}
+                            className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-rose-50 border border-rose-200 text-[11px] font-semibold text-rose-700 cursor-pointer"
+                          >
+                            Remover
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="pt-4 border-t border-[#F0EAE1] flex justify-end">
@@ -3353,6 +3488,258 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </button>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Hidden file input for site background upload */}
+              <input
+                ref={bgFileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    await handleBackgroundFileSelect(file);
+                    e.target.value = '';
+                  }
+                }}
+              />
+
+              {/* CARD 3: FOTO DE FUNDO & TRANSPARÊNCIA DO SITE */}
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E0D5C3] shadow-sm space-y-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b border-[#EADFCF]">
+                  <div>
+                    <div className="flex items-center gap-2.5 mb-1.5">
+                      <span className="p-2 rounded-xl bg-[#C24D2C]/10 text-[#C24D2C]">
+                        <ImageIcon className="w-5 h-5" />
+                      </span>
+                      <h4 className="font-serif-italian text-2xl font-bold text-[#181513]">
+                        3. Foto de Fundo &amp; Transparência do Site
+                      </h4>
+                    </div>
+                    <p className="text-xs sm:text-sm text-[#5C554E]">
+                      Personalize a imagem exibida com transparência ao fundo de todas as páginas e regule o grau da transparência/visibilidade.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCurrentSiteInfo(prev => ({
+                          ...prev,
+                          backgroundImageUrl: DEFAULT_BACKGROUND_IMAGE_URL,
+                          backgroundOpacity: DEFAULT_BACKGROUND_OPACITY
+                        }));
+                        setBgUrlInput('');
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#F0EAE1] border border-[#E0D5C3] text-xs font-bold text-[#181513] flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-[#C24D2C]" />
+                      <span>Restaurar Padrão</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Upload & Drag Drop */}
+                <div
+                  onDragEnter={(e) => { e.preventDefault(); setDragBgActive(true); }}
+                  onDragLeave={(e) => { e.preventDefault(); setDragBgActive(false); }}
+                  onDragOver={(e) => { e.preventDefault(); }}
+                  onDrop={async (e) => {
+                    e.preventDefault();
+                    setDragBgActive(false);
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) {
+                      await handleBackgroundFileSelect(file);
+                    }
+                  }}
+                  onClick={() => bgFileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-3xl p-6 text-center transition-all flex flex-col items-center justify-center gap-2.5 cursor-pointer ${
+                    dragBgActive
+                      ? 'border-[#C24D2C] bg-[#C24D2C]/5 scale-[1.01]'
+                      : 'border-[#E0D5C3] hover:border-[#C24D2C]/60 bg-[#FAF7F2]'
+                  }`}
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-white border border-[#E0D5C3] shadow-sm flex items-center justify-center text-[#C24D2C]">
+                    {isProcessingBgImage ? <RefreshCw className="w-6 h-6 animate-spin" /> : <Upload className="w-6 h-6" />}
+                  </div>
+                  <p className="font-bold text-sm text-[#181513]">
+                    {isProcessingBgImage ? 'Otimizando imagem para o Firestore...' : 'Clique para selecionar ou arraste a nova foto de fundo'}
+                  </p>
+                  <p className="text-xs text-[#5C554E]">
+                    JPG, PNG ou WebP (otimizada automaticamente para sincronizar entre dispositivos)
+                  </p>
+                </div>
+
+                {/* URL Input */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-[#181513] flex items-center gap-1.5">
+                    <ImageIcon className="w-4 h-4 text-[#C24D2C]" />
+                    <span>Ou informe a URL da imagem de fundo:</span>
+                  </label>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      placeholder="/assets/aistudio/... ou https://exemplo.com/fundo.jpg"
+                      value={activeBgPreviewUrl}
+                      onChange={(e) => {
+                        setBgUrlInput(e.target.value);
+                        handleUpdateSiteInfoField('backgroundImageUrl', e.target.value);
+                      }}
+                      className="flex-1 px-4 py-2.5 rounded-xl bg-[#FAF7F2] border border-[#E0D5C3] text-xs sm:text-sm text-[#181513] focus:outline-none focus:ring-2 focus:ring-[#C24D2C]/30 focus:border-[#C24D2C]"
+                    />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          const text = await navigator.clipboard.readText();
+                          if (text) {
+                            setBgUrlInput(text);
+                            handleUpdateSiteInfoField('backgroundImageUrl', text);
+                          }
+                        } catch {}
+                      }}
+                      className="px-3.5 py-2.5 rounded-xl bg-white hover:bg-neutral-100 border border-[#E0D5C3] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <ClipboardPaste className="w-4 h-4 text-[#5C554E]" />
+                      <span>Colar</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Transparency / Opacity Slider */}
+                <div className="p-5 rounded-2xl bg-[#FAF7F2] border border-[#E0D5C3] space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wider text-[#181513] flex items-center gap-2">
+                        <SlidersHorizontal className="w-4 h-4 text-[#C24D2C]" />
+                        <span>Grau da Transparência (Opacidade da Imagem de Fundo)</span>
+                      </label>
+                      <p className="text-[11px] text-[#5C554E] mt-0.5">
+                        0% oculta a foto; 15% a 25% mantém leitura ideal; 100% exibe a foto totalmente nítida.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={activeBgOpacity}
+                        onChange={(e) => {
+                          const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+                          handleUpdateSiteInfoField('backgroundOpacity', v);
+                        }}
+                        className="w-16 px-2.5 py-1.5 rounded-xl bg-white border border-[#E0D5C3] text-center text-sm font-extrabold text-[#C24D2C] tabular-nums"
+                      />
+                      <span className="text-xs font-bold text-[#5C554E]">%</span>
+                    </div>
+                  </div>
+
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={activeBgOpacity}
+                    onChange={(e) => handleUpdateSiteInfoField('backgroundOpacity', Number(e.target.value))}
+                    className="w-full accent-[#C24D2C] cursor-pointer"
+                  />
+
+                  <div className="flex items-center justify-between text-[11px] text-[#8C827A] font-medium">
+                    <span>0% (Invisível)</span>
+                    <span>15% (Sutil recomendado)</span>
+                    <span>50% (Médio)</span>
+                    <span>100% (Intenso)</span>
+                  </div>
+                </div>
+
+                {/* Live Preview in Light & Dark Themes */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="relative rounded-2xl overflow-hidden border border-[#E0D5C3] bg-white p-6 min-h-[150px] flex flex-col items-center justify-center text-center shadow-xs">
+                    {activeBgPreviewUrl && activeBgOpacity > 0 && (
+                      <div
+                        className="absolute inset-0 bg-cover bg-center pointer-events-none transition-opacity duration-200"
+                        style={{
+                          backgroundImage: `url("${activeBgPreviewUrl.replace(/["\\]/g, '\\$&')}")`,
+                          opacity: activeBgOpacity / 100
+                        }}
+                      />
+                    )}
+                    <div className="relative z-10 space-y-1">
+                      <span className="text-[10px] uppercase font-bold tracking-widest text-[#C24D2C] bg-white/85 px-2.5 py-0.5 rounded-full border border-[#E0D5C3]">
+                        Prévia no Tema Claro ({activeBgOpacity}%)
+                      </span>
+                      <p className="font-serif-italian text-lg font-bold text-[#181513] pt-1">
+                        Deolinda Pizzaria Napoletana
+                      </p>
+                      <p className="text-xs text-[#4A423B]">
+                        Fermentação natural lenta de 72 horas
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="relative rounded-2xl overflow-hidden border border-[#C24D2C]/30 bg-[#12100E] p-6 min-h-[150px] flex flex-col items-center justify-center text-center shadow-xs">
+                    {activeBgPreviewUrl && activeBgOpacity > 0 && (
+                      <div
+                        className="absolute inset-0 bg-cover bg-center pointer-events-none transition-opacity duration-200"
+                        style={{
+                          backgroundImage: `url("${activeBgPreviewUrl.replace(/["\\]/g, '\\$&')}")`,
+                          opacity: activeBgOpacity / 100
+                        }}
+                      />
+                    )}
+                    <div className="relative z-10 space-y-1">
+                      <span className="text-[10px] uppercase font-bold tracking-widest text-[#E5A93C] bg-black/55 px-2.5 py-0.5 rounded-full border border-white/10">
+                        Prévia no Tema Escuro ({activeBgOpacity}%)
+                      </span>
+                      <p className="font-serif-italian text-lg font-bold text-[#FAF7F2] pt-1">
+                        Deolinda Pizzaria Napoletana
+                      </p>
+                      <p className="text-xs text-[#D6CEC5]">
+                        Fermentação natural lenta de 72 horas
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                  <div>
+                    {activeBgPreviewUrl && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBgUrlInput('');
+                          handleUpdateSiteInfoField('backgroundImageUrl', '');
+                        }}
+                        className="px-4 py-2.5 rounded-xl bg-white hover:bg-rose-50 text-rose-700 border border-rose-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Remover Foto de Fundo</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveSiteInfo}
+                    disabled={isSavingSiteInfo}
+                    className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-[#C24D2C] to-[#E5A93C] hover:from-[#A63A1E] hover:to-[#D4982B] text-white text-xs sm:text-sm font-bold shadow-lg shadow-[#C24D2C]/25 hover:scale-105 active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    {isSavingSiteInfo ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Salvando no Firestore...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        <span>Salvar Fundo e Transparência</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
 

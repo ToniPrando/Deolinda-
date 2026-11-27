@@ -210,9 +210,11 @@ export interface SiteInfo {
   valetInfo: string;
   environmentInfo: string;
 
-  // Rodapé
+  // Rodapé & Aparência Global
   footerCopyright: string;
   footerAssociationText: string;
+  backgroundImageUrl?: string;
+  backgroundOpacity?: number;
 }
 
 export interface WeeklyHourEntry {

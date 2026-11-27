@@ -1,5 +1,8 @@
 import { SiteInfo, WeeklyHourEntry } from '../types';
 
+export const DEFAULT_BACKGROUND_IMAGE_URL = '/assets/aistudio/Screenshot_20261127_094059_Adobe_Acrobat_88464b81.jpg';
+export const DEFAULT_BACKGROUND_OPACITY = 15;
+
 export const DEFAULT_WEEKLY_HOURS: WeeklyHourEntry[] = [
   { id: 'mon', day: 'Segunda-feira', hours: 'Fechado para descanso da equipe e maturação dos fermentos' },
   { id: 'tue', day: 'Terça-feira', hours: '18h00 às 23h00' },
@@ -81,9 +84,11 @@ export const DEFAULT_SITE_INFO: SiteInfo = {
   valetInfo: 'Serviço de Valet cortesia na porta e convênio com estacionamento ao lado.',
   environmentInfo: 'Salão principal com ar condicionado e Jardim do Forno a Lenha ao ar livre pet-friendly.',
 
-  // Rodapé
+  // Rodapé & Aparência Global
   footerCopyright: 'Deolinda Pizzaria Napoletana. Fatta con amore, lievito madre e farina pura.',
-  footerAssociationText: ''
+  footerAssociationText: '',
+  backgroundImageUrl: DEFAULT_BACKGROUND_IMAGE_URL,
+  backgroundOpacity: DEFAULT_BACKGROUND_OPACITY
 };
 
 export function getWeeklyHoursFromSiteInfo(siteInfo?: Partial<SiteInfo> | null): WeeklyHourEntry[] {

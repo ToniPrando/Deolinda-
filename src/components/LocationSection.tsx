@@ -60,7 +60,7 @@ export const LocationSection: React.FC<LocationSectionProps> = ({ siteInfo }) =>
   };
 
   return (
-    <section id="localizacao" className="pt-6 sm:pt-8 pb-12 sm:pb-16 bg-white dark:bg-[#12100E] text-[#181513] dark:text-[#FAF7F2] border-t border-[#EADFCF] dark:border-white/10 relative overflow-hidden scroll-mt-16 sm:scroll-mt-18 transition-colors duration-200">
+    <section id="localizacao" className="pt-6 sm:pt-8 pb-12 sm:pb-16 bg-transparent text-[#181513] dark:text-[#FAF7F2] border-t border-[#EADFCF] dark:border-white/10 relative overflow-hidden scroll-mt-16 sm:scroll-mt-18 transition-colors duration-200">
       <div className="w-full max-w-[820px] mx-auto px-4 sm:px-6 relative z-10">
         
         {/* Section Header */}

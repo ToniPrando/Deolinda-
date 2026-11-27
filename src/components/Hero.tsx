@@ -24,7 +24,7 @@ export const Hero: React.FC<HeroProps> = ({
   const { isDark } = useTheme();
 
   return (
-    <section className="relative bg-white dark:bg-[#12100E] text-[#181513] dark:text-[#FAF7F2] pt-2 sm:pt-3 pb-12 sm:pb-16 overflow-x-clip transition-colors duration-200">
+    <section className="relative bg-transparent text-[#181513] dark:text-[#FAF7F2] pt-2 sm:pt-3 pb-12 sm:pb-16 overflow-x-clip transition-colors duration-200">
       <div className="relative z-10 w-full max-w-[1520px] mx-auto px-3 sm:px-5 lg:px-6 pt-0 sm:pt-1 pb-4">
 
         {/* Coluna Esquerda: Logo junto e centralizado com o texto próximo à margem esquerda | Coluna Direita: Foto próxima ao cabeçalho */}

@@ -41,7 +41,7 @@ export const SocialFeedSection: React.FC<SocialFeedSectionProps> = ({ posts }) =
   const animationDurationSeconds = Math.max(75, Math.round(basePosts.length * 10));
 
   return (
-    <section id="galeria" className="pt-8 sm:pt-12 pb-14 bg-white dark:bg-[#12100E] text-[#181513] dark:text-[#FAF7F2] border-t border-[#EADFCF] dark:border-white/10 scroll-mt-16 sm:scroll-mt-18 overflow-hidden transition-colors duration-200">
+    <section id="galeria" className="pt-8 sm:pt-12 pb-14 bg-transparent text-[#181513] dark:text-[#FAF7F2] border-t border-[#EADFCF] dark:border-white/10 scroll-mt-16 sm:scroll-mt-18 overflow-hidden transition-colors duration-200">
       {/* CSS do looping contínuo da direita para a esquerda */}
       <style>{`
         @keyframes marqueeScrollLeft {
